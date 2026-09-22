@@ -1,7 +1,13 @@
-# Gesetze
+# GNOMELex oder Gnome-Lex
 
-GNOME-Anwendung zum Lesen und Annotieren deutscher Bundesgesetze,
-zunächst für das Bürgerliche Gesetzbuch (BGB). Daten stammen von
+GNOMELex ist eine mit dem GTK-Toolkit für GNOME-Desktopumgebungen zusammengestellte App zum Lesen deutscher Gesetze. 
+Sie befindet sich in reger Entwicklung und befindet sich in einer äußerst frühen ausführbaren Version.
+
+Als Besonderheit fügt sich GNOMELex nahtlos in bestehende GNOME-Desktops ein und erreicht somit einen schönen Look & Feel ohne nervigen Electron-/Browser-Overhead.
+
+GNOMELex entstand aus meinem Bedarf heraus, eine GNOME-native App für Gesetzestexte im Repetitorium zu haben, und ist stark auf meine eigenen Bedürfnisse adaptiert. PRs, falls jemals welche kommen sollten, nehme ich aber natürlich immer gerne an. 
+
+GNOMELex bezieht seine Gesetzestexte als XML von
 [gesetze-im-internet.de](https://www.gesetze-im-internet.de/).
 
 ## Bauen
