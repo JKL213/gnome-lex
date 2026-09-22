@@ -1,9 +1,10 @@
 //! GObject-Datenobjekte für Listen (werden in den folgenden Stufen ausgebaut).
 
 use gtk::glib;
+use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 
-mod imp {
+mod imp_outline {
     use super::*;
     use std::cell::{Cell, RefCell};
 
@@ -30,6 +31,11 @@ mod imp {
 
     #[glib::derived_properties]
     impl ObjectImpl for OutlineItem {}
+}
+
+mod imp_search {
+    use super::*;
+    use std::cell::{Cell, RefCell};
 
     #[derive(Default, glib::Properties)]
     #[properties(wrapper_type = super::SearchResultObject)]
@@ -50,6 +56,11 @@ mod imp {
 
     #[glib::derived_properties]
     impl ObjectImpl for SearchResultObject {}
+}
+
+mod imp_annotation {
+    use super::*;
+    use std::cell::{Cell, RefCell};
 
     #[derive(Default, glib::Properties)]
     #[properties(wrapper_type = super::AnnotationObject)]
@@ -81,7 +92,7 @@ mod imp {
 }
 
 glib::wrapper! {
-    pub struct OutlineItem(ObjectSubclass<imp::OutlineItem>);
+    pub struct OutlineItem(ObjectSubclass<imp_outline::OutlineItem>);
 }
 
 impl OutlineItem {
@@ -97,7 +108,7 @@ impl OutlineItem {
 }
 
 glib::wrapper! {
-    pub struct SearchResultObject(ObjectSubclass<imp::SearchResultObject>);
+    pub struct SearchResultObject(ObjectSubclass<imp_search::SearchResultObject>);
 }
 
 impl SearchResultObject {
@@ -111,7 +122,7 @@ impl SearchResultObject {
 }
 
 glib::wrapper! {
-    pub struct AnnotationObject(ObjectSubclass<imp::AnnotationObject>);
+    pub struct AnnotationObject(ObjectSubclass<imp_annotation::AnnotationObject>);
 }
 
 impl AnnotationObject {

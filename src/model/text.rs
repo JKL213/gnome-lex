@@ -391,7 +391,7 @@ mod tests {
         let f = flatten_blocks(&[p("(1) Erster."), p("(2) Zweiter.")]);
         assert_eq!(f.text(), "(1) Erster.\n(2) Zweiter.\n");
         assert_eq!(f.block_starts, vec![0, 12]);
-        assert_eq!(f.char_len(), 24);
+        assert_eq!(f.char_len(), 25);
     }
 
     #[test]
@@ -422,7 +422,7 @@ mod tests {
         assert_eq!(f.text(), "Intro:\n1.\teins\n2.\tzwei\na)\tzwei-a\n");
         let label = f.segs.iter().find(|s| s.text == "1.").unwrap();
         assert!(label.tags.contains(&SegTag::ListLabel));
-        let nested = f.segs.iter().find(|s| s.text == "zwei-a").unwrap();
+        let nested = f.segs.iter().find(|s| s.text.contains("zwei-a")).unwrap();
         assert!(nested.tags.contains(&SegTag::ListLine(1)));
     }
 

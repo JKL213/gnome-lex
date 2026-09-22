@@ -1,0 +1,112 @@
+# German translations for PACKAGE package
+# German translation for PACKAGE.
+# Copyright (C) 2026 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# Automatically generated, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-23 00:00+0200\n"
+"PO-Revision-Date: 2026-09-23 00:00+0200\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: src/application.rs:99 data/ui/window.blp:5 data/ui/window.blp:26
+#: data/org.gnomelex.Gesetze.desktop.in:2
+#: data/org.gnomelex.Gesetze.metainfo.xml.in:6
+msgid "Gesetze"
+msgstr ""
+
+#: src/application.rs:105
+msgid ""
+"Deutsche Bundesgesetze lesen und annotieren. Datenquelle: gesetze-im-"
+"internet.de"
+msgstr ""
+
+#: data/ui/window.blp:18
+msgid "Hauptmenü"
+msgstr ""
+
+#: data/ui/window.blp:27
+msgid "Das Bürgerliche Gesetzbuch wird in der nächsten Stufe geladen."
+msgstr ""
+
+#: data/ui/window.blp:36
+msgid "_Info zu Gesetze"
+msgstr ""
+
+#: data/ui/window.blp:40
+msgid "_Beenden"
+msgstr ""
+
+#: data/org.gnomelex.Gesetze.desktop.in:3
+#: data/org.gnomelex.Gesetze.metainfo.xml.in:7
+msgid "Deutsche Bundesgesetze lesen und annotieren"
+msgstr ""
+
+#: data/org.gnomelex.Gesetze.desktop.in:9
+msgid "Gesetz;BGB;Recht;Norm;Paragraph;"
+msgstr ""
+
+#: data/org.gnomelex.Gesetze.metainfo.xml.in:9
+msgid ""
+"Gesetze zeigt den Text des Bürgerlichen Gesetzbuchs aus der amtlichen Quelle "
+"gesetze-im-internet.de mit Gliederung, Volltextsuche und klickbaren "
+"Verweisen. Textstellen lassen sich markieren, mit Notizen versehen und als "
+"Lesezeichen ablegen."
+msgstr ""
+
+#: data/org.gnomelex.Gesetze.metainfo.xml.in:20
+msgid "Gnome Lex"
+msgstr ""
+
+#: data/org.gnomelex.Gesetze.metainfo.xml.in:38
+msgid "Erste Version: BGB lesen, suchen, verweisen, annotieren."
+msgstr ""
+
+#: data/org.gnomelex.Gesetze.gschema.xml:6
+msgid "Fensterbreite"
+msgstr ""
+
+#: data/org.gnomelex.Gesetze.gschema.xml:10
+msgid "Fensterhöhe"
+msgstr ""
+
+#: data/org.gnomelex.Gesetze.gschema.xml:14
+msgid "Fenster maximiert"
+msgstr ""
+
+#: data/org.gnomelex.Gesetze.gschema.xml:19
+msgid "Schriftgröße des Normtexts in Punkt"
+msgstr ""
+
+#: data/org.gnomelex.Gesetze.gschema.xml:23
+msgid "Beim Beenden geöffnete Tabs (JSON je Tab)"
+msgstr ""
+
+#: data/org.gnomelex.Gesetze.gschema.xml:27
+msgid "Index des zuletzt aktiven Tabs"
+msgstr ""
+
+#: data/org.gnomelex.Gesetze.gschema.xml:31
+msgid "Seitenleiste für Notizen und Lesezeichen sichtbar"
+msgstr ""
+
+#: data/org.gnomelex.Gesetze.gschema.xml:40
+msgid "Farbschema: System, hell oder dunkel"
+msgstr ""
+
+#: data/org.gnomelex.Gesetze.gschema.xml:44
+msgid "Beim Start auf neue Gesetzesfassungen prüfen"
+msgstr ""
+
+#: data/org.gnomelex.Gesetze.gschema.xml:48
+msgid "Zeitpunkt der letzten Aktualisierungsprüfung (ISO 8601)"
+msgstr ""

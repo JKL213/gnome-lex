@@ -1,0 +1,13 @@
+{
+  "github.copilot.chat.codeGeneration.useInstructionFiles": true,
+  "chat.promptFiles": true,
+  "chat.promptFilesLocations": { ".github/prompts": true },
+  "chat.instructionsFilesLocations": { ".github/instructions": true },
+  "chat.agentFilesLocations": { ".github/agents": true },
+  "rust-analyzer.cargo.extraEnv": { "PKG_CONFIG_PATH": "${env:HOME}/.cache/gnome-lex/pc" },
+  "rust-analyzer.check.command": "clippy",
+  "rust-analyzer.check.extraArgs": ["--all-targets", "--", "-D", "warnings"],
+  "files.associations": { "*.blp": "blueprint" },
+  "editor.formatOnSave": true,
+  "[rust]": { "editor.defaultFormatter": "rust-lang.rust-analyzer" }
+}

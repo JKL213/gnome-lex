@@ -1,5 +1,7 @@
 //! SQLite-Datenhaltung: Gesetze, Gliederung, Normen, Absätze, Volltextindex
 //! (FTS5) und Annotationen.
+// Wird ab den folgenden Stufen von der Oberfläche genutzt.
+#![allow(dead_code)]
 
 use std::path::{Path, PathBuf};
 
@@ -195,7 +197,9 @@ impl Database {
     pub fn replace_law(&mut self, slug: &str, parsed: &ParsedLaw) -> Result<i64> {
         let tx = self.conn.transaction()?;
         if let Some(old_id) = tx
-            .query_row("SELECT id FROM laws WHERE slug = ?1", [slug], |r| r.get::<_, i64>(0))
+            .query_row("SELECT id FROM laws WHERE slug = ?1", [slug], |r| {
+                r.get::<_, i64>(0)
+            })
             .optional()?
         {
             tx.execute("DELETE FROM norms_fts WHERE law_id = ?1", [old_id])?;
@@ -256,10 +260,8 @@ impl Database {
             )?;
             for (i, n) in parsed.norms.iter().enumerate() {
                 let blocks = serde_json::to_string(&n.blocks).unwrap_or_else(|_| "[]".into());
-                let footnotes =
-                    serde_json::to_string(&n.footnotes).unwrap_or_else(|_| "[]".into());
-                let fussnoten =
-                    serde_json::to_string(&n.fussnoten).unwrap_or_else(|_| "[]".into());
+                let footnotes = serde_json::to_string(&n.footnotes).unwrap_or_else(|_| "[]".into());
+                let fussnoten = serde_json::to_string(&n.fussnoten).unwrap_or_else(|_| "[]".into());
                 norm_stmt.execute(params![
                     law_id,
                     n.unit.map(|u| unit_ids[u]),
@@ -293,7 +295,9 @@ impl Database {
     pub fn delete_law(&mut self, slug: &str) -> Result<()> {
         let tx = self.conn.transaction()?;
         if let Some(old_id) = tx
-            .query_row("SELECT id FROM laws WHERE slug = ?1", [slug], |r| r.get::<_, i64>(0))
+            .query_row("SELECT id FROM laws WHERE slug = ?1", [slug], |r| {
+                r.get::<_, i64>(0)
+            })
             .optional()?
         {
             tx.execute("DELETE FROM norms_fts WHERE law_id = ?1", [old_id])?;
@@ -484,7 +488,11 @@ impl Database {
 
     pub fn insert_annotation(&self, a: &Annotation) -> Result<i64> {
         let now = Annotation::now();
-        let created = if a.created.is_empty() { now.clone() } else { a.created.clone() };
+        let created = if a.created.is_empty() {
+            now.clone()
+        } else {
+            a.created.clone()
+        };
         self.conn.execute(
             "INSERT INTO annotations (law, norm, paragraph, start, end, quote, kind, color, note,
                                       target, created, modified, orphaned)
@@ -499,7 +507,9 @@ impl Database {
                 a.kind.as_str(),
                 a.color,
                 a.note,
-                a.target.as_ref().map(|t| serde_json::to_string(t).unwrap_or_default()),
+                a.target
+                    .as_ref()
+                    .map(|t| serde_json::to_string(t).unwrap_or_default()),
                 created,
                 now,
                 a.orphaned as i64,
@@ -524,7 +534,9 @@ impl Database {
                 a.kind.as_str(),
                 a.color,
                 a.note,
-                a.target.as_ref().map(|t| serde_json::to_string(t).unwrap_or_default()),
+                a.target
+                    .as_ref()
+                    .map(|t| serde_json::to_string(t).unwrap_or_default()),
                 Annotation::now(),
                 a.orphaned as i64,
             ],
@@ -612,7 +624,11 @@ impl Database {
                     }
                 }
                 Anchor::Moved => {
-                    report.moved += 1;
+                    if was_orphaned {
+                        report.recovered += 1;
+                    } else {
+                        report.moved += 1;
+                    }
                     a.orphaned = false;
                     self.update_annotation(&a)?;
                 }
@@ -708,8 +724,14 @@ fn insert_annotation_tx(tx: &Transaction<'_>, a: &Annotation) -> Result<()> {
             a.kind.as_str(),
             a.color,
             a.note,
-            a.target.as_ref().map(|t| serde_json::to_string(t).unwrap_or_default()),
-            if a.created.is_empty() { now.clone() } else { a.created.clone() },
+            a.target
+                .as_ref()
+                .map(|t| serde_json::to_string(t).unwrap_or_default()),
+            if a.created.is_empty() {
+                now.clone()
+            } else {
+                a.created.clone()
+            },
             now,
             a.orphaned as i64,
         ],
@@ -902,7 +924,7 @@ mod tests {
                     unit: Some(1),
                     blocks: vec![
                         Block::Paragraph {
-                            spans: vec![Span::plain("(1) Der Verkäufer verpflichtet sich.")],
+                            spans: vec![Span::plain("(1) Der Veräußerer verpflichtet sich.")],
                         },
                         Block::Paragraph {
                             spans: vec![Span::plain(text_433)],
@@ -917,7 +939,9 @@ mod tests {
     #[test]
     fn import_and_query() {
         let mut db = Database::open_in_memory().unwrap();
-        let law_id = db.replace_law("bgb", &sample_law("(2) Der Käufer zahlt.")).unwrap();
+        let law_id = db
+            .replace_law("bgb", &sample_law("(2) Der Käufer zahlt."))
+            .unwrap();
         let law = db.law_by_slug("bgb").unwrap().unwrap();
         assert_eq!(law.id, law_id);
         assert_eq!(law.jurabk, "BGB");
@@ -945,7 +969,9 @@ mod tests {
     #[test]
     fn fulltext_search() {
         let mut db = Database::open_in_memory().unwrap();
-        let law_id = db.replace_law("bgb", &sample_law("(2) Der Käufer zahlt.")).unwrap();
+        let law_id = db
+            .replace_law("bgb", &sample_law("(2) Der Käufer zahlt."))
+            .unwrap();
         let hits = db.search(Some(law_id), "käufer", 10).unwrap();
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].norm.enbez.as_deref(), Some("§ 433"));
@@ -953,14 +979,25 @@ mod tests {
         let hits = db.search(Some(law_id), "rechtsf", 10).unwrap();
         assert_eq!(hits.len(), 1);
         assert!(db.search(Some(law_id), "", 10).unwrap().is_empty());
-        assert!(db.search(Some(law_id), "\"Verkäufer verpflichtet\"", 10).unwrap().len() == 1);
-        assert!(db.search(Some(law_id), "verpflichtet AND) (", 10).unwrap().len() == 1);
+        assert!(
+            db.search(Some(law_id), "\"Veräußerer verpflichtet\"", 10)
+                .unwrap()
+                .len()
+                == 1
+        );
+        assert!(
+            db.search(Some(law_id), "verpflichtet )(", 10)
+                .unwrap()
+                .len()
+                == 1
+        );
     }
 
     #[test]
     fn annotations_roundtrip_and_reanchor() {
         let mut db = Database::open_in_memory().unwrap();
-        db.replace_law("bgb", &sample_law("(2) Der Käufer zahlt.")).unwrap();
+        db.replace_law("bgb", &sample_law("(2) Der Käufer zahlt."))
+            .unwrap();
         let a = Annotation {
             id: 0,
             law: "bgb".into(),
@@ -991,7 +1028,8 @@ mod tests {
         assert_eq!(db.annotations_for_norm("bgb", "§ 433").unwrap().len(), 2);
 
         // Text verschiebt sich: Wortlaut wird wiedergefunden.
-        db.replace_law("bgb", &sample_law("(2) Nun zahlt der Käufer.")).unwrap();
+        db.replace_law("bgb", &sample_law("(2) Nun zahlt der Käufer."))
+            .unwrap();
         let report = db.reanchor_law("bgb").unwrap();
         assert_eq!(report.moved, 1);
         assert_eq!(report.unchanged, 1);
@@ -1001,13 +1039,15 @@ mod tests {
         assert!(!moved.orphaned);
 
         // Wortlaut verschwindet: verwaist.
-        db.replace_law("bgb", &sample_law("(2) Der Erwerber zahlt.")).unwrap();
+        db.replace_law("bgb", &sample_law("(2) Der Erwerber zahlt."))
+            .unwrap();
         let report = db.reanchor_law("bgb").unwrap();
         assert_eq!(report.orphaned, 1);
         assert!(db.annotation(id).unwrap().unwrap().orphaned);
 
         // Wortlaut kehrt zurück: wiederhergestellt.
-        db.replace_law("bgb", &sample_law("(2) Der Käufer zahlt.")).unwrap();
+        db.replace_law("bgb", &sample_law("(2) Der Käufer zahlt."))
+            .unwrap();
         let report = db.reanchor_law("bgb").unwrap();
         assert_eq!(report.recovered, 1);
 
@@ -1024,9 +1064,18 @@ mod tests {
     #[test]
     fn fts_query_building() {
         assert_eq!(build_fts_query("  "), None);
-        assert_eq!(build_fts_query("Kauf vertrag"), Some("\"Kauf\"* AND \"vertrag\"*".into()));
-        assert_eq!(build_fts_query("\"guter Glaube\""), Some("\"guter Glaube\"".into()));
-        assert_eq!(build_fts_query("a) OR (b"), Some("\"a\"* AND \"OR\"* AND \"b\"*".into()));
+        assert_eq!(
+            build_fts_query("Kauf vertrag"),
+            Some("\"Kauf\"* AND \"vertrag\"*".into())
+        );
+        assert_eq!(
+            build_fts_query("\"guter Glaube\""),
+            Some("\"guter Glaube\"".into())
+        );
+        assert_eq!(
+            build_fts_query("a) OR (b"),
+            Some("\"a\"* AND \"OR\"* AND \"b\"*".into())
+        );
     }
 
     #[test]

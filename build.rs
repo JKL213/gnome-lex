@@ -17,7 +17,14 @@ fn main() {
     println!("cargo:rerun-if-changed=data/org.gnomelex.Gesetze.gschema.xml");
     println!("cargo:rerun-if-changed=data/icons");
     println!("cargo:rerun-if-changed=data/ui");
-    for var in ["APP_ID", "VERSION", "PROFILE", "LOCALEDIR", "PKGDATADIR", "GSCHEMA_DIR"] {
+    for var in [
+        "APP_ID",
+        "VERSION",
+        "PROFILE",
+        "LOCALEDIR",
+        "PKGDATADIR",
+        "GSCHEMA_DIR",
+    ] {
         println!("cargo:rerun-if-env-changed={var}");
     }
 
@@ -45,7 +52,9 @@ fn compile_blueprints(ui_dir: &Path, out_ui_dir: &Path) {
         .arg(ui_dir)
         .args(&inputs)
         .status()
-        .unwrap_or_else(|e| panic!("blueprint-compiler ({compiler}) konnte nicht gestartet werden: {e}"));
+        .unwrap_or_else(|e| {
+            panic!("blueprint-compiler ({compiler}) konnte nicht gestartet werden: {e}")
+        });
     assert!(status.success(), "blueprint-compiler ist fehlgeschlagen");
 }
 

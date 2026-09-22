@@ -4,6 +4,7 @@ pub const APP_ID: &str = env!("APP_ID");
 pub const VERSION: &str = env!("VERSION");
 pub const PROFILE: &str = env!("PROFILE");
 pub const LOCALEDIR: &str = env!("LOCALEDIR");
+#[allow(dead_code)]
 pub const PKGDATADIR: &str = env!("PKGDATADIR");
 pub const GSCHEMA_DIR: &str = env!("GSCHEMA_DIR");
 pub const GETTEXT_PACKAGE: &str = "gesetze";

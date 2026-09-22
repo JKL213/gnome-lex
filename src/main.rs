@@ -20,7 +20,10 @@ use crate::config::{GETTEXT_PACKAGE, RESOURCE_PREFIX};
 fn main() -> glib::ExitCode {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
 
-    setlocale(LocaleCategory::LcAll, "");
+    // SAFETY: wird vor dem Start weiterer Threads einmalig aufgerufen.
+    unsafe {
+        setlocale(LocaleCategory::LcAll, "");
+    }
     bindtextdomain(GETTEXT_PACKAGE, locale_dir()).expect("bindtextdomain");
     bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8").expect("bind_textdomain_codeset");
     textdomain(GETTEXT_PACKAGE).expect("textdomain");
@@ -44,7 +47,11 @@ fn locale_dir() -> std::path::PathBuf {
     }
     std::env::current_exe()
         .ok()
-        .and_then(|exe| exe.parent().and_then(|p| p.parent()).map(|p| p.to_path_buf()))
+        .and_then(|exe| {
+            exe.parent()
+                .and_then(|p| p.parent())
+                .map(|p| p.to_path_buf())
+        })
         .map(|prefix| prefix.join("share").join("locale"))
         .unwrap_or(configured)
 }

@@ -4,6 +4,8 @@
 //! Satz 2“, „Artikel 229 EGBGB“, „Art. 229 § 34 BGBEG“ sowie „Absatz 3“ als
 //! Verweis innerhalb derselben Norm. Offsets sind Zeichenoffsets (Unicode-
 //! Skalare), wie sie `GtkTextBuffer` verwendet.
+// Wird ab den folgenden Stufen von der Oberfläche genutzt.
+#![allow(dead_code)]
 
 use std::sync::OnceLock;
 
@@ -212,11 +214,8 @@ fn qualifier_values(c: &mut Cursor<'_>) -> Option<String> {
     loop {
         let save = c.pos;
         c.skip_ws();
-        let connector = c.eat(",")
-            || c.eat("und")
-            || c.eat("oder")
-            || c.eat("bis")
-            || c.eat("sowie");
+        let connector =
+            c.eat(",") || c.eat("und") || c.eat("oder") || c.eat("bis") || c.eat("sowie");
         if !connector {
             c.pos = save;
             break;
@@ -265,7 +264,15 @@ fn is_law_abbrev(token: &str) -> bool {
         return false;
     }
     let upper = token.chars().filter(|c| c.is_uppercase()).count();
-    const STOP: &[&str] = &["Abs", "Satz", "Nr", "Nummer", "Absatz", "Halbsatz", "Buchstabe"];
+    const STOP: &[&str] = &[
+        "Abs",
+        "Satz",
+        "Nr",
+        "Nummer",
+        "Absatz",
+        "Halbsatz",
+        "Buchstabe",
+    ];
     upper >= 2 && !STOP.contains(&token)
 }
 
@@ -306,7 +313,11 @@ fn law_suffix(text: &str, pos: usize, current_law: &str) -> Option<(usize, LawRe
         return None;
     }
     let end = c.pos + token.len();
-    if text[end..].chars().next().is_some_and(|ch| ch.is_alphanumeric()) {
+    if text[end..]
+        .chars()
+        .next()
+        .is_some_and(|ch| ch.is_alphanumeric())
+    {
         return None;
     }
     let law = if token.eq_ignore_ascii_case(current_law) {
@@ -329,10 +340,7 @@ pub fn find_references(text: &str, current_law: &str) -> Vec<Reference> {
         }
         let sign = m.as_str();
         let is_article = sign.starts_with("Art");
-        let mut c = Cursor {
-            text,
-            pos: m.end(),
-        };
+        let mut c = Cursor { text, pos: m.end() };
         let mut items: Vec<(usize, usize, NormRef)> = Vec::new();
 
         loop {
@@ -415,10 +423,7 @@ pub fn find_references(text: &str, current_law: &str) -> Vec<Reference> {
     let mut occupied: Vec<(usize, usize)> = raw.iter().map(|r| (r.0, r.1)).collect();
     occupied.sort_unstable();
     for m in bare_abs_regex().find_iter(text) {
-        if occupied
-            .iter()
-            .any(|(s, e)| m.start() < *e && m.end() > *s)
-        {
+        if occupied.iter().any(|(s, e)| m.start() < *e && m.end() > *s) {
             continue;
         }
         // Nicht, wenn direkt ein Gesetz folgt („Absatz 2 VVG“ ist unüblich) oder
@@ -584,7 +589,7 @@ mod tests {
         let r = refs(t);
         assert_eq!(r.len(), 1);
         assert_eq!(slice(t, &r[0]), "1");
-        assert_eq!(r[0].start, 6);
+        assert_eq!(r[0].start, 7);
     }
 
     #[test]

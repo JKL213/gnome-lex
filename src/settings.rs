@@ -6,7 +6,6 @@
 use std::path::PathBuf;
 
 use gtk::gio;
-use gtk::prelude::*;
 
 use crate::config::{BASE_SCHEMA_ID, GSCHEMA_DIR};
 

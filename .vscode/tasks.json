@@ -1,0 +1,48 @@
+{
+  "version": "2.0.0",
+  "options": { "env": { "PKG_CONFIG_PATH": "${env:HOME}/.cache/gnome-lex/pc" } },
+  "tasks": [
+    { "label": "cargo build", "type": "shell", "command": "cargo build", "group": { "kind": "build", "isDefault": true }, "problemMatcher": ["$rustc"] },
+    { "label": "cargo run", "type": "shell", "command": "cargo run", "problemMatcher": ["$rustc"] },
+    { "label": "qualität (fmt, clippy, test)", "type": "shell", "command": "cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test", "group": { "kind": "test", "isDefault": true }, "problemMatcher": ["$rustc"] },
+    { "label": "meson: setup+compile+test", "type": "shell", "command": "meson setup _build -Dprofile=development --reconfigure && meson compile -C _build && meson test -C _build --no-rebuild", "problemMatcher": [] },
+    {
+      "label": "flatpak: build",
+      "detail": "Vollständiger Flatpak-Build nach _flatpak (dauert einige Minuten, Cargo wird in der Sandbox neu gebaut)",
+      "type": "shell",
+      "command": "flatpak-builder --user --force-clean --ccache _flatpak build-aux/org.gnomelex.Gesetze.Devel.json",
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "flatpak: run",
+      "detail": "Startet die App aus dem Flatpak-Build ohne Debugger",
+      "type": "shell",
+      "command": "${workspaceFolder}/build-aux/flatpak-run.sh gesetze",
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
+      "label": "flatpak: build+run",
+      "dependsOrder": "sequence",
+      "dependsOn": ["flatpak: build", "flatpak: run"],
+      "problemMatcher": []
+    },
+    {
+      "label": "flatpak: installieren",
+      "detail": "Baut und installiert die Devel-Variante für den Nutzer",
+      "type": "shell",
+      "command": "flatpak-builder --user --install --force-clean _flatpak build-aux/org.gnomelex.Gesetze.Devel.json",
+      "problemMatcher": []
+    },
+    {
+      "label": "flatpak: shell",
+      "detail": "Interaktive Shell in der Flatpak-Build-Umgebung",
+      "type": "shell",
+      "command": "${workspaceFolder}/build-aux/flatpak-run.sh sh",
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    }
+  ]
+}

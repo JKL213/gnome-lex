@@ -64,7 +64,8 @@ mod imp {
 glib::wrapper! {
     pub struct LexWindow(ObjectSubclass<imp::LexWindow>)
         @extends gtk::Widget, gtk::Window, gtk::ApplicationWindow, adw::ApplicationWindow,
-        @implements gio::ActionGroup, gio::ActionMap, gtk::Root, gtk::Native, gtk::ShortcutManager;
+        @implements gio::ActionGroup, gio::ActionMap, gtk::Accessible, gtk::Buildable,
+                    gtk::ConstraintTarget, gtk::Native, gtk::Root, gtk::ShortcutManager;
 }
 
 impl LexWindow {

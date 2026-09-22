@@ -30,7 +30,7 @@ mod imp {
                 window.present();
                 return;
             }
-            let window = LexWindow::new(&app);
+            let window = LexWindow::new(&*app);
             window.present();
         }
 

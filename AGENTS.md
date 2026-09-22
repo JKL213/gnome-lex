@@ -60,8 +60,37 @@ bekommen einen Test.
 Schema). Meson: `meson setup _build -Dprofile=development && meson compile -C _build`.
 Flatpak: `flatpak-builder --user --install --force-clean _flatpak build-aux/org.gnomelex.Gesetze.Devel.json`.
 
-Fehlt `libsoup3-devel` lokal, kann für die Entwicklung ein pkg-config-Shim
-über `PKG_CONFIG_PATH` gesetzt werden; der Flatpak-Build braucht das nicht.
+Fehlt `libsoup3-devel` lokal, liegt unter `~/.cache/gnome-lex/pc` ein
+pkg-config-Shim (`libsoup-3.0.pc` plus Symlink auf `libsoup-3.0.so.0`).
+Vor Cargo-Befehlen `export PKG_CONFIG_PATH=$HOME/.cache/gnome-lex/pc` setzen;
+`.vscode/settings.json` und `.vscode/tasks.json` tun das bereits. Der
+Flatpak-Build braucht das nicht.
+
+## Run and Debug in VS Code
+
+`.vscode/launch.json` enthält drei Konfigurationen (Erweiterung
+`ms-vscode.cpptools`, gdb):
+
+- **Flatpak: Gesetze debuggen (neu bauen)** – führt `flatpak: build` aus
+  (mehrere Minuten) und startet danach gdb in der Sandbox.
+- **Flatpak: Gesetze debuggen (ohne Neubau)** – nutzt den vorhandenen Build
+  unter `_flatpak`.
+- **Nativ: Gesetze debuggen (cargo)** – Debug-Build ohne Sandbox.
+
+Der Debugger läuft über `build-aux/flatpak-run.sh`, das `flatpak-builder --run`
+kapselt und hängengebliebene rofiles-fuse-Mounts bereinigt. Quellpfade werden
+von `/run/build/gesetze` auf den Arbeitsbereich abgebildet, Debug-Symbole
+kommen aus `/app/lib/debug`. Tasks: `flatpak: build`, `flatpak: run`,
+`flatpak: build+run`, `flatpak: installieren`, `flatpak: shell`.
+
+## GitHub Copilot
+
+Copilot ist über `.github/copilot-instructions.md`, `.github/instructions/`
+(dateibezogene Regeln), `.github/prompts/` (vorbereitete Kleinaufgaben,
+aufrufbar als `/name` im Copilot-Chat) und `.github/agents/kleinaufgaben.agent.md`
+konfiguriert. Copilot bekommt nur klar abgegrenzte Aufgaben (Tests,
+Übersetzungen, Dokumentation, Icons); Stufen des Entwicklungsplans werden
+nicht an Copilot delegiert.
 
 ## Vorgehen
 

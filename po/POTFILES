@@ -2,15 +2,5 @@ data/org.gnomelex.Gesetze.desktop.in
 data/org.gnomelex.Gesetze.metainfo.xml.in
 data/org.gnomelex.Gesetze.gschema.xml
 data/ui/window.blp
-data/ui/law_tab.blp
-data/ui/norm_view.blp
-data/ui/preferences.blp
-data/ui/shortcuts.blp
 src/application.rs
 src/window.rs
-src/importer/mod.rs
-src/widgets/law_tab.rs
-src/widgets/norm_view.rs
-src/widgets/annotation_sidebar.rs
-src/widgets/outline_view.rs
-src/widgets/search_view.rs

@@ -1,5 +1,7 @@
 //! Import von Gesetzen: Entpacken der XML-Datei und Schreiben in die Datenbank.
 //! Download und Aktualisierungsprüfung folgen in einer späteren Stufe.
+// Wird ab den folgenden Stufen von der Oberfläche genutzt.
+#![allow(dead_code)]
 
 pub mod xml;
 

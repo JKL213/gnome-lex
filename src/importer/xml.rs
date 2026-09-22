@@ -110,7 +110,9 @@ pub fn parse_dom(xml: &str) -> Result<Element, XmlError> {
                     .push(Node::Element(elem));
             }
             Event::End(_) => {
-                let elem = stack.pop().ok_or_else(|| XmlError::Invalid("Ende ohne Anfang".into()))?;
+                let elem = stack
+                    .pop()
+                    .ok_or_else(|| XmlError::Invalid("Ende ohne Anfang".into()))?;
                 stack
                     .last_mut()
                     .ok_or_else(|| XmlError::Invalid("Wurzel geschlossen".into()))?
@@ -118,44 +120,57 @@ pub fn parse_dom(xml: &str) -> Result<Element, XmlError> {
                     .push(Node::Element(elem));
             }
             Event::Text(t) => {
-                let text = t.decode()?.into_owned();
-                let text = quick_xml::escape::unescape(&text)
+                let raw: &str = &t;
+                let text = quick_xml::escape::unescape(raw)
                     .map(|c| c.into_owned())
-                    .unwrap_or(text);
+                    .unwrap_or_else(|_| raw.to_owned());
                 push_text(stack.last_mut().expect("stack"), &text);
             }
             Event::CData(t) => {
-                let text = String::from_utf8_lossy(&t).into_owned();
-                push_text(stack.last_mut().expect("stack"), &text);
+                let text: &str = &t;
+                push_text(stack.last_mut().expect("stack"), text);
+            }
+            Event::GeneralRef(r) => {
+                // `&amp;`, `&quot;`, `&#8203;` … werden als eigene Ereignisse geliefert.
+                let resolved: String = match r.resolve_char_ref() {
+                    Ok(Some(ch)) => ch.to_string(),
+                    _ => {
+                        let name: &str = &r;
+                        quick_xml::escape::resolve_predefined_entity(name)
+                            .map(str::to_owned)
+                            .unwrap_or_else(|| format!("&{name};"))
+                    }
+                };
+                push_text(stack.last_mut().expect("stack"), &resolved);
             }
             Event::Eof => break,
             _ => {}
         }
     }
-    let mut root = stack.pop().ok_or_else(|| XmlError::Invalid("leer".into()))?;
+    let root = stack
+        .pop()
+        .ok_or_else(|| XmlError::Invalid("leer".into()))?;
     if !stack.is_empty() {
         return Err(XmlError::Invalid("Elemente nicht geschlossen".into()));
     }
-    root.elements()
-        .next()
-        .cloned()
-        .ok_or_else(|| XmlError::Invalid("kein Wurzelelement".into()))
-        .map(|e| {
-            root.children.clear();
-            e
+    root.children
+        .into_iter()
+        .find_map(|n| match n {
+            Node::Element(e) => Some(e),
+            Node::Text(_) => None,
         })
+        .ok_or_else(|| XmlError::Invalid("kein Wurzelelement".into()))
 }
 
 fn start_element(e: &quick_xml::events::BytesStart<'_>) -> Result<Element, XmlError> {
-    let name = String::from_utf8_lossy(e.name().as_ref()).into_owned();
+    let name = e.name().as_ref().to_owned();
     let mut attrs = HashMap::new();
     for attr in e.attributes() {
         let attr = attr.map_err(|e| XmlError::Xml(e.to_string()))?;
-        let key = String::from_utf8_lossy(attr.key.as_ref()).into_owned();
-        let value = attr
-            .unescape_value()
+        let key = attr.key.as_ref().to_owned();
+        let value = quick_xml::escape::unescape(&attr.value)
             .map(|v| v.into_owned())
-            .unwrap_or_else(|_| String::from_utf8_lossy(&attr.value).into_owned());
+            .unwrap_or_else(|_| attr.value.to_string());
         attrs.insert(key, value);
     }
     Ok(Element {
@@ -227,7 +242,10 @@ pub struct ParsedLaw {
 /// Liest nur die Metadaten (für den Aktualisierungsvergleich).
 pub fn parse_meta(xml: &str) -> Result<ParsedLawMeta, XmlError> {
     // Nur den ersten <norm>-Block betrachten, um nicht die ganze Datei zu parsen.
-    let end = xml.find("</norm>").map(|i| i + "</norm>".len()).unwrap_or(xml.len());
+    let end = xml
+        .find("</norm>")
+        .map(|i| i + "</norm>".len())
+        .unwrap_or(xml.len());
     let head = &xml[..end];
     let head = format!("{head}</dokumente>");
     let dom = parse_dom(&head)?;
@@ -355,7 +373,10 @@ pub fn parse_law(xml: &str) -> Result<ParsedLaw, XmlError> {
 
 fn law_meta(dom: &Element, first: &Element) -> ParsedLawMeta {
     let md = first.child("metadaten");
-    let get = |name: &str| md.and_then(|m| m.child(name)).map(|e| normalize_ws(&e.text()));
+    let get = |name: &str| {
+        md.and_then(|m| m.child(name))
+            .map(|e| normalize_ws(&e.text()))
+    };
     let mut meta = ParsedLawMeta {
         doknr: dom
             .attr("doknr")
@@ -382,7 +403,10 @@ fn law_meta(dom: &Element, first: &Element) -> ParsedLawMeta {
             meta.fundstelle = Some(normalize_ws(&format!("{periodikum} {zit}")));
         }
         for stand in md.elements().filter(|e| e.name == "standangabe") {
-            let typ = stand.child("standtyp").map(|e| e.text()).unwrap_or_default();
+            let typ = stand
+                .child("standtyp")
+                .map(|e| e.text())
+                .unwrap_or_default();
             let kommentar = stand
                 .child("standkommentar")
                 .map(|e| normalize_ws(&e.text()))
@@ -492,21 +516,63 @@ fn collect_paragraph(e: &Element, style: Style, spans: &mut Vec<Span>, blocks: &
             Node::Text(t) => push_span(spans, t, style, None),
             Node::Element(c) => match c.name.as_str() {
                 "BR" => push_span(spans, "\n", style, None),
-                "B" => collect_paragraph(c, Style { bold: true, ..style }, spans, blocks),
-                "I" => collect_paragraph(c, Style { italic: true, ..style }, spans, blocks),
-                "U" => collect_paragraph(c, Style { underline: true, ..style }, spans, blocks),
+                "B" => collect_paragraph(
+                    c,
+                    Style {
+                        bold: true,
+                        ..style
+                    },
+                    spans,
+                    blocks,
+                ),
+                "I" => collect_paragraph(
+                    c,
+                    Style {
+                        italic: true,
+                        ..style
+                    },
+                    spans,
+                    blocks,
+                ),
+                "U" => collect_paragraph(
+                    c,
+                    Style {
+                        underline: true,
+                        ..style
+                    },
+                    spans,
+                    blocks,
+                ),
                 "SUP" => collect_paragraph(c, Style { sup: true, ..style }, spans, blocks),
                 "SUB" => collect_paragraph(c, Style { sub: true, ..style }, spans, blocks),
-                "small" => collect_paragraph(c, Style { small: true, ..style }, spans, blocks),
+                "small" => collect_paragraph(
+                    c,
+                    Style {
+                        small: true,
+                        ..style
+                    },
+                    spans,
+                    blocks,
+                ),
                 "FnR" => {
                     if let Some(id) = c.attr("ID") {
-                        push_span(spans, "*", Style { sup: true, ..style }, Some(id.to_owned()));
+                        push_span(
+                            spans,
+                            "*",
+                            Style { sup: true, ..style },
+                            Some(id.to_owned()),
+                        );
                     }
                 }
                 "FnArea" => {
                     for r in c.elements().filter(|r| r.name == "FnR") {
                         if let Some(id) = r.attr("ID") {
-                            push_span(spans, "*", Style { sup: true, ..style }, Some(id.to_owned()));
+                            push_span(
+                                spans,
+                                "*",
+                                Style { sup: true, ..style },
+                                Some(id.to_owned()),
+                            );
                         }
                     }
                 }
@@ -732,9 +798,11 @@ fn toc_blocks(toc: &Element) -> Vec<Block> {
             "Title" => {
                 let mut spans = ident.take().unwrap_or_default();
                 if !spans.is_empty() {
-                    spans.push(Span::plain(" "));
+                    push_span(&mut spans, " ", Style::default(), None);
                 }
-                spans.extend(inline_spans(e, Style::default()));
+                for span in inline_spans(e, Style::default()) {
+                    push_span(&mut spans, &span.text, span.style, span.footnote);
+                }
                 blocks.push(Block::Heading {
                     level: toc_level(e),
                     spans,
@@ -832,19 +900,36 @@ mod tests {
         let names: Vec<_> = law.norms.iter().map(|n| n.enbez.clone()).collect();
         assert_eq!(
             names,
-            vec![None, Some("Inhaltsübersicht".into()), Some("§ 1".into()), Some("§ 14".into())]
+            vec![
+                None,
+                Some("Inhaltsübersicht".into()),
+                Some("§ 1".into()),
+                Some("§ 14".into())
+            ]
         );
-        let p1 = law.norms.iter().find(|n| n.enbez.as_deref() == Some("§ 1")).unwrap();
+        let p1 = law
+            .norms
+            .iter()
+            .find(|n| n.enbez.as_deref() == Some("§ 1"))
+            .unwrap();
         assert_eq!(p1.unit, Some(1));
         assert_eq!(p1.titel.as_deref(), Some("Beginn der Rechtsfähigkeit"));
-        let p14 = law.norms.iter().find(|n| n.enbez.as_deref() == Some("§ 14")).unwrap();
+        let p14 = law
+            .norms
+            .iter()
+            .find(|n| n.enbez.as_deref() == Some("§ 14"))
+            .unwrap();
         assert_eq!(p14.unit, Some(2));
     }
 
     #[test]
     fn parses_paragraphs_styles_footnotes_and_tables() {
         let law = parse_law(SAMPLE).unwrap();
-        let p14 = law.norms.iter().find(|n| n.enbez.as_deref() == Some("§ 14")).unwrap();
+        let p14 = law
+            .norms
+            .iter()
+            .find(|n| n.enbez.as_deref() == Some("§ 14"))
+            .unwrap();
         assert_eq!(p14.blocks.len(), 4);
         match &p14.blocks[0] {
             Block::Paragraph { spans } => {
