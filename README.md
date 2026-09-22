@@ -1,7 +1,7 @@
 # GNOMELex oder Gnome-Lex
 
 GNOMELex ist eine mit dem GTK-Toolkit für GNOME-Desktopumgebungen zusammengestellte App zum Lesen deutscher Gesetze. 
-Sie befindet sich in reger Entwicklung und befindet sich in einer äußerst frühen ausführbaren Version.
+Sie befindet sich in reger Entwicklung und ist seit August 2026 in einer äußerst frühen ausführbaren Version.
 
 Als Besonderheit fügt sich GNOMELex nahtlos in bestehende GNOME-Desktops ein und erreicht somit einen schönen Look & Feel ohne nervigen Electron-/Browser-Overhead.
 
@@ -11,7 +11,9 @@ GNOMELex bezieht seine Gesetzestexte als XML von
 [gesetze-im-internet.de](https://www.gesetze-im-internet.de/).
 
 ## Bauen
+WARNUNG! GNOMELex wurde von AI-Agents mitentwickelt. Den größten Teil des Adwaita/GTK-Displaystacks habe ich jedoch selbst implementiert. Da sich die Meinungen bei AI-Code spalten, sei es jedem selbst überlassen, wie er dieses Projekt verwenden möchte. Es werden jedoch keine ungetesteten Builds publiziert. Jede Zeile Code wird von mir entweder selbst geschrieben oder selbst geprüft. 
 
+Im Umkehrschluss ist es natürlich erlaubt, eigene PRs mit KI zu generieren oder zu beschreiben, das ist mir im Rahmen dieses Projektes egal. 
 Nur Cargo (Entwicklung):
 
 ```sh
