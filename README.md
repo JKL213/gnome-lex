@@ -4,7 +4,7 @@
 # GNOMELex oder Gnome-Lex
 
 GNOMELex ist eine mit dem GTK-Toolkit für GNOME-Desktopumgebungen zusammengestellte App zum Lesen deutscher Gesetze. 
-Sie befindet sich in reger Entwicklung und ist seit August 2026 in einer äußerst frühen ausführbaren Version.
+Sie befindet sich in reger Entwicklung und ist seit August 2026 in einer äußerst frühen ausführbaren Version. (Für die drei deutschen Juristen die tatsächlich mal mit GNOME arbeiten).
 
 Als Besonderheit fügt sich GNOMELex nahtlos in bestehende GNOME-Desktops ein und erreicht somit einen schönen Look & Feel ohne nervigen Electron-/Browser-Overhead.
 
