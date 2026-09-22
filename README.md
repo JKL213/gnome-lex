@@ -1,3 +1,6 @@
+<img width="1280" height="640" alt="github-social-preview_2" src="https://github.com/user-attachments/assets/2f20a0e1-e228-49f1-b5fb-7bd3f7013f49" />
+
+
 # GNOMELex oder Gnome-Lex
 
 GNOMELex ist eine mit dem GTK-Toolkit für GNOME-Desktopumgebungen zusammengestellte App zum Lesen deutscher Gesetze. 
