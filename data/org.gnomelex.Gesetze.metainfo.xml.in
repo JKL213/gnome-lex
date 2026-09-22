@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>@app_id@</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Gesetze</name>
+  <summary>Deutsche Bundesgesetze lesen und annotieren</summary>
+  <description>
+    <p>
+      Gesetze zeigt den Text des Bürgerlichen Gesetzbuchs aus der amtlichen
+      Quelle gesetze-im-internet.de mit Gliederung, Volltextsuche und
+      klickbaren Verweisen. Textstellen lassen sich markieren, mit Notizen
+      versehen und als Lesezeichen ablegen.
+    </p>
+  </description>
+  <launchable type="desktop-id">@app_id@.desktop</launchable>
+  <url type="homepage">https://github.com/gnome-lex/gnome-lex</url>
+  <url type="bugtracker">https://github.com/gnome-lex/gnome-lex/issues</url>
+  <developer id="org.gnomelex">
+    <name>Gnome Lex</name>
+  </developer>
+  <content_rating type="oars-1.1"/>
+  <branding>
+    <color type="primary" scheme_preference="light">#c0bfbc</color>
+    <color type="primary" scheme_preference="dark">#3d3846</color>
+  </branding>
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+    <control>touch</control>
+  </supports>
+  <releases>
+    <release version="0.1.0" date="2026-09-22">
+      <description>
+        <p>Erste Version: BGB lesen, suchen, verweisen, annotieren.</p>
+      </description>
+    </release>
+  </releases>
+</component>

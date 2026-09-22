@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="gesetze">
+  <schema id="org.gnomelex.Gesetze" path="/org/gnomelex/Gesetze/">
+    <key name="window-width" type="i">
+      <default>1100</default>
+      <summary>Fensterbreite</summary>
+    </key>
+    <key name="window-height" type="i">
+      <default>720</default>
+      <summary>Fensterhöhe</summary>
+    </key>
+    <key name="window-maximized" type="b">
+      <default>false</default>
+      <summary>Fenster maximiert</summary>
+    </key>
+    <key name="font-size" type="i">
+      <range min="8" max="40"/>
+      <default>12</default>
+      <summary>Schriftgröße des Normtexts in Punkt</summary>
+    </key>
+    <key name="open-tabs" type="as">
+      <default>[]</default>
+      <summary>Beim Beenden geöffnete Tabs (JSON je Tab)</summary>
+    </key>
+    <key name="active-tab" type="i">
+      <default>0</default>
+      <summary>Index des zuletzt aktiven Tabs</summary>
+    </key>
+    <key name="show-annotations-sidebar" type="b">
+      <default>false</default>
+      <summary>Seitenleiste für Notizen und Lesezeichen sichtbar</summary>
+    </key>
+    <key name="color-scheme" type="s">
+      <choices>
+        <choice value="default"/>
+        <choice value="light"/>
+        <choice value="dark"/>
+      </choices>
+      <default>"default"</default>
+      <summary>Farbschema: System, hell oder dunkel</summary>
+    </key>
+    <key name="check-updates" type="b">
+      <default>true</default>
+      <summary>Beim Start auf neue Gesetzesfassungen prüfen</summary>
+    </key>
+    <key name="last-update-check" type="s">
+      <default>""</default>
+      <summary>Zeitpunkt der letzten Aktualisierungsprüfung (ISO 8601)</summary>
+    </key>
+  </schema>
+</schemalist>

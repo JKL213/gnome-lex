@@ -1,0 +1,44 @@
+/* Normtext */
+.norm-text {
+  padding: 12px 24px 48px 24px;
+}
+.norm-text text {
+  background: transparent;
+}
+.norm-table {
+  margin: 6px 0;
+  border: 1px solid alpha(currentColor, 0.2);
+  border-radius: 6px;
+}
+.norm-table label {
+  padding: 4px 8px;
+}
+.norm-table .table-header {
+  font-weight: bold;
+  background: alpha(currentColor, 0.06);
+}
+.note-marker {
+  color: var(--accent-color);
+  margin: 0 2px;
+}
+.outline-row label.unit {
+  font-weight: bold;
+}
+.outline-row label.norm-title {
+  opacity: 0.7;
+}
+.annotation-quote {
+  font-style: italic;
+  opacity: 0.8;
+}
+.highlight-swatch {
+  min-width: 18px;
+  min-height: 18px;
+  border-radius: 9px;
+  border: 1px solid alpha(currentColor, 0.25);
+}
+.highlight-swatch.yellow { background: #f6d32d; }
+.highlight-swatch.green  { background: #8ff0a4; }
+.highlight-swatch.blue   { background: #99c1f1; }
+.highlight-swatch.pink   { background: #f4a6c7; }
+.highlight-swatch.orange { background: #ffbe6f; }

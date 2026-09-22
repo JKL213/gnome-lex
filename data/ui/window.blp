@@ -1,0 +1,44 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $LexWindow : Adw.ApplicationWindow {
+  title: _("Gesetze");
+  default-width: 1100;
+  default-height: 720;
+  width-request: 360;
+  height-request: 294;
+
+  content: Adw.ToastOverlay toast_overlay {
+    child: Adw.ToolbarView {
+      [top]
+      Adw.HeaderBar {
+        [end]
+        MenuButton {
+          icon-name: "open-menu-symbolic";
+          tooltip-text: _("Hauptmenü");
+          primary: true;
+          menu-model: primary_menu;
+        }
+      }
+
+      content: Adw.StatusPage status_page {
+        icon-name: "org.gnomelex.Gesetze";
+        title: _("Gesetze");
+        description: _("Das Bürgerliche Gesetzbuch wird in der nächsten Stufe geladen.");
+      };
+    };
+  };
+}
+
+menu primary_menu {
+  section {
+    item {
+      label: _("_Info zu Gesetze");
+      action: "app.about";
+    }
+    item {
+      label: _("_Beenden");
+      action: "app.quit";
+    }
+  }
+}

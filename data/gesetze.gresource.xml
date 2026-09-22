@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/org/gnomelex/Gesetze">
+    <file compressed="true" preprocess="xml-stripblanks">ui/window.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/law_tab.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/norm_view.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/outline_row.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/annotation_row.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/search_row.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/preferences.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/shortcuts.ui</file>
+    <file compressed="true">style.css</file>
+    <file preprocess="xml-stripblanks" alias="icons/scalable/apps/org.gnomelex.Gesetze.svg">icons/hicolor/scalable/apps/org.gnomelex.Gesetze.svg</file>
+    <file preprocess="xml-stripblanks" alias="icons/scalable/actions/law-symbolic.svg">icons/hicolor/symbolic/apps/org.gnomelex.Gesetze-symbolic.svg</file>
+  </gresource>
+</gresources>

@@ -1,0 +1,50 @@
+{
+  "id": "org.gnomelex.Gesetze.Devel",
+  "runtime": "org.gnome.Platform",
+  "runtime-version": "51",
+  "sdk": "org.gnome.Sdk",
+  "sdk-extensions": ["org.freedesktop.Sdk.Extension.rust-stable"],
+  "command": "gesetze",
+  "finish-args": [
+    "--share=network",
+    "--share=ipc",
+    "--socket=fallback-x11",
+    "--socket=wayland",
+    "--device=dri"
+  ],
+  "build-options": {
+    "append-path": "/usr/lib/sdk/rust-stable/bin",
+    "build-args": ["--share=network"],
+    "env": {
+      "CARGO_HOME": "/run/build/gesetze/cargo",
+      "RUST_BACKTRACE": "1"
+    }
+  },
+  "cleanup": ["/share/doc"],
+  "modules": [
+    {
+      "name": "blueprint-compiler",
+      "buildsystem": "meson",
+      "cleanup": ["*"],
+      "sources": [
+        {
+          "type": "git",
+          "url": "https://gitlab.gnome.org/GNOME/blueprint-compiler.git",
+          "tag": "v0.20.0"
+        }
+      ]
+    },
+    {
+      "name": "gesetze",
+      "buildsystem": "meson",
+      "run-tests": false,
+      "config-opts": ["-Dprofile=development"],
+      "sources": [
+        {
+          "type": "dir",
+          "path": ".."
+        }
+      ]
+    }
+  ]
+}

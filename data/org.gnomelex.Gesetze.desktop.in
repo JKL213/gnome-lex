@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Gesetze
+Comment=Deutsche Bundesgesetze lesen und annotieren
+Exec=gesetze %U
+Icon=@app_id@
+Terminal=false
+Type=Application
+Categories=Office;Education;GTK;GNOME;
+Keywords=Gesetz;BGB;Recht;Norm;Paragraph;
+StartupNotify=true
+DBusActivatable=true
+X-Purism-FormFactor=Workstation;Mobile;

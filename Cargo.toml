@@ -1,0 +1,36 @@
+[package]
+name = "gesetze"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.92"
+license = "GPL-3.0-or-later"
+description = "Deutsche Bundesgesetze lesen und annotieren"
+default-run = "gesetze"
+
+[[bin]]
+name = "gesetze"
+path = "src/main.rs"
+
+[dependencies]
+gtk = { package = "gtk4", version = "0.11", features = ["gnome_50", "blueprint"] }
+adw = { package = "libadwaita", version = "0.9", features = ["v1_9"] }
+glib = "0.22"
+gio = "0.22"
+soup = { package = "soup3", version = "0.9" }
+rusqlite = { version = "0.40", features = ["bundled"] }
+quick-xml = "0.42"
+zip = { version = "8", default-features = false, features = ["deflate"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+regex = "1"
+gettext-rs = { version = "0.8", features = ["gettext-system"] }
+log = "0.4"
+env_logger = "0.11"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+
+[build-dependencies]
+glib-build-tools = "0.22"
+
+[profile.release]
+lto = "thin"
+codegen-units = 4
