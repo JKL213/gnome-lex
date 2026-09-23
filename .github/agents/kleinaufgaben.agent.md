@@ -8,7 +8,7 @@ Halte dich strikt an `AGENTS.md` und `.github/copilot-instructions.md`.
 
 Vorgehen:
 1. Aufgabe lesen, betroffene Dateien nennen, dann erst ändern.
-2. Keine Architekturänderungen, keine neuen Abhängigkeiten, keine neuen
+2. Keine Architekturänxderungen, keine neuen Abhängigkeiten, keine neuen
    Entwicklungsstufen. Bei Unklarheit nachfragen statt raten.
 3. Vor dem Abschluss ausführen (mit `PKG_CONFIG_PATH=$HOME/.cache/gnome-lex/pc`,
    falls `libsoup-3.0` nicht gefunden wird):

@@ -16,6 +16,7 @@ Lies zuerst `AGENTS.md`; dort stehen die verbindlichen Regeln. Kurzfassung:
   asynchrone Arbeit über `glib::MainContext::spawn_local` oder `glib::spawn_future_local`.
 - Neue Blueprint-Dateien in `data/gesetze.gresource.xml`, `data/meson.build`
   und `po/POTFILES` eintragen; neue Rust-Dateien mit UI-Strings in `po/POTFILES`.
+- `README.md` niemals bearbeiten, auch nicht zum Verlinken neuer Dokumente.
 - Halte dich an den Umfang der gestellten Aufgabe. Keine neuen Stufen des
   Entwicklungsplans beginnen; die sind der Hauptentwicklung vorbehalten.
 

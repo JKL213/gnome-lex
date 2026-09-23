@@ -20,6 +20,8 @@ App-ID: `org.gnomelex.Gesetze`. Binärname: `gesetze`.
 - Datenhaltung: `rusqlite` (bundled, FTS5). XML: `quick-xml`. Zip: `zip`.
 - Kein Branding, keine Firmen- oder Personennamen im Code, in Metadaten
   oder in der UI.
+- `README.md` wird nicht von Agenten bearbeitet. Änderungen daran nimmt
+  ausschließlich der Projektverantwortliche vor.
 - Texte in der UI über `gettext` (`gettextrs`) übersetzbar halten; neue
   Quelldateien mit UI-Strings in `po/POTFILES` eintragen.
 - GNOME Human Interface Guidelines beachten.
@@ -77,8 +79,10 @@ Flatpak-Build braucht das nicht.
   unter `_flatpak`.
 - **Nativ: Gesetze debuggen (cargo)** – Debug-Build ohne Sandbox.
 
-Der Debugger läuft über `build-aux/flatpak-run.sh`, das `flatpak-builder --run`
-kapselt und hängengebliebene rofiles-fuse-Mounts bereinigt. Quellpfade werden
+Der Debugger läuft über `build-aux/flatpak-run.sh`, das die Sandbox direkt
+mit `flatpak build --with-appdir` startet (ohne rofiles-fuse, das aus dem
+Debug-Adapter heraus nicht funktioniert) und Anzeige- sowie D-Bus-Variablen
+durchreicht. Quellpfade werden
 von `/run/build/gesetze` auf den Arbeitsbereich abgebildet, Debug-Symbole
 kommen aus `/app/lib/debug`. Tasks: `flatpak: build`, `flatpak: run`,
 `flatpak: build+run`, `flatpak: installieren`, `flatpak: shell`.

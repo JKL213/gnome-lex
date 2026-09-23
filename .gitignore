@@ -5,3 +5,7 @@
 /flatpak-repo
 /vendor
 *.o
+.github/agents/kleinaufgaben.agent.md
+
+# Prompt-Dateien für Copilot bleiben lokal
+/.github/prompts/
