@@ -1,22 +1,25 @@
 <img width="1280" height="640" alt="github-social-preview_2" src="https://github.com/user-attachments/assets/2f20a0e1-e228-49f1-b5fb-7bd3f7013f49" />
 
 
-# GNOMELex oder Gnome-Lex
+# gnome-lex
 
-GNOMELex ist eine mit dem GTK-Toolkit für GNOME-Desktopumgebungen zusammengestellte App zum Lesen deutscher Gesetze. 
+gnome-lex ist eine mit dem GTK-Toolkit für GNOME-Desktopumgebungen zusammengestellte App zum Lesen deutscher Gesetze. 
 Sie befindet sich in reger Entwicklung und ist seit August 2026 in einer äußerst frühen ausführbaren Version. (Für die drei deutschen Juristen die tatsächlich mal mit GNOME arbeiten).
 
-Als Besonderheit fügt sich GNOMELex nahtlos in bestehende GNOME-Desktops ein und erreicht somit einen schönen Look & Feel ohne nervigen Electron-/Browser-Overhead.
+Als Besonderheit fügt sich gnome-lex nahtlos in bestehende GNOME-Desktops ein und erreicht somit einen schönen Look & Feel ohne nervigen Electron-/Browser-Overhead.
 
-GNOMELex entstand aus meinem Bedarf heraus, eine GNOME-native App für Gesetzestexte im Repetitorium zu haben, und ist stark auf meine eigenen Bedürfnisse adaptiert. PRs, falls jemals welche kommen sollten, nehme ich aber natürlich immer gerne an. 
+gnome-lex entstand aus meinem Bedarf heraus, eine GNOME-native App für Gesetzestexte im Repetitorium zu haben, und ist stark auf meine eigenen Bedürfnisse adaptiert. PRs, falls jemals welche kommen sollten, nehme ich aber natürlich immer gerne an. 
 
-GNOMELex bezieht seine Gesetzestexte als XML von
+gnome-lex bezieht seine Gesetzestexte als XML von
 [gesetze-im-internet.de](https://www.gesetze-im-internet.de/).
 
 ## Bauen
-WARNUNG! GNOMELex wurde von AI-Agents mitentwickelt. Den größten Teil des Adwaita/GTK-Displaystacks habe ich jedoch selbst implementiert. Da sich die Meinungen bei AI-Code spalten, sei es jedem selbst überlassen, wie er dieses Projekt verwenden möchte. Es werden jedoch keine ungetesteten Builds publiziert. Jede Zeile Code wird von mir entweder selbst geschrieben oder selbst geprüft. 
+WARNUNG! gnome-lex wurde von AI-Agents mitentwickelt. Den größten Teil des Adwaita/GTK-Displaystacks habe ich jedoch selbst implementiert. Da sich die Meinungen bei AI-Code spalten, sei es jedem selbst überlassen, wie er dieses Projekt verwenden möchte. Es werden jedoch keine ungetesteten Builds publiziert. Jede Zeile Code wird von mir entweder selbst geschrieben oder selbst geprüft. 
 
 Im Umkehrschluss ist es natürlich erlaubt, eigene PRs mit KI zu generieren oder zu beschreiben, das ist mir im Rahmen dieses Projektes egal. 
+
+
+
 Nur Cargo (Entwicklung):
 
 ```sh
@@ -43,15 +46,4 @@ flatpak run org.gnomelex.Gesetze.Devel
 Voraussetzungen: Rust stable, GTK 4.22, libadwaita 1.9, libsoup 3.6,
 blueprint-compiler 0.20, Meson 1.0. Windows-Build: siehe
 [docs/WINDOWS.md](docs/WINDOWS.md).
-
-## Struktur
-
-| Modul        | Aufgabe                                                   |
-|--------------|-----------------------------------------------------------|
-| `importer`   | Download, Entpacken und Parsen der gii-norm-XML-Dateien  |
-| `db`         | SQLite (rusqlite, FTS5): Gesetze, Normen, Annotationen   |
-| `model`      | GObject-Datenobjekte und das Block-Modell des Normtexts  |
-| `refs`       | Erkennung von Normverweisen im Text                       |
-| `widgets`    | Eigene Widgets (Gliederung, Normansicht, Seitenleisten)  |
-| `window`     | Hauptfenster mit Tabs                                     |
-| `application`| AdwApplication, Aktionen, Dialoge                         |
+   |
