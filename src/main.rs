@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Jan-Henrik Koch
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 #![doc = include_str!("../README.md")]
 
 mod application;

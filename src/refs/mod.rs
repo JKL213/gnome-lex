@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Jan-Henrik Koch
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 //! Erkennung von Normverweisen im Gesetzestext.
 //!
 //! Erkannt werden u. a. „§ 280 Abs. 1“, „§§ 434 bis 437“, „§§ 28, 31a Abs. 1

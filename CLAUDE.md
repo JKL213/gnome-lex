@@ -87,11 +87,11 @@ Unit-Tests für Importer und Verweisparser sind Pflicht.
 
 ---
 
-## 3. Stand: Stufe 1 abgeschlossen, Stufe 2 noch nicht begonnen
+## 3. Stand: Stufe 2 abgeschlossen, Stufe 3 noch nicht begonnen
 
 Alles Folgende ist gebaut und geprüft (cargo build/test/clippy/fmt grün,
-Meson-Tests grün, Flatpak-Build erfolgreich, App startet nativ und in der
-Sandbox):
+Stufe 1 zusätzlich mit Meson-Tests und Flatpak-Build; Stufe 2 wurde über
+`build-aux/sdk-cargo.sh` in der GNOME-SDK-Sandbox geprüft, siehe unten):
 
 - **Gerüst:** `Cargo.toml`, `build.rs` (Blueprint → OUT_DIR, GResource,
   glib-compile-schemas, Export von APP_ID/VERSION/PROFILE/LOCALEDIR/
@@ -119,9 +119,16 @@ Sandbox):
     `parse_law()` → ParsedLaw {meta, units (Baum über Kennzahl-Präfix),
     norms}. Gliederungsnormen (doknr …BJNG…) tragen die Einheit, §-Normen
     folgen in Dokumentreihenfolge. Tests mit Inline-XML.
-  - `src/importer/mod.rs`: SOURCES (bgb), ImportError, `extract_xml()`
-    (zip), `import_xml(db_path, slug, xml)` (blockierend). **Download über
-    soup3 und Update-Prüfung fehlen noch (Stufe 2).**
+  - `src/importer/mod.rs` (Stufe 2 fertig): `Source`/`SOURCES`/`DEFAULT_SLUG`
+    (bgb), ImportError (+Network/UnknownSource/Cancelled), `extract_xml()`
+    (zip), `import_xml(db_path, slug, xml)` (blockierend), `download(url,
+    progress)` (soup3 `send_future` + `read_bytes_future` in 64-KiB-Blöcken,
+    User-Agent `gesetze/<version>`, 60 s Timeout), `install_law(db_path,
+    slug, progress)` (Download im Hauptkontext, Entpacken/Parsen/DB in
+    `gio::spawn_blocking`), `check_update(db_path, slug, progress)` →
+    `UpdateCheck::{NotInstalled, UpToDate, Available}`, `installed_law()`,
+    `version_differs(installed, remote)` (Stand-Vermerk, sonst Build-Datum).
+    Fortschritt über `Progress::{Downloading{received,total}, Importing}`.
   - `src/db/mod.rs`: Schema (laws, units, norms mit Blöcken als JSON,
     paragraphs, norms_fts FTS5 unicode61, annotations), `replace_law()`,
     Gliederungs-/Norm-Abfragen, `neighbor_norm()`, `search()` mit
@@ -137,13 +144,30 @@ Sandbox):
   - `src/settings.rs`: GSettings mit Fallback-Suche (GSETTINGS_SCHEMA_DIR,
     Build-OUT_DIR, `<exe>/../share/glib-2.0/schemas`).
   - `src/application.rs` (Aktionen quit/about, CSS laden, AboutDialog),
-    `src/window.rs` (Fenstergeometrie an GSettings gebunden),
-    `data/ui/window.blp` (Headerbar, Hauptmenü, StatusPage). Übrige
-    `.blp` unter `data/ui/` sind Stubs (nur `using`-Zeilen), bereits in
-    GResource/Meson/POTFILES eingetragen: law_tab, norm_view, outline_row,
-    annotation_row, search_row, preferences, shortcuts.
-- **Tooling:** `.vscode/` (settings, tasks, launch, extensions),
-  `build-aux/flatpak-run.sh` (startet Sandbox per `flatpak build
+    `src/window.rs` (Stufe 2): Fenstergeometrie an GSettings gebunden;
+    `GtkStack` mit drei Seiten „empty“ (StatusPage mit Schaltfläche „BGB
+    herunterladen“), „busy“ (StatusPage mit `AdwSpinnerPaintable`,
+    Fortschritt in Prozent und Bytes) und „ready“ (Titel, Stand,
+    Neufassung, Fundstelle, Dokumentdatum, Importzeitpunkt). Fensteraktionen
+    `win.download` (Erstimport und Aktualisierung, gleicher Ablauf) und
+    `win.check-updates`; beide im Hauptmenü, während laufender Vorgänge
+    deaktiviert. Beim Start: installierte Fassung per `spawn_blocking`
+    lesen; wenn `check-updates` aktiv und `last-update-check` älter als
+    24 h, stille Prüfung (Fehler nur ins Log). Neue Fassung → Toast mit
+    Schaltfläche „Aktualisieren“ (Aktion `win.download`); nach Import Toast
+    mit Normenzahl und ggf. Reanchor-Bericht (verschoben/verwaist/
+    wiedergefunden). `last-update-check` wird als RFC 3339 gespeichert.
+    Hilfsfunktionen `format_builddate`, `update_check_due` mit Tests.
+    `data/ui/window.blp` entsprechend. Übrige `.blp` unter `data/ui/` sind
+    Stubs (nur `using`-Zeilen), bereits in GResource/Meson/POTFILES
+    eingetragen: law_tab, norm_view, outline_row, annotation_row,
+    search_row, preferences, shortcuts.
+- **Tooling:** `.vscode/` (settings, tasks, launch, extensions; Tasks
+  `sdk: cargo build|run|qualität` für die SDK-Sandbox),
+  `build-aux/sdk-cargo.sh` (führt Cargo in `org.gnome.Sdk//51` mit
+  rust-stable aus, Ziel `target-sdk/`, in `.gitignore`; nötig, wenn der Host
+  keine gtk4-/libadwaita-Entwicklungspakete oder nur glib < 2.88 hat, wie
+  Fedora 43), `build-aux/flatpak-run.sh` (startet Sandbox per `flatpak build
   --with-appdir` auf `_flatpak`, reicht Display-/D-Bus-Variablen durch,
   fasst Argumente zu einer `sh -c`-Kommandozeile zusammen, weil cppdbg
   „gdb --interpreter=mi“ als ein Argument übergibt), Copilot-Konfiguration
@@ -168,20 +192,33 @@ Sandbox):
   `tasks.json` setzen die Variable trotzdem (harmlos).
 - `flatpak-builder --install-deps-from=flathub` scheitert mit `--user`,
   wenn Flathub nur systemweit eingerichtet ist; ohne die Option bauen.
+- `flatpak run` der SDK-Sandbox blieb auf dem Entwicklungsrechner gelegentlich
+  vor dem Start hängen (Wartezeit auf eine Pipe; vermutlich Dokumenten-Portal
+  und Autofs-Einhängungen unter `/mnt`). `build-aux/sdk-cargo.sh` setzt daher
+  `--no-documents-portal --no-a11y-bus`; seitdem keine Hänger.
+- Test des Imports ohne Klicken (Stufe 2 so geprüft): App aus
+  `target-sdk/debug/gesetze` per `flatpak run … --own-name=org.gnomelex.Gesetze.Devel
+  --env=XDG_DATA_HOME=<Verzeichnis unter $HOME> --env=GSETTINGS_BACKEND=keyfile
+  --env=RUST_LOG=info org.gnome.Sdk//51` starten (ein Verzeichnis unter
+  `/tmp` ist in der Sandbox nicht sichtbar!), dann Fensteraktionen über
+  D-Bus auslösen: `gdbus call --session --dest org.gnomelex.Gesetze.Devel
+  --object-path /org/gnomelex/Gesetze/Devel/window/1 --method
+  org.gtk.Actions.Activate download "[]" "{}"` (ebenso `check-updates`,
+  `DescribeAll` zeigt den Aktiviert-Zustand). Ergebnis: 2558 Normen,
+  289 Einheiten, 5673 Absätze, DB ca. 7 MB, Download + Import ca. 3 s.
 
 ---
 
-## 4. Nächster Schritt: Stufe 2 (erst nach Kommando)
+## 4. Nächster Schritt: Stufe 3 (erst nach Kommando)
 
-Geplant: Download `xml.zip` über `soup::Session::send_and_read_future` im
-Hauptkontext, danach Entpacken + Parsen + `import_xml` in
-`gio::spawn_blocking`; Fortschritt/Fehler per Toast; Erststart zeigt eine
-StatusPage mit Schaltfläche „BGB herunterladen“; Menüpunkt „Auf
-Aktualisierung prüfen“ (Stand-Vermerk aus `parse_meta` vergleichen,
-bei Änderung neu importieren und `reanchor_law` melden); Einstellung
-`check-updates` beim Start beachten. Zusätzliche Tests für Importer nach
-Bedarf (Copilot-Prompt `importer-edge-cases` existiert lokal).
-
-Anschließend Stufe 3 (Gliederung als TreeListModel, Normansicht mit
-TextView/Tags, Tabellen als GtkGrid an ChildAnchors, gemeinsamer Buffer
-pro Norm) usw. gemäß Stufenplan.
+Geplant: Gliederung als `GtkTreeListModel` über `OutlineItem` in einem
+`GtkListView` (linke Seite des `AdwNavigationSplitView`), Normansicht mit
+`GtkTextView` und TextTags (Überschriften, Absatznummern, Fußnoten),
+Tabellen als `GtkGrid` an `GtkTextChildAnchor`, gemeinsamer Buffer pro
+Norm; **`flatten_blocks()` aus `src/model/text.rs` für den Buffer nutzen**,
+damit Annotations-Offsets zur DB passen. Die „ready“-Seite des Fensters
+wird dann durch die eigentliche Ansicht ersetzt; `win.download` und
+`win.check-updates` bleiben im Menü. Offene Punkte aus Stufe 2: ein
+Einstellungsdialog (Stub `preferences.blp`) mit Schalter für
+`check-updates` fehlt noch; die Prüfung lädt das ganze Archiv (~470 KB),
+ein HEAD-Vergleich über ETag/Last-Modified wäre eine mögliche Optimierung.

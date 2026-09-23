@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Jan-Henrik Koch
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 //! SQLite-Datenhaltung: Gesetze, Gliederung, Normen, Absätze, Volltextindex
 //! (FTS5) und Annotationen.
 // Wird ab den folgenden Stufen von der Oberfläche genutzt.

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Jan-Henrik Koch
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 //! Zur Build-Zeit festgelegte Konstanten (siehe `build.rs` und `src/meson.build`).
 
 pub const APP_ID: &str = env!("APP_ID");

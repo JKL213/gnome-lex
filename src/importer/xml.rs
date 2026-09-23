@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Jan-Henrik Koch
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 //! Parser für Dokumente nach der DTD `gii-norm` (gesetze-im-internet.de).
 //!
 //! Die Datei wird in einen einfachen DOM gelesen und anschließend in das

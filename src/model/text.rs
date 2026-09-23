@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Jan-Henrik Koch
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 //! Block-Modell des Normtexts und dessen Linearisierung in Textsegmente.
 //!
 //! Der Importer speichert Blöcke als JSON in SQLite; die Normansicht wandelt

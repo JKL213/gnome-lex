@@ -36,8 +36,11 @@ for var in WAYLAND_DISPLAY DISPLAY XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS \
     fi
 done
 
+# --nofilesystem=host: `flatpak build` bindet sonst das ganze Host-Dateisystem
+# ein, und bwrap scheitert an autofs-Einhängepunkten wie /mnt/nas.
 exec flatpak build \
     --with-appdir \
+    --nofilesystem=host \
     --share=network --share=ipc \
     --socket=wayland --socket=fallback-x11 --socket=session-bus \
     --device=dri \

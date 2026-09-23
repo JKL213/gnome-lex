@@ -22,6 +22,13 @@ Hinweise:
   `AGENTS.md` überflüssig. Die Einträge in `.vscode/settings.json` und
   `.vscode/tasks.json` (`PKG_CONFIG_PATH=$HOME/.cache/gnome-lex/pc`)
   stören nicht, weil das Verzeichnis dann einfach leer bzw. nicht vorhanden ist.
+- Die Rust-Bindings (gtk4 0.11 mit Feature `gnome_50`) verlangen glib ab
+  2.88. Fedora 43 liefert nur 2.86; dann schlägt `cargo build` auf dem Host
+  schon bei `glib-sys` fehl. In diesem Fall die Cargo-Befehle in der
+  GNOME-SDK-Sandbox ausführen: `build-aux/sdk-cargo.sh build`,
+  `build-aux/sdk-cargo.sh test`, `build-aux/sdk-cargo.sh clippy -- -D warnings`.
+  Das Skript nutzt `org.gnome.Sdk//51` samt `rust-stable`-Erweiterung, baut
+  nach `target-sdk/` und braucht keine zusätzlichen Host-Pakete.
 - `xdg-desktop-portal-gtk` neben `xdg-desktop-portal-kde` sorgt dafür,
   dass GTK-Dateidialoge und das Farbschema (hell/dunkel) unter Plasma
   korrekt funktionieren. libadwaita übernimmt das Plasma-Farbschema über

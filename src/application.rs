@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Jan-Henrik Koch
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 //! `AdwApplication`-Subklasse: Aktionen, Tastenkürzel, Dialoge.
 
 use adw::prelude::*;
@@ -100,7 +103,7 @@ impl LexApplication {
             .application_icon(APP_ID)
             .developer_name("Gnome Lex")
             .version(VERSION)
-            .license_type(gtk::License::Gpl30)
+            .license_type(gtk::License::Lgpl30)
             .comments(gettext(
                 "Deutsche Bundesgesetze lesen und annotieren. Datenquelle: gesetze-im-internet.de",
             ))

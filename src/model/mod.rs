@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Jan-Henrik Koch
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 //! Datenmodell: das Block-Modell des Normtexts (serialisierbar, ohne GTK)
 //! sowie GObject-Subklassen für Listen und Bäume in der Oberfläche.
 // Wird ab den folgenden Stufen von der Oberfläche genutzt.
