@@ -21,16 +21,79 @@ template $LexWindow : Adw.ApplicationWindow {
         }
       }
 
-      content: Adw.StatusPage status_page {
-        icon-name: "org.gnomelex.Gesetze";
-        title: _("Gesetze");
-        description: _("Das Bürgerliche Gesetzbuch wird in der nächsten Stufe geladen.");
+      content: Stack stack {
+        transition-type: crossfade;
+
+        StackPage {
+          name: "empty";
+          child: Adw.StatusPage empty_page {
+            icon-name: "org.gnomelex.Gesetze";
+            title: _("Kein Gesetz geladen");
+            description: _("Das Bürgerliche Gesetzbuch wird einmalig von gesetze-im-internet.de heruntergeladen und lokal gespeichert.");
+
+            child: Button download_button {
+              label: _("BGB herunterladen");
+              halign: center;
+              action-name: "win.download";
+
+              styles ["pill", "suggested-action"]
+            };
+          };
+        }
+
+        StackPage {
+          name: "busy";
+          child: Adw.StatusPage busy_page {
+            title: _("Lade herunter …");
+            description: "";
+          };
+        }
+
+        StackPage {
+          name: "ready";
+          child: Adw.StatusPage ready_page {
+            icon-name: "org.gnomelex.Gesetze";
+            title: _("Bürgerliches Gesetzbuch");
+            description: "";
+
+            child: Box {
+              orientation: vertical;
+              spacing: 12;
+              halign: center;
+
+              Label version_label {
+                wrap: true;
+                justify: center;
+
+                styles ["dim-label"]
+              }
+
+              Button {
+                label: _("Auf Aktualisierung prüfen");
+                halign: center;
+                action-name: "win.check-updates";
+
+                styles ["pill"]
+              }
+            };
+          };
+        }
       };
     };
   };
 }
 
 menu primary_menu {
+  section {
+    item {
+      label: _("Auf _Aktualisierung prüfen");
+      action: "win.check-updates";
+    }
+    item {
+      label: _("BGB neu _herunterladen");
+      action: "win.download";
+    }
+  }
   section {
     item {
       label: _("_Info zu Gesetze");

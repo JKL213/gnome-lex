@@ -9,3 +9,4 @@
 
 # Prompt-Dateien für Copilot bleiben lokal
 /.github/prompts/
+/target-sdk

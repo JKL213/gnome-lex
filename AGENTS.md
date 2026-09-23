@@ -68,6 +68,11 @@ Vor Cargo-Befehlen `export PKG_CONFIG_PATH=$HOME/.cache/gnome-lex/pc` setzen;
 `.vscode/settings.json` und `.vscode/tasks.json` tun das bereits. Der
 Flatpak-Build braucht das nicht.
 
+Fehlen auf dem Host `gtk4-devel`, `libadwaita-devel` oder eine glib ab
+2.88 (Fedora 43 liefert 2.86), laufen Cargo-Befehle stattdessen in der
+GNOME-SDK-Sandbox: `build-aux/sdk-cargo.sh build|test|clippy|fmt …`
+(Ziel-Verzeichnis `target-sdk/`, Registry des Hosts wird geteilt).
+
 ## Run and Debug in VS Code
 
 `.vscode/launch.json` enthält drei Konfigurationen (Erweiterung
