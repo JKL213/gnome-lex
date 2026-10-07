@@ -1,0 +1,33 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Download-Center: alle bekannten Gesetze mit Stand und Schaltfläche zum
+// Herunterladen bzw. Aktualisieren.
+template $LexDownloadCenter : Adw.Dialog {
+  title: _("Gesetze herunterladen");
+  content-width: 680;
+  content-height: 640;
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      [start]
+      Button {
+        icon-name: "view-refresh-symbolic";
+        tooltip-text: _("Installierte Gesetze auf Aktualisierungen prüfen");
+        action-name: "win.check-updates";
+      }
+    }
+
+    content: Adw.PreferencesPage {
+      Adw.PreferencesGroup installed_group {
+        title: _("Installiert");
+      }
+
+      Adw.PreferencesGroup available_group {
+        title: _("Verfügbar");
+        description: _("Quelle: gesetze-im-internet.de (Bundesministerium der Justiz). Die Texte werden lokal gespeichert.");
+      }
+    };
+  };
+}

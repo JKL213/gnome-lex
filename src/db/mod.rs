@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2026 Jan-Henrik Koch
+// SPDX-FileCopyrightText: 2026 Gnome Lex
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 //! SQLite-Datenhaltung: Gesetze, Gliederung, Normen, Absätze, Volltextindex
@@ -95,6 +95,25 @@ CREATE INDEX IF NOT EXISTS annotations_norm ON annotations(law, norm);
 pub struct SearchHit {
     pub norm: NormInfo,
     pub snippet: String,
+}
+
+/// Treffer der Schnellsuche.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QuickHit {
+    pub norm: NormInfo,
+    pub law_slug: String,
+    pub law_abbrev: String,
+}
+
+/// Zerlegte Eingabe der Schnellsuche (siehe [`parse_quick_query`]).
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct QuickQuery {
+    /// Erkanntes Gesetzeskürzel in Kleinschreibung.
+    pub law: Option<String>,
+    /// Beginn der Normbezeichnung, z. B. „§ 433“ oder „Art 5“.
+    pub enbez: Option<String>,
+    /// Übrige Wörter für die Volltextsuche.
+    pub words: Vec<String>,
 }
 
 /// Ergebnis der Neuverankerung von Annotationen nach einem Update.
@@ -395,16 +414,101 @@ impl Database {
             .optional()
     }
 
-    /// Vorherige (`-1`) oder nächste (`+1`) Norm in Dokumentreihenfolge.
+    /// Vorherige (`-1`) oder nächste (`+1`) lesbare Norm in Dokumentreihenfolge
+    /// (Rahmennorm und Inhaltsübersicht werden übersprungen).
     pub fn neighbor_norm(&self, id: i64, direction: i64) -> Result<Option<i64>> {
         let sql = if direction < 0 {
             "SELECT n2.id FROM norms n1 JOIN norms n2 ON n2.law_id = n1.law_id
-             WHERE n1.id = ?1 AND n2.position < n1.position ORDER BY n2.position DESC LIMIT 1"
+             WHERE n1.id = ?1 AND n2.position < n1.position
+               AND n2.enbez IS NOT NULL AND n2.enbez <> 'Inhaltsübersicht'
+             ORDER BY n2.position DESC LIMIT 1"
         } else {
             "SELECT n2.id FROM norms n1 JOIN norms n2 ON n2.law_id = n1.law_id
-             WHERE n1.id = ?1 AND n2.position > n1.position ORDER BY n2.position ASC LIMIT 1"
+             WHERE n1.id = ?1 AND n2.position > n1.position
+               AND n2.enbez IS NOT NULL AND n2.enbez <> 'Inhaltsübersicht'
+             ORDER BY n2.position ASC LIMIT 1"
         };
         self.conn.query_row(sql, [id], |r| r.get(0)).optional()
+    }
+
+    /// Gliederungspfad einer Einheit von der Wurzel bis zur Einheit selbst.
+    pub fn unit_path(&self, unit_id: Option<i64>) -> Result<Vec<UnitInfo>> {
+        let mut path = Vec::new();
+        let mut next = unit_id;
+        while let Some(id) = next {
+            let unit = self
+                .conn
+                .query_row(
+                    "SELECT id, law_id, parent_id, kennzahl, bez, titel, depth, position
+                     FROM units WHERE id = ?1",
+                    [id],
+                    |r| {
+                        Ok(UnitInfo {
+                            id: r.get(0)?,
+                            law_id: r.get(1)?,
+                            parent_id: r.get(2)?,
+                            kennzahl: r.get(3)?,
+                            bez: r.get(4)?,
+                            titel: r.get(5)?,
+                            depth: r.get(6)?,
+                            position: r.get(7)?,
+                        })
+                    },
+                )
+                .optional()?;
+            let Some(unit) = unit else {
+                break;
+            };
+            next = unit.parent_id;
+            path.push(unit);
+            if path.len() > 16 {
+                break;
+            }
+        }
+        path.reverse();
+        Ok(path)
+    }
+
+    /// Die Notiz (Schema) zu einer Norm: Annotation der Art „note“ ohne
+    /// Textanker (Absatz 0, leerer Wortlaut).
+    pub fn norm_note(&self, law: &str, enbez: &str) -> Result<Option<Annotation>> {
+        Ok(self
+            .annotations_for_norm(law, enbez)?
+            .into_iter()
+            .find(|a| a.kind == AnnotationKind::Note && a.paragraph == 0 && a.quote.is_empty()))
+    }
+
+    /// Legt die Notiz zu einer Norm an, ändert oder löscht sie (leerer Text).
+    pub fn set_norm_note(&self, law: &str, enbez: &str, text: &str) -> Result<()> {
+        let existing = self.norm_note(law, enbez)?;
+        let text = text.trim_end();
+        match (existing, text.is_empty()) {
+            (Some(a), true) => self.delete_annotation(a.id),
+            (Some(mut a), false) => {
+                a.note = Some(text.to_owned());
+                self.update_annotation(&a)
+            }
+            (None, true) => Ok(()),
+            (None, false) => {
+                let a = Annotation {
+                    id: 0,
+                    law: law.to_owned(),
+                    norm: enbez.to_owned(),
+                    paragraph: 0,
+                    start: 0,
+                    end: 0,
+                    quote: String::new(),
+                    kind: AnnotationKind::Note,
+                    color: None,
+                    note: Some(text.to_owned()),
+                    target: None,
+                    created: String::new(),
+                    modified: String::new(),
+                    orphaned: false,
+                };
+                self.insert_annotation(&a).map(|_| ())
+            }
+        }
     }
 
     /// Absatztexte einer Norm (1-basiert, in Reihenfolge).
@@ -440,6 +544,92 @@ impl Database {
             })
         })?;
         rows.collect()
+    }
+
+    /// Schnellsuche: Gesetzeskürzel, Normnummer und Stichwörter in
+    /// beliebiger Reihenfolge („433“, „zpo 253“, „§ 55a bgb“, „Kaufvertrag“).
+    /// Treffer im Gesetz `preferred_law` stehen bei gleicher Güte vorn.
+    pub fn quick_search(
+        &self,
+        input: &str,
+        preferred_law: Option<i64>,
+        limit: usize,
+    ) -> Result<Vec<QuickHit>> {
+        let laws = self.laws()?;
+        let abbrevs: Vec<String> = laws
+            .iter()
+            .flat_map(|l| {
+                [
+                    Some(l.jurabk.clone()),
+                    l.amtabk.clone(),
+                    Some(l.slug.clone()),
+                ]
+                .into_iter()
+                .flatten()
+                .map(|a| a.to_lowercase())
+            })
+            .collect();
+        let query = parse_quick_query(input, &abbrevs);
+        let law_id = query.law.as_deref().and_then(|abbrev| {
+            laws.iter()
+                .find(|l| {
+                    l.jurabk.eq_ignore_ascii_case(abbrev)
+                        || l.slug.eq_ignore_ascii_case(abbrev)
+                        || l.amtabk
+                            .as_deref()
+                            .is_some_and(|a| a.eq_ignore_ascii_case(abbrev))
+                })
+                .map(|l| l.id)
+        });
+        const COLUMNS: &str =
+            "n.id, n.law_id, n.unit_id, n.doknr, n.enbez, n.titel, n.position, l.slug, l.jurabk";
+        let map = |r: &rusqlite::Row| -> Result<QuickHit> {
+            Ok(QuickHit {
+                norm: row_to_norm_info(r)?,
+                law_slug: r.get(7)?,
+                law_abbrev: r.get(8)?,
+            })
+        };
+        if let Some(enbez) = &query.enbez {
+            let pattern = format!("{}%", enbez.replace(['%', '_'], ""));
+            let mut stmt = self.conn.prepare(&format!(
+                "SELECT {COLUMNS} FROM norms n JOIN laws l ON l.id = n.law_id
+                 WHERE (?1 IS NULL OR n.law_id = ?1) AND n.enbez LIKE ?2
+                   AND n.enbez <> 'Inhaltsübersicht'
+                 ORDER BY (n.enbez = ?3 COLLATE NOCASE) DESC, (n.law_id = ?4) DESC,
+                          length(n.enbez), l.title, n.position
+                 LIMIT ?5"
+            ))?;
+            let rows = stmt.query_map(
+                params![law_id, pattern, enbez, preferred_law, limit as i64],
+                map,
+            )?;
+            return rows.collect();
+        }
+        if !query.words.is_empty() {
+            let Some(fts) = build_fts_query(&query.words.join(" ")) else {
+                return Ok(Vec::new());
+            };
+            let mut stmt = self.conn.prepare(&format!(
+                "SELECT {COLUMNS} FROM norms_fts
+                 JOIN norms n ON n.id = norms_fts.norm_id JOIN laws l ON l.id = n.law_id
+                 WHERE norms_fts MATCH ?1 AND (?2 IS NULL OR norms_fts.law_id = ?2)
+                   AND n.enbez IS NOT NULL AND n.enbez <> 'Inhaltsübersicht'
+                 ORDER BY bm25(norms_fts, 5.0, 10.0, 1.0), (n.law_id = ?3) DESC
+                 LIMIT ?4"
+            ))?;
+            let rows = stmt.query_map(params![fts, law_id, preferred_law, limit as i64], map)?;
+            return rows.collect();
+        }
+        if let Some(law_id) = law_id {
+            let mut stmt = self.conn.prepare(&format!(
+                "SELECT {COLUMNS} FROM norms n JOIN laws l ON l.id = n.law_id
+                 WHERE n.law_id = ?1 AND n.enbez LIKE '§%' ORDER BY n.position LIMIT ?2"
+            ))?;
+            let rows = stmt.query_map(params![law_id, limit as i64], map)?;
+            return rows.collect();
+        }
+        Ok(Vec::new())
     }
 
     // ------------------------------------------------------------------
@@ -762,6 +952,49 @@ fn find_char_pos(text: &str, needle: &str) -> Option<usize> {
     Some(text[..byte].chars().count())
 }
 
+/// Zerlegt die Eingabe der Schnellsuche. `abbrevs` sind die bekannten
+/// Gesetzeskürzel in Kleinschreibung. „§“, „§§“ und „Art.“ werden als
+/// Präfix der Normbezeichnung verstanden, Zahlen (auch „55a“) als Nummer,
+/// alles andere als Stichwort.
+pub fn parse_quick_query(input: &str, abbrevs: &[String]) -> QuickQuery {
+    let mut query = QuickQuery::default();
+    let mut article = false;
+    let spaced = input.replace('§', " § ");
+    for token in spaced.split_whitespace() {
+        let lower = token
+            .trim_matches(|c: char| c == ',' || c == ';' || c == '.')
+            .to_lowercase();
+        if lower.is_empty() {
+            continue;
+        }
+        if lower == "§" || lower == "§§" {
+            continue;
+        }
+        if matches!(lower.as_str(), "art" | "artikel") {
+            article = true;
+            continue;
+        }
+        if query.enbez.is_none() && is_norm_number(&lower) {
+            let prefix = if article { "Art" } else { "§" };
+            query.enbez = Some(format!("{prefix} {lower}"));
+            continue;
+        }
+        if query.law.is_none() && abbrevs.iter().any(|a| a == &lower) {
+            query.law = Some(lower);
+            continue;
+        }
+        query.words.push(token.to_owned());
+    }
+    query
+}
+
+/// Ziffern mit höchstens zwei angehängten Buchstaben („433“, „55a“, „312b“).
+fn is_norm_number(token: &str) -> bool {
+    let digits = token.chars().take_while(|c| c.is_ascii_digit()).count();
+    let rest = &token[digits..];
+    digits > 0 && rest.len() <= 2 && rest.chars().all(|c| c.is_ascii_lowercase())
+}
+
 /// Baut eine FTS5-Abfrage aus freier Eingabe: jeder Term als Präfixsuche,
 /// Anführungszeichen als Phrase.
 pub fn build_fts_query(input: &str) -> Option<String> {
@@ -937,6 +1170,95 @@ mod tests {
                 },
             ],
         }
+    }
+
+    /// Zweites Gesetz für Tests mit mehreren Gesetzen.
+    fn second_law() -> ParsedLaw {
+        let mut law = sample_law("(2) Egal.");
+        law.meta.jurabk = "ZPO".into();
+        law.meta.amtabk = Some("ZPO".into());
+        law.meta.title = "Zivilprozessordnung".into();
+        law.meta.doknr = "BJNR005330950".into();
+        law.norms[1].enbez = Some("§ 43".into());
+        law.norms[1].titel = Some("Verlust des Ablehnungsrechts".into());
+        law.norms[1].doknr = "Z43".into();
+        law
+    }
+
+    #[test]
+    fn quick_query_parsing() {
+        let abbrevs = vec!["bgb".to_string(), "zpo".to_string()];
+        let q = parse_quick_query("433", &abbrevs);
+        assert_eq!(q.enbez.as_deref(), Some("§ 433"));
+        assert!(q.law.is_none() && q.words.is_empty());
+        let q = parse_quick_query("zpo §55a", &abbrevs);
+        assert_eq!(q.law.as_deref(), Some("zpo"));
+        assert_eq!(q.enbez.as_deref(), Some("§ 55a"));
+        let q = parse_quick_query("§ 253 ZPO", &abbrevs);
+        assert_eq!(q.law.as_deref(), Some("zpo"));
+        assert_eq!(q.enbez.as_deref(), Some("§ 253"));
+        let q = parse_quick_query("Art. 5 BGB", &abbrevs);
+        assert_eq!(q.enbez.as_deref(), Some("Art 5"));
+        let q = parse_quick_query("Kaufvertrag Pflichten", &abbrevs);
+        assert!(q.enbez.is_none());
+        assert_eq!(q.words, vec!["Kaufvertrag", "Pflichten"]);
+        let q = parse_quick_query("bgb", &abbrevs);
+        assert_eq!(q.law.as_deref(), Some("bgb"));
+        assert!(q.enbez.is_none() && q.words.is_empty());
+    }
+
+    #[test]
+    fn quick_search_across_laws() {
+        let mut db = Database::open_in_memory().unwrap();
+        let bgb = db
+            .replace_law("bgb", &sample_law("(2) Der Käufer zahlt."))
+            .unwrap();
+        let zpo = db.replace_law("zpo", &second_law()).unwrap();
+
+        // Nummer ohne Gesetz: exakter Treffer zuerst, bevorzugtes Gesetz vorn.
+        let hits = db.quick_search("43", Some(zpo), 10).unwrap();
+        assert_eq!(hits[0].norm.enbez.as_deref(), Some("§ 43"));
+        assert_eq!(hits[0].law_abbrev, "ZPO");
+        assert_eq!(hits[1].norm.enbez.as_deref(), Some("§ 433"));
+        assert_eq!(hits[1].law_slug, "bgb");
+
+        // Gesetz eingrenzen.
+        let hits = db.quick_search("bgb 1", Some(zpo), 10).unwrap();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].norm.law_id, bgb);
+
+        // Stichwort über beide Gesetze.
+        let hits = db.quick_search("ablehnungsrecht", None, 10).unwrap();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].norm.enbez.as_deref(), Some("§ 43"));
+
+        // Nur ein Gesetz: dessen erste Norm.
+        let hits = db.quick_search("ZPO", None, 10).unwrap();
+        assert_eq!(hits[0].law_slug, "zpo");
+        assert_eq!(hits[0].norm.enbez.as_deref(), Some("§ 1"));
+
+        assert!(db.quick_search("", None, 10).unwrap().is_empty());
+    }
+
+    #[test]
+    fn unit_path_and_norm_note() {
+        let mut db = Database::open_in_memory().unwrap();
+        let law_id = db.replace_law("bgb", &sample_law("(2) Egal.")).unwrap();
+        let norm = db.norm_by_enbez(law_id, "§ 1").unwrap().unwrap();
+        let path = db.unit_path(norm.info.unit_id).unwrap();
+        let labels: Vec<&str> = path.iter().map(|u| u.bez.as_str()).collect();
+        assert_eq!(labels, ["Buch 1", "Abschnitt 1"]);
+        assert!(db.unit_path(None).unwrap().is_empty());
+
+        assert!(db.norm_note("bgb", "§ 1").unwrap().is_none());
+        db.set_norm_note("bgb", "§ 1", "I. Anspruch entstanden\n")
+            .unwrap();
+        let note = db.norm_note("bgb", "§ 1").unwrap().unwrap();
+        assert_eq!(note.note.as_deref(), Some("I. Anspruch entstanden"));
+        db.set_norm_note("bgb", "§ 1", "II. Neu").unwrap();
+        assert_eq!(db.norm_note("bgb", "§ 1").unwrap().unwrap().id, note.id);
+        db.set_norm_note("bgb", "§ 1", "  ").unwrap();
+        assert!(db.norm_note("bgb", "§ 1").unwrap().is_none());
     }
 
     #[test]

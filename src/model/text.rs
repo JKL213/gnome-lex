@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2026 Jan-Henrik Koch
+// SPDX-FileCopyrightText: 2026 Gnome Lex
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 //! Block-Modell des Normtexts und dessen Linearisierung in Textsegmente.

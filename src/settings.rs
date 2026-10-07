@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2026 Jan-Henrik Koch
+// SPDX-FileCopyrightText: 2026 Gnome Lex
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 //! GSettings-Zugriff mit Rückfallebenen: Wird das Schema nicht in der
@@ -6,14 +6,25 @@
 //! Windows-Build), wird es aus dem Build-Verzeichnis bzw. relativ zur
 //! ausführbaren Datei geladen.
 
+use std::cell::OnceCell;
 use std::path::PathBuf;
 
 use gtk::gio;
 
 use crate::config::{BASE_SCHEMA_ID, GSCHEMA_DIR};
 
-/// Liefert die Einstellungen der Anwendung.
+thread_local! {
+    static SETTINGS: OnceCell<gio::Settings> = const { OnceCell::new() };
+}
+
+/// Liefert die (gemeinsame) Einstellungsinstanz der Anwendung. Eine einzige
+/// Instanz ist wichtig, damit `connect_changed`-Handler nicht mit einer
+/// kurzlebigen Kopie verschwinden.
 pub fn settings() -> gio::Settings {
+    SETTINGS.with(|cell| cell.get_or_init(create_settings).clone())
+}
+
+fn create_settings() -> gio::Settings {
     if let Some(source) = gio::SettingsSchemaSource::default() {
         if let Some(schema) = source.lookup(BASE_SCHEMA_ID, true) {
             return gio::Settings::new_full(&schema, None::<&gio::SettingsBackend>, None);

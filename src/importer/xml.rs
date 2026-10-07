@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2026 Jan-Henrik Koch
+// SPDX-FileCopyrightText: 2026 Gnome Lex
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 //! Parser für Dokumente nach der DTD `gii-norm` (gesetze-im-internet.de).
@@ -286,6 +286,9 @@ pub fn parse_law(xml: &str) -> Result<ParsedLaw, XmlError> {
             .ok_or_else(|| XmlError::Invalid("norm ohne metadaten".into()))?;
         let doknr = norm.attr("doknr").unwrap_or_default().to_owned();
         let textdaten = norm.child("textdaten");
+        // Bezeichnung und Titel der Gliederungseinheit, falls die
+        // Gliederungsnorm selbst Text trägt (z. B. „Amtlicher Hinweis“).
+        let mut unit_labels: Option<(String, Option<String>)> = None;
 
         if let Some(unit) = md.child("gliederungseinheit") {
             let kennzahl = unit
@@ -311,13 +314,14 @@ pub fn parse_law(xml: &str) -> Result<ParsedLaw, XmlError> {
             law.units.push(ParsedUnit {
                 doknr: doknr.clone(),
                 kennzahl: kennzahl.clone(),
-                bez,
-                titel,
+                bez: bez.clone(),
+                titel: titel.clone(),
                 parent,
                 depth,
             });
             open.push((law.units.len() - 1, kennzahl));
-            // Gliederungsnormen tragen in der Regel keinen eigenen Text.
+            // Gliederungsnormen tragen in der Regel keinen eigenen Text;
+            // einige haben nur einen Hinweis als Fußnote.
             let has_text = textdaten
                 .and_then(|t| t.child("text"))
                 .map(|t| !t.text().trim().is_empty())
@@ -325,24 +329,32 @@ pub fn parse_law(xml: &str) -> Result<ParsedLaw, XmlError> {
             if !has_text {
                 continue;
             }
+            unit_labels = Some((bez, titel));
         }
 
+        let (unit_bez, unit_titel) = unit_labels.unzip();
         let enbez = md
             .child("enbez")
-            .map(|e| normalize_ws(&e.text()))
-            .filter(|s| !s.is_empty());
+            .map(|e| strip_repealed_marker(&normalize_ws(&e.text())))
+            .filter(|s| !s.is_empty())
+            .or(unit_bez.filter(|s| !s.is_empty()));
         let titel = md
             .child("titel")
             .map(|e| normalize_ws(&e.text()))
-            .filter(|s| !s.is_empty());
+            .filter(|s| !s.is_empty())
+            .or(unit_titel.flatten());
 
         let mut blocks = Vec::new();
         let mut footnotes = Vec::new();
         let mut fussnoten = Vec::new();
+        let is_toc = enbez.as_deref() == Some("Inhaltsübersicht");
         if let Some(td) = textdaten {
             if let Some(text) = td.child("text") {
                 if let Some(content) = text.child("Content") {
                     blocks = content_blocks(content);
+                    if is_toc {
+                        blocks = tables_to_lines(blocks);
+                    }
                 }
                 if let Some(toc) = text.child("TOC") {
                     blocks.extend(toc_blocks(toc));
@@ -504,13 +516,24 @@ fn paragraph_blocks(p: &Element) -> Vec<Block> {
     let mut blocks = Vec::new();
     let mut spans: Vec<Span> = Vec::new();
     collect_paragraph(p, Style::default(), &mut spans, &mut blocks);
-    trim_spans(&mut spans);
-    if !spans.is_empty() || blocks.is_empty() {
-        blocks.insert(0, Block::Paragraph { spans });
+    // Text vor einem Blockelement wurde bereits in `collect_paragraph`
+    // abgeschlossen; hier folgt der Rest (z. B. ein Nachsatz hinter der
+    // Liste) in Dokumentreihenfolge.
+    flush_spans(&mut spans, &mut blocks);
+    if blocks.is_empty() {
+        blocks.push(Block::Paragraph { spans: Vec::new() });
     }
-    // Wurde die Liste mitten im Absatz eingefügt, steht der Einleitungssatz
-    // an erster Stelle; nachfolgende Blöcke folgen in Dokumentreihenfolge.
     blocks
+}
+
+/// Schließt die bisher gesammelten Spans als eigenen Absatzblock ab.
+fn flush_spans(spans: &mut Vec<Span>, blocks: &mut Vec<Block>) {
+    trim_spans(spans);
+    if !spans.is_empty() {
+        blocks.push(Block::Paragraph {
+            spans: std::mem::take(spans),
+        });
+    }
 }
 
 fn collect_paragraph(e: &Element, style: Style, spans: &mut Vec<Span>, blocks: &mut Vec<Block>) {
@@ -579,12 +602,27 @@ fn collect_paragraph(e: &Element, style: Style, spans: &mut Vec<Span>, blocks: &
                         }
                     }
                 }
-                "DL" => blocks.push(list_block(c)),
-                "table" => blocks.push(table_block(c)),
-                "pre" => blocks.push(Block::Pre {
-                    text: c.text().trim_matches('\n').to_owned(),
-                }),
-                "Revision" => blocks.extend(content_blocks(c)),
+                // Blockelemente unterbrechen den Fließtext: Text davor wird
+                // als eigener Absatz abgeschlossen, damit die Reihenfolge
+                // „Einleitung – Liste – Nachsatz“ erhalten bleibt.
+                "DL" => {
+                    flush_spans(spans, blocks);
+                    blocks.push(list_block(c));
+                }
+                "table" => {
+                    flush_spans(spans, blocks);
+                    blocks.push(table_block(c));
+                }
+                "pre" => {
+                    flush_spans(spans, blocks);
+                    blocks.push(Block::Pre {
+                        text: c.text().trim_matches('\n').to_owned(),
+                    });
+                }
+                "Revision" => {
+                    flush_spans(spans, blocks);
+                    blocks.extend(content_blocks(c));
+                }
                 "Split" | "IMG" | "FILE" | "QuoteL" | "QuoteR" | "ABWFORMAT" | "Accolade"
                 | "AttR" => {}
                 "kommentar" => push_span(
@@ -661,8 +699,20 @@ fn inline_spans(e: &Element, style: Style) -> Vec<Span> {
     let mut spans = Vec::new();
     let mut blocks = Vec::new();
     collect_paragraph(e, style, &mut spans, &mut blocks);
-    trim_spans(&mut spans);
-    spans
+    // Blockelemente sind hier nicht vorgesehen; Text, der vor einem solchen
+    // Element abgeschlossen wurde, wird wieder eingereiht, damit nichts
+    // verloren geht.
+    let mut all: Vec<Span> = blocks
+        .into_iter()
+        .filter_map(|b| match b {
+            Block::Paragraph { spans } => Some(spans),
+            _ => None,
+        })
+        .flatten()
+        .collect();
+    all.append(&mut spans);
+    trim_spans(&mut all);
+    all
 }
 
 fn list_block(dl: &Element) -> Block {
@@ -812,7 +862,7 @@ fn toc_blocks(toc: &Element) -> Vec<Block> {
                 });
             }
             "P" => blocks.extend(paragraph_blocks(e)),
-            "table" => blocks.push(table_block(e)),
+            "table" => blocks.extend(toc_table_lines(e)),
             _ => {}
         }
     }
@@ -820,6 +870,78 @@ fn toc_blocks(toc: &Element) -> Vec<Block> {
         blocks.push(Block::Heading { level: 1, spans: i });
     }
     blocks
+}
+
+/// Inhaltsübersichten als Tabelle (z. B. ZPO mit über 1400 Zeilen) werden
+/// zu einfachen Zeilen: Gliederungszeilen („Buch 1 …“) als Überschrift,
+/// alles andere als Absatz. So muss die Ansicht keine Riesentabelle bauen.
+fn toc_table_lines(table: &Element) -> Vec<Block> {
+    let Block::Table { rows, .. } = table_block(table) else {
+        return Vec::new();
+    };
+    table_rows_to_lines(rows)
+}
+
+/// Ersetzt in einer Blockliste jede Tabelle durch ihre Zeilen (für
+/// Inhaltsübersichten, die im `<Content>` statt im `<TOC>` stehen).
+fn tables_to_lines(blocks: Vec<Block>) -> Vec<Block> {
+    let mut out = Vec::with_capacity(blocks.len());
+    for block in blocks {
+        match block {
+            Block::Table { rows, .. } => out.extend(table_rows_to_lines(rows)),
+            other => out.push(other),
+        }
+    }
+    out
+}
+
+fn table_rows_to_lines(rows: Vec<Vec<Cell>>) -> Vec<Block> {
+    rows.into_iter()
+        .filter_map(|row| {
+            let mut spans: Vec<Span> = Vec::new();
+            for cell in row {
+                for block in cell.blocks {
+                    let cell_spans = match block {
+                        Block::Paragraph { spans } | Block::Heading { spans, .. } => spans,
+                        _ => continue,
+                    };
+                    if !spans.is_empty() {
+                        push_span(&mut spans, " ", Style::default(), None);
+                    }
+                    for s in cell_spans {
+                        push_span(&mut spans, &s.text, s.style, s.footnote);
+                    }
+                }
+            }
+            if spans.is_empty() {
+                return None;
+            }
+            let text = spans_text(&spans);
+            Some(if is_unit_label(&text) {
+                Block::Heading { level: 2, spans }
+            } else {
+                Block::Paragraph { spans }
+            })
+        })
+        .collect()
+}
+
+/// Beginnt der Text wie eine Gliederungseinheit („Buch 2“, „Abschnitt 1“)?
+fn is_unit_label(text: &str) -> bool {
+    let first = text.split_whitespace().next().unwrap_or_default();
+    matches!(
+        first,
+        "Buch" | "Teil" | "Abschnitt" | "Unterabschnitt" | "Titel" | "Untertitel" | "Kapitel"
+    )
+}
+
+/// Entfernt die Markierung „(XXXX)“, die gesetze-im-internet.de weggefallenen
+/// Normen voranstellt („(XXXX) §§ 15 bis 20“ → „§§ 15 bis 20“).
+pub fn strip_repealed_marker(enbez: &str) -> String {
+    match enbez.strip_prefix("(XXXX)") {
+        Some(rest) => rest.trim_start().to_owned(),
+        None => enbez.to_owned(),
+    }
 }
 
 fn toc_level(e: &Element) -> u8 {
@@ -925,6 +1047,69 @@ mod tests {
         assert_eq!(p14.unit, Some(2));
     }
 
+    /// Gliederungsnormen mit eigenem Text (hier nur ein „Amtlicher Hinweis“
+    /// als Fußnote) erscheinen als Norm mit Bezeichnung und Titel der Einheit.
+    #[test]
+    fn unit_norm_with_footnote_gets_unit_labels() {
+        let xml = r#"<dokumente builddate="1" doknr="BJNR1"><norm doknr="BJNR1"><metadaten><jurabk>X</jurabk><langue>X</langue></metadaten><textdaten/></norm>
+<norm doknr="BJNR1BJNG1"><metadaten><jurabk>X</jurabk><gliederungseinheit><gliederungskennzahl>010</gliederungskennzahl><gliederungsbez>Titel 1</gliederungsbez><gliederungstitel>Kauf, Tausch</gliederungstitel></gliederungseinheit></metadaten><textdaten><text format="XML"><Content><P><FnR ID="F1"/></P></Content><Footnotes><Footnote FnZ="*" ID="F1"><B>Amtlicher Hinweis:</B><BR/>Dient der Umsetzung.</Footnote></Footnotes></text><fussnoten/></textdaten></norm>
+<norm doknr="BJNR1BJNG2"><metadaten><jurabk>X</jurabk><gliederungseinheit><gliederungskennzahl>020</gliederungskennzahl><gliederungsbez>Titel 2</gliederungsbez></gliederungseinheit></metadaten><textdaten><text format="XML"><Content><P/></Content></text><fussnoten/></textdaten></norm>
+<norm doknr="BJNR1BJNE1"><metadaten><jurabk>X</jurabk><enbez>§ 1</enbez></metadaten><textdaten><text format="XML"><Content><P>Text.</P></Content></text><fussnoten/></textdaten></norm>
+</dokumente>"#;
+        let law = parse_law(xml).unwrap();
+        assert_eq!(law.units.len(), 2);
+        let names: Vec<_> = law.norms.iter().map(|n| n.enbez.clone()).collect();
+        assert_eq!(
+            names,
+            vec![None, Some("Titel 1".into()), Some("§ 1".into())]
+        );
+        let unit_norm = &law.norms[1];
+        assert_eq!(unit_norm.titel.as_deref(), Some("Kauf, Tausch"));
+        assert_eq!(unit_norm.unit, Some(0));
+        assert_eq!(unit_norm.footnotes.len(), 1);
+    }
+
+    #[test]
+    fn repealed_marker_is_stripped() {
+        assert_eq!(strip_repealed_marker("(XXXX) §§ 15 bis 20"), "§§ 15 bis 20");
+        assert_eq!(strip_repealed_marker("§ 10"), "§ 10");
+        let xml = r#"<dokumente builddate="1" doknr="BJNR1"><norm doknr="BJNR1"><metadaten><jurabk>X</jurabk><langue>X</langue></metadaten><textdaten/></norm>
+<norm doknr="BJNR1BJNE1"><metadaten><jurabk>X</jurabk><enbez>(XXXX) §§ 3 bis 6</enbez><titel>(weggefallen)</titel></metadaten><textdaten><text format="XML"><Content><P>-</P></Content></text><fussnoten/></textdaten></norm>
+</dokumente>"#;
+        let law = parse_law(xml).unwrap();
+        assert_eq!(law.norms[1].enbez.as_deref(), Some("§§ 3 bis 6"));
+    }
+
+    /// Eine Inhaltsübersicht als Tabelle wird zu Zeilen (Überschrift für
+    /// Gliederungseinheiten, sonst Absatz) statt zu einer Tabelle.
+    #[test]
+    fn toc_table_becomes_lines() {
+        let xml = r#"<dokumente builddate="1" doknr="BJNR1"><norm doknr="BJNR1"><metadaten><jurabk>X</jurabk><langue>X</langue></metadaten><textdaten/></norm>
+<norm doknr="BJNR1BJNE1"><metadaten><jurabk>X</jurabk><enbez>Inhaltsübersicht</enbez></metadaten><textdaten><text format="XML"><TOC><table><tgroup cols="2"><colspec colname="c1"/><colspec colname="c2"/><tbody><row><entry>Buch 1</entry><entry>Allgemeine Vorschriften</entry></row><row><entry>§ 1</entry><entry>Sachliche Zuständigkeit</entry></row></tbody></tgroup></table></TOC></text><fussnoten/></textdaten></norm>
+</dokumente>"#;
+        let law = parse_law(xml).unwrap();
+        let blocks = &law.norms[1].blocks;
+        assert_eq!(blocks.len(), 2);
+        // Dieselbe Tabelle im <Content> (so liefert es die ZPO).
+        let xml2 = xml
+            .replace("<TOC>", "<Content>")
+            .replace("</TOC>", "</Content>");
+        let law2 = parse_law(&xml2).unwrap();
+        assert_eq!(law2.norms[1].blocks, *blocks);
+        match &blocks[0] {
+            Block::Heading { spans, .. } => {
+                assert_eq!(spans_text(spans), "Buch 1 Allgemeine Vorschriften")
+            }
+            other => panic!("unexpected {other:?}"),
+        }
+        match &blocks[1] {
+            Block::Paragraph { spans } => {
+                assert_eq!(spans_text(spans), "§ 1 Sachliche Zuständigkeit")
+            }
+            other => panic!("unexpected {other:?}"),
+        }
+    }
+
     #[test]
     fn parses_paragraphs_styles_footnotes_and_tables() {
         let law = parse_law(SAMPLE).unwrap();
@@ -995,6 +1180,40 @@ mod tests {
             .fussnoten
             .iter()
             .any(|b| matches!(b, Block::Pre { text } if text.contains("Textnachweis"))));
+    }
+
+    #[test]
+    fn keeps_text_after_embedded_list_in_order() {
+        let xml = SAMPLE.replace(
+            "<P>Die Rechtsfähigkeit des Menschen beginnt mit der Vollendung der Geburt.</P>",
+            "<P>(1) Es muss gewährleistet sein, dass <DL Type=\"arabic\"><DT>1.</DT><DD><LA>Daten gesichert werden.</LA></DD></DL> Die Landesregierungen können die Ermächtigung übertragen.</P>",
+        );
+        let law = parse_law(&xml).unwrap();
+        let norm = law
+            .norms
+            .iter()
+            .find(|n| n.enbez.as_deref() == Some("§ 1"))
+            .unwrap();
+        assert_eq!(norm.blocks.len(), 3, "{:?}", norm.blocks);
+        match &norm.blocks[0] {
+            Block::Paragraph { spans } => {
+                assert_eq!(spans_text(spans), "(1) Es muss gewährleistet sein, dass")
+            }
+            other => panic!("unexpected {other:?}"),
+        }
+        assert!(matches!(&norm.blocks[1], Block::List { items, .. } if items.len() == 1));
+        match &norm.blocks[2] {
+            Block::Paragraph { spans } => assert_eq!(
+                spans_text(spans),
+                "Die Landesregierungen können die Ermächtigung übertragen."
+            ),
+            other => panic!("unexpected {other:?}"),
+        }
+        let flat = flatten_blocks(&norm.blocks);
+        assert_eq!(
+            flat.text(),
+            "(1) Es muss gewährleistet sein, dass\n1.\tDaten gesichert werden.\nDie Landesregierungen können die Ermächtigung übertragen.\n"
+        );
     }
 
     #[test]

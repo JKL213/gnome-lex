@@ -1,9 +1,65 @@
+/* Schriften: Oberfläche in Inter (Obsidian-Standard); der Lesetext bekommt
+   seine Familie aus der Einstellung „reading-font“ (siehe application.rs),
+   Standard ist Public Sans → Source Sans 3 → Inter. Nicht installierte
+   Schriften fallen auf die nächste Familie der Liste zurück. */
+window {
+  font-family: "Inter", "Inter Variable", "Adwaita Sans", "Cantarell", sans-serif;
+}
+
+/* Markierungen und angeheftete Notizen */
+.note-marker {
+  min-width: 22px;
+  min-height: 22px;
+  padding: 0;
+  border-radius: 11px;
+  color: rgba(0, 0, 0, 0.75);
+  -gtk-icon-size: 13px;
+}
+.note-marker.yellow { background: #f6d32d; }
+.note-marker.green  { background: #8ff0a4; }
+.note-marker.blue   { background: #99c1f1; }
+.note-marker.pink   { background: #f4a6c7; }
+.note-marker.orange { background: #ffbe6f; }
+.note-editor {
+  min-height: 120px;
+}
+.note-editor text {
+  background: transparent;
+}
+.highlight-swatch.selected {
+  border: 2px solid var(--accent-color);
+}
+
+/* Geteilte Ansicht: Beschriftung über jeder Ansicht, aktive in Akzentfarbe */
+.pane-caption {
+  padding: 4px 16px;
+  font-size: 0.85em;
+  font-weight: bold;
+  opacity: 0.55;
+  border-bottom: 1px solid alpha(currentColor, 0.12);
+}
+.pane-caption.active {
+  color: var(--accent-color);
+  opacity: 1;
+}
+
+/* Notizpanel */
+.notes-view {
+  padding: 12px;
+}
+.notes-view text {
+  background: transparent;
+}
+
 /* Normtext */
 .norm-text {
   padding: 12px 24px 48px 24px;
 }
 .norm-text text {
   background: transparent;
+}
+.norm-text text selection {
+  background: alpha(var(--accent-bg-color), 0.3);
 }
 .norm-table {
   margin: 6px 0;
@@ -21,11 +77,25 @@
   color: var(--accent-color);
   margin: 0 2px;
 }
+/* Gliederung: Einheiten fett, Titel abgesetzt, Normen mit ruhigem Raster */
+.outline-row {
+  padding: 3px 0;
+  font-feature-settings: "tnum";
+}
 .outline-row label.unit {
   font-weight: bold;
 }
 .outline-row label.norm-title {
-  opacity: 0.7;
+  opacity: 0.65;
+}
+.outline-row label.norm-label {
+  min-width: 48px;
+}
+.outline-row.repealed {
+  opacity: 0.45;
+}
+.norm-table-plain {
+  margin: 6px 0;
 }
 .annotation-quote {
   font-style: italic;

@@ -1,2 +1,30 @@
 using Gtk 4.0;
 using Adw 1;
+
+// Anzeige einer einzelnen Norm als formatierter Text.
+template $LexNormView : Adw.Bin {
+  child: ScrolledWindow scrolled {
+    hscrollbar-policy: never;
+    vexpand: true;
+
+    child: Adw.ClampScrollable {
+      maximum-size: 780;
+      tightening-threshold: 620;
+
+      child: TextView text_view {
+        editable: false;
+        cursor-visible: false;
+        wrap-mode: word_char;
+        left-margin: 32;
+        right-margin: 32;
+        top-margin: 24;
+        bottom-margin: 64;
+        pixels-above-lines: 2;
+        pixels-below-lines: 8;
+        pixels-inside-wrap: 3;
+
+        styles ["norm-text"]
+      };
+    };
+  };
+}

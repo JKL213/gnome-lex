@@ -1,2 +1,52 @@
 using Gtk 4.0;
 using Adw 1;
+
+// Ein Tab: eine Normansicht, auf Wunsch geteilt in zwei Ansichten
+// nebeneinander (oder untereinander bei Schmalbreite).
+template $LexLawTab : Adw.Bin {
+  child: Paned paned {
+    orientation: horizontal;
+    wide-handle: true;
+    shrink-start-child: false;
+    shrink-end-child: false;
+    resize-start-child: true;
+    resize-end-child: true;
+
+    start-child: Box pane0 {
+      orientation: vertical;
+
+      styles ["norm-pane"]
+
+      Label caption0 {
+        xalign: 0;
+        ellipsize: end;
+        visible: false;
+
+        styles ["pane-caption"]
+      }
+
+      $LexNormView view0 {
+        vexpand: true;
+      }
+    };
+
+    end-child: Box pane1 {
+      orientation: vertical;
+      visible: false;
+
+      styles ["norm-pane"]
+
+      Label caption1 {
+        xalign: 0;
+        ellipsize: end;
+        visible: false;
+
+        styles ["pane-caption"]
+      }
+
+      $LexNormView view1 {
+        vexpand: true;
+      }
+    };
+  };
+}

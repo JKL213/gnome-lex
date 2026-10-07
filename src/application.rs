@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2026 Jan-Henrik Koch
+// SPDX-FileCopyrightText: 2026 Gnome Lex
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 //! `AdwApplication`-Subklasse: Aktionen, Tastenkürzel, Dialoge.
@@ -9,6 +9,10 @@ use gettextrs::gettext;
 use gtk::{gio, glib};
 
 use crate::config::{APP_ID, VERSION};
+use crate::widgets::{
+    preferences::{apply_color_scheme, apply_reading_font},
+    LexPreferences,
+};
 use crate::window::LexWindow;
 
 mod imp {
@@ -43,6 +47,9 @@ mod imp {
             app.setup_actions();
             app.setup_accels();
             app.load_css();
+            let settings = crate::settings::settings();
+            apply_color_scheme(&settings);
+            apply_reading_font(&settings);
         }
     }
 
@@ -71,18 +78,92 @@ impl LexApplication {
     }
 
     fn setup_actions(&self) {
+        // Beim Beenden über die Aktion die Tabs sichern (kein close-request).
         let quit = gio::ActionEntry::builder("quit")
-            .activate(|app: &Self, _, _| app.quit())
+            .activate(|app: &Self, _, _| {
+                for window in app.windows() {
+                    if let Some(window) = window.downcast_ref::<LexWindow>() {
+                        window.save_state_before_quit();
+                    }
+                }
+                app.quit()
+            })
             .build();
         let about = gio::ActionEntry::builder("about")
             .activate(|app: &Self, _, _| app.show_about())
             .build();
-        self.add_action_entries([quit, about]);
+        let preferences = gio::ActionEntry::builder("preferences")
+            .activate(|app: &Self, _, _| {
+                LexPreferences::new().present(app.active_window().as_ref());
+            })
+            .build();
+        let shortcuts = gio::ActionEntry::builder("shortcuts")
+            .activate(|app: &Self, _, _| app.show_shortcuts())
+            .build();
+        // Norm im aktiven Fenster anzeigen (Parameter: Bezeichnung wie „§ 433“).
+        let show_norm = gio::ActionEntry::builder("show-norm")
+            .parameter_type(Some(&String::static_variant_type()))
+            .activate(|app: &Self, _, param| {
+                let Some(enbez) = param.and_then(|p| p.get::<String>()) else {
+                    return;
+                };
+                if let Some(window) = app.active_window().and_downcast::<LexWindow>() {
+                    window.show_norm_by_enbez(&enbez);
+                }
+            })
+            .build();
+        // Fensteraktion im aktiven Fenster auslösen („download bgb“,
+        // „new-tab“); ein Wort nach dem Namen wird als String-Parameter
+        // übergeben. Nur für Tests per D-Bus, da GTK das Fensterobjekt
+        // derzeit nicht exportiert.
+        let window_action = gio::ActionEntry::builder("window-action")
+            .parameter_type(Some(&String::static_variant_type()))
+            .activate(|app: &Self, _, param| {
+                let Some(spec) = param.and_then(|p| p.get::<String>()) else {
+                    return;
+                };
+                let (name, arg) = match spec.split_once(' ') {
+                    Some((n, a)) => (n.to_owned(), Some(a.trim().to_variant())),
+                    None => (spec.clone(), None),
+                };
+                if let Some(window) = app.active_window().and_downcast::<LexWindow>() {
+                    ActionGroupExt::activate_action(&window, &name, arg.as_ref());
+                }
+            })
+            .build();
+        self.add_action_entries([
+            quit,
+            about,
+            preferences,
+            shortcuts,
+            show_norm,
+            window_action,
+        ]);
     }
 
     fn setup_accels(&self) {
         self.set_accels_for_action("app.quit", &["<Control>q"]);
-        self.set_accels_for_action("window.close", &["<Control>w"]);
+        self.set_accels_for_action("app.preferences", &["<Control>comma"]);
+        self.set_accels_for_action("app.shortcuts", &["<Control>question"]);
+        self.set_accels_for_action("win.toggle-notes", &["<Control><Shift>n"]);
+        self.set_accels_for_action("win.close-tab", &["<Control>w"]);
+        self.set_accels_for_action("win.new-tab", &["<Control>t"]);
+        self.set_accels_for_action("win.next-tab", &["<Control>Page_Down", "<Control>Tab"]);
+        self.set_accels_for_action("win.prev-tab", &["<Control>Page_Up", "<Control><Shift>Tab"]);
+        self.set_accels_for_action("win.tab-overview", &["<Control><Shift>o"]);
+        self.set_accels_for_action("win.split", &["<Control><Shift>d"]);
+        self.set_accels_for_action("win.switch-pane", &["F6"]);
+        self.set_accels_for_action("win.toggle-favorite", &["<Control>d"]);
+        // „/“ wird zusätzlich im Fenster abgefangen (nur außerhalb von Eingabefeldern).
+        self.set_accels_for_action("win.quick-search", &["<Control>k"]);
+        self.set_accels_for_action("win.prev-norm", &["<Alt>Page_Up"]);
+        self.set_accels_for_action("win.next-norm", &["<Alt>Page_Down"]);
+        self.set_accels_for_action(
+            "win.zoom-in",
+            &["<Control>plus", "<Control>equal", "<Control>KP_Add"],
+        );
+        self.set_accels_for_action("win.zoom-out", &["<Control>minus", "<Control>KP_Subtract"]);
+        self.set_accels_for_action("win.zoom-reset", &["<Control>0", "<Control>KP_0"]);
     }
 
     fn load_css(&self) {
@@ -95,6 +176,62 @@ impl LexApplication {
                 gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
             );
         }
+    }
+
+    /// Übersicht der Tastenkürzel (`Adw.ShortcutsDialog`).
+    fn show_shortcuts(&self) {
+        let dialog = adw::ShortcutsDialog::new();
+        let sections: [(&str, &[(&str, &str)]); 4] = [
+            (
+                &gettext("Navigation"),
+                &[
+                    (&gettext("Schnellsuche"), "<Control>k slash"),
+                    (&gettext("Vorherige Norm"), "<Alt>Page_Up"),
+                    (&gettext("Nächste Norm"), "<Alt>Page_Down"),
+                    (&gettext("Favorit setzen oder entfernen"), "<Control>d"),
+                    (
+                        &gettext("Notiz / Schema ein- oder ausblenden"),
+                        "<Control><Shift>n",
+                    ),
+                ],
+            ),
+            (
+                &gettext("Tabs und Ansicht"),
+                &[
+                    (&gettext("Neuer Tab"), "<Control>t"),
+                    (&gettext("Tab schließen"), "<Control>w"),
+                    (&gettext("Nächster Tab"), "<Control>Page_Down"),
+                    (&gettext("Vorheriger Tab"), "<Control>Page_Up"),
+                    (&gettext("Tab-Übersicht"), "<Control><Shift>o"),
+                    (&gettext("Geteilte Ansicht"), "<Control><Shift>d"),
+                    (&gettext("Zwischen den Ansichten wechseln"), "F6"),
+                ],
+            ),
+            (
+                &gettext("Schrift"),
+                &[
+                    (&gettext("Vergrößern"), "<Control>plus"),
+                    (&gettext("Verkleinern"), "<Control>minus"),
+                    (&gettext("Zurücksetzen"), "<Control>0"),
+                ],
+            ),
+            (
+                &gettext("Allgemein"),
+                &[
+                    (&gettext("Einstellungen"), "<Control>comma"),
+                    (&gettext("Tastenkürzel"), "<Control>question"),
+                    (&gettext("Beenden"), "<Control>q"),
+                ],
+            ),
+        ];
+        for (title, items) in sections {
+            let section = adw::ShortcutsSection::new(Some(title));
+            for (name, accel) in items {
+                section.add(adw::ShortcutsItem::new(name, accel));
+            }
+            dialog.add(section);
+        }
+        dialog.present(self.active_window().as_ref());
     }
 
     fn show_about(&self) {

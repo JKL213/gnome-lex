@@ -18,9 +18,17 @@
       <default>12</default>
       <summary>Schriftgröße des Normtexts in Punkt</summary>
     </key>
+    <key name="reading-font" type="s">
+      <default>""</default>
+      <summary>Schriftfamilie des Gesetzestexts (leer = Standardauswahl)</summary>
+    </key>
     <key name="open-tabs" type="as">
       <default>[]</default>
       <summary>Beim Beenden geöffnete Tabs (JSON je Tab)</summary>
+    </key>
+    <key name="history" type="as">
+      <default>[]</default>
+      <summary>Zuletzt gelesene Normen (JSON je Eintrag, neueste zuletzt)</summary>
     </key>
     <key name="active-tab" type="i">
       <default>0</default>

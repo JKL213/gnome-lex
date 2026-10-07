@@ -1,2 +1,29 @@
 using Gtk 4.0;
 using Adw 1;
+
+// Zeile der Gliederung: Baum-Expander mit Bezeichnung und Titel.
+template $LexOutlineRow : Box {
+  styles ["outline-row"]
+
+  TreeExpander expander {
+    hexpand: true;
+
+    child: Box {
+      spacing: 6;
+
+      Label label_label {
+        xalign: 0;
+
+        styles ["norm-label"]
+      }
+
+      Label title_label {
+        xalign: 0;
+        hexpand: true;
+        ellipsize: end;
+
+        styles ["norm-title"]
+      }
+    };
+  }
+}

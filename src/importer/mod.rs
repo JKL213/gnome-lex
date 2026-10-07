@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2026 Jan-Henrik Koch
+// SPDX-FileCopyrightText: 2026 Gnome Lex
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 //! Import von Gesetzen: Download des XML-Archivs von gesetze-im-internet.de,
@@ -26,12 +26,13 @@ use xml::ParsedLawMeta;
 /// Eine bekannte Gesetzesquelle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Source {
-    /// Interner Schlüssel (z. B. `bgb`), zugleich `slug` in der Datenbank.
+    /// Interner Schlüssel (z. B. `bgb`), zugleich `slug` in der Datenbank
+    /// und Pfadbestandteil auf gesetze-im-internet.de.
     pub slug: &'static str,
+    /// Übliches Kürzel.
+    pub abbrev: &'static str,
     /// Anzeigename.
     pub name: &'static str,
-    /// Adresse des XML-Archivs.
-    pub url: &'static str,
 }
 
 impl Source {
@@ -39,16 +40,56 @@ impl Source {
     pub fn by_slug(slug: &str) -> Option<&'static Source> {
         SOURCES.iter().find(|s| s.slug == slug)
     }
+
+    /// Adresse des XML-Archivs.
+    pub fn url(&self) -> String {
+        format!("https://www.gesetze-im-internet.de/{}/xml.zip", self.slug)
+    }
 }
 
-/// Bekannte Gesetzesquellen.
-pub const SOURCES: &[Source] = &[Source {
-    slug: "bgb",
-    name: "Bürgerliches Gesetzbuch",
-    url: "https://www.gesetze-im-internet.de/bgb/xml.zip",
-}];
+const fn src(slug: &'static str, abbrev: &'static str, name: &'static str) -> Source {
+    Source { slug, abbrev, name }
+}
 
-/// Slug des Gesetzes, das beim ersten Start angeboten wird.
+/// Bekannte Gesetzesquellen (Slugs wie auf gesetze-im-internet.de).
+pub const SOURCES: &[Source] = &[
+    src("bgb", "BGB", "Bürgerliches Gesetzbuch"),
+    src("bgbeg", "EGBGB", "Einführungsgesetz zum Bürgerlichen Gesetzbuche"),
+    src("zpo", "ZPO", "Zivilprozessordnung"),
+    src("famfg", "FamFG", "Gesetz über das Verfahren in Familiensachen und in den Angelegenheiten der freiwilligen Gerichtsbarkeit"),
+    src("gvg", "GVG", "Gerichtsverfassungsgesetz"),
+    src("zvg", "ZVG", "Gesetz über die Zwangsversteigerung und die Zwangsverwaltung"),
+    src("inso", "InsO", "Insolvenzordnung"),
+    src("hgb", "HGB", "Handelsgesetzbuch"),
+    src("gmbhg", "GmbHG", "Gesetz betreffend die Gesellschaften mit beschränkter Haftung"),
+    src("aktg", "AktG", "Aktiengesetz"),
+    src("wphg", "WpHG", "Wertpapierhandelsgesetz"),
+    src("vvg_2008", "VVG", "Versicherungsvertragsgesetz"),
+    src("stgb", "StGB", "Strafgesetzbuch"),
+    src("stpo", "StPO", "Strafprozessordnung"),
+    src("owig_1968", "OWiG", "Gesetz über Ordnungswidrigkeiten"),
+    src("gg", "GG", "Grundgesetz für die Bundesrepublik Deutschland"),
+    src("vwgo", "VwGO", "Verwaltungsgerichtsordnung"),
+    src("vwvfg", "VwVfG", "Verwaltungsverfahrensgesetz"),
+    src("arbgg", "ArbGG", "Arbeitsgerichtsgesetz"),
+    src("kschg", "KSchG", "Kündigungsschutzgesetz"),
+    src("betrvg", "BetrVG", "Betriebsverfassungsgesetz"),
+    src("agg", "AGG", "Allgemeines Gleichbehandlungsgesetz"),
+    src("sgb_5", "SGB V", "Sozialgesetzbuch Fünftes Buch – Gesetzliche Krankenversicherung"),
+    src("urhg", "UrhG", "Urheberrechtsgesetz"),
+    src("markeng", "MarkenG", "Markengesetz"),
+    src("patg", "PatG", "Patentgesetz"),
+    src("estg", "EStG", "Einkommensteuergesetz"),
+    src("ao_1977", "AO", "Abgabenordnung"),
+    src("ustg_1980", "UStG", "Umsatzsteuergesetz"),
+    src("rvg", "RVG", "Rechtsanwaltsvergütungsgesetz"),
+    src("gkg_2004", "GKG", "Gerichtskostengesetz"),
+    src("beurkg", "BeurkG", "Beurkundungsgesetz"),
+    src("wogg", "WoGG", "Wohngeldgesetz"),
+];
+
+/// Slug des Standardgesetzes (für Tests).
+#[allow(dead_code)]
 pub const DEFAULT_SLUG: &str = "bgb";
 
 /// Größe der Leseblöcke beim Download.
@@ -211,7 +252,7 @@ pub async fn install_law(
     mut progress: impl FnMut(Progress),
 ) -> Result<ImportReport, ImportError> {
     let source = Source::by_slug(slug).ok_or_else(|| ImportError::UnknownSource(slug.into()))?;
-    let bytes = download(source.url, |received, total| {
+    let bytes = download(&source.url(), |received, total| {
         progress(Progress::Downloading { received, total })
     })
     .await?;
@@ -257,7 +298,7 @@ pub async fn check_update(
     let Some(installed) = installed else {
         return Ok(UpdateCheck::NotInstalled);
     };
-    let bytes = download(source.url, |received, total| {
+    let bytes = download(&source.url(), |received, total| {
         progress(Progress::Downloading { received, total })
     })
     .await?;
@@ -275,11 +316,6 @@ pub async fn check_update(
     } else {
         Ok(UpdateCheck::UpToDate(installed))
     }
-}
-
-/// Liest die installierte Fassung eines Gesetzes (blockierend, aber schnell).
-pub fn installed_law(db_path: &Path, slug: &str) -> Result<Option<LawInfo>, ImportError> {
-    Ok(Database::open(db_path)?.law_by_slug(slug)?)
 }
 
 /// Ist die Fassung auf dem Server eine andere als die installierte?
@@ -309,6 +345,50 @@ mod tests {
     use super::*;
     use std::io::Write;
 
+    /// Import des echten BGB-XML (Pfad in `GESETZE_BGB_XML`), prüft die
+    /// Blockreihenfolge in § 55a: Einleitung – Liste – Nachsatz.
+    /// Läuft nur mit `cargo test -- --ignored`.
+    #[test]
+    #[ignore]
+    fn imports_real_bgb_keeps_list_order() {
+        use crate::model::text::{spans_text, Block};
+        let Ok(path) = std::env::var("GESETZE_BGB_XML") else {
+            eprintln!("GESETZE_BGB_XML nicht gesetzt, Test übersprungen");
+            return;
+        };
+        let xml = std::fs::read_to_string(path).unwrap();
+        let dir = std::env::temp_dir().join(format!("gesetze-test-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let db_path = dir.join("gesetze.db");
+        let report = import_xml(&db_path, DEFAULT_SLUG, &xml).unwrap();
+        assert!(report.norms > 2000, "nur {} Normen", report.norms);
+        let db = crate::db::Database::open(&db_path).unwrap();
+        let norm = db.norm_by_enbez(report.law_id, "§ 55a").unwrap().unwrap();
+        let kinds: Vec<&str> = norm
+            .blocks
+            .iter()
+            .map(|b| match b {
+                Block::Paragraph { .. } => "P",
+                Block::List { .. } => "L",
+                _ => "?",
+            })
+            .collect();
+        assert_eq!(kinds[..3], ["P", "L", "P"], "{kinds:?}");
+        match &norm.blocks[0] {
+            Block::Paragraph { spans } => {
+                assert!(spans_text(spans).ends_with("gewährleistet sein, dass"))
+            }
+            other => panic!("unexpected {other:?}"),
+        }
+        match &norm.blocks[2] {
+            Block::Paragraph { spans } => {
+                assert!(spans_text(spans).starts_with("Die Landesregierungen können"))
+            }
+            other => panic!("unexpected {other:?}"),
+        }
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
     #[test]
     fn extracts_xml_from_zip() {
         let mut buf = std::io::Cursor::new(Vec::new());
@@ -330,8 +410,9 @@ mod tests {
     fn source_lookup() {
         let bgb = Source::by_slug("bgb").unwrap();
         assert_eq!(bgb.name, "Bürgerliches Gesetzbuch");
-        assert!(bgb.url.ends_with("/bgb/xml.zip"));
-        assert!(Source::by_slug("hgb").is_none());
+        assert!(bgb.url().ends_with("/bgb/xml.zip"));
+        assert!(Source::by_slug("gibtsnicht").is_none());
+        assert_eq!(Source::by_slug("hgb").map(|s| s.abbrev), Some("HGB"));
         assert!(Source::by_slug(DEFAULT_SLUG).is_some());
     }
 

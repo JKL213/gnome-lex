@@ -1,2 +1,67 @@
 using Gtk 4.0;
 using Adw 1;
+
+// Einstellungen: Farbschema, Schriftgröße, Aktualisierungsprüfung.
+template $LexPreferences : Adw.PreferencesDialog {
+  title: _("Einstellungen");
+
+  Adw.PreferencesPage {
+    Adw.PreferencesGroup {
+      title: _("Darstellung");
+
+      Adw.ComboRow color_scheme_row {
+        title: _("Farbschema");
+
+        model: StringList {
+          strings [_("Wie das System"), _("Hell"), _("Dunkel")]
+        };
+      }
+
+      Adw.ActionRow font_row {
+        title: _("Schrift des Gesetzestexts");
+        subtitle: _("Standard: Public Sans, sonst Source Sans 3 oder Inter");
+
+        [suffix]
+        FontDialogButton font_button {
+          valign: center;
+          level: family;
+          use-font: true;
+
+          dialog: FontDialog {
+            title: _("Schrift des Gesetzestexts");
+          };
+        }
+
+        [suffix]
+        Button font_reset_button {
+          icon-name: "edit-clear-symbolic";
+          tooltip-text: _("Standardschrift verwenden");
+          valign: center;
+
+          styles ["flat"]
+        }
+      }
+
+      Adw.SpinRow font_size_row {
+        title: _("Schriftgröße des Gesetzestexts");
+        subtitle: _("In Punkt; auch über Strg+Plus und Strg+Minus");
+
+        adjustment: Adjustment {
+          lower: 8;
+          upper: 40;
+          step-increment: 1;
+          page-increment: 4;
+        };
+      }
+    }
+
+    Adw.PreferencesGroup {
+      title: _("Aktualisierung");
+
+      Adw.SwitchRow check_updates_row {
+        title: _("Beim Start auf neue Fassungen prüfen");
+        subtitle: _("Höchstens einmal täglich; lädt die Archive von gesetze-im-internet.de");
+      }
+    }
+  }
+}
