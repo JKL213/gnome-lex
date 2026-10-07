@@ -72,7 +72,7 @@ impl LexOutlineRow {
     }
 
     /// Mittelklick oder Strg+Klick auf eine Norm öffnet sie in einem neuen
-    /// Tab (`win.open-in-new-tab`); der normale Klick bleibt der Liste.
+    /// Ansicht (`win.open-in-other-pane`); der normale Klick bleibt der Liste.
     fn setup_gesture(&self) {
         let gesture = gtk::GestureClick::builder()
             .button(0)
@@ -94,9 +94,9 @@ impl LexOutlineRow {
                 if button == 2 || (button == 1 && ctrl) {
                     gesture.set_state(gtk::EventSequenceState::Claimed);
                     if let Err(err) =
-                        row.activate_action("win.open-in-new-tab", Some(&id.to_variant()))
+                        row.activate_action("win.open-in-other-pane", Some(&id.to_variant()))
                     {
-                        log::warn!("open-in-new-tab nicht erreichbar: {err}");
+                        log::warn!("open-in-other-pane nicht erreichbar: {err}");
                     }
                 }
             }

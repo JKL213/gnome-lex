@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 Gnome Lex
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
-//! Ein Tab der Leseansicht: eine Normansicht, auf Wunsch geteilt in zwei
-//! Ansichten (links/rechts bzw. oben/unten bei Schmalbreite). Jede Ansicht
-//! („Pane“) kann eine Norm eines beliebigen installierten Gesetzes zeigen.
-//! Die aktive Ansicht bestimmt Titel, Blättern und das Ziel von Klicks in
-//! der Gliederung.
+//! Die Leseansicht: eine Normansicht, auf Wunsch geteilt in zwei Ansichten
+//! (links/rechts bzw. oben/unten bei Schmalbreite). Jede Ansicht („Pane“)
+//! kann eine Norm eines beliebigen installierten Gesetzes zeigen. Die
+//! aktive Ansicht bestimmt Titel, Blättern und das Ziel von Klicks in der
+//! Gliederung.
 
 use std::cell::{Cell, RefCell};
 
@@ -15,8 +15,8 @@ use gtk::{gio, glib, CompositeTemplate};
 
 use crate::db::Database;
 use crate::model::{Annotation, AnnotationKind, LawInfo, NormInfo};
-use crate::refs::NormRef;
-use crate::widgets::norm_view::{AnnotationEvent, NormPage};
+use crate::refs::{LawRef, NormRef};
+use crate::widgets::norm_view::{AnnotationEvent, NormPage, RefChip};
 use crate::widgets::LexNormView;
 
 /// Was eine Ansicht gerade zeigt.
@@ -27,9 +27,9 @@ pub struct PaneInfo {
     pub law_abbrev: String,
 }
 
-/// Gespeicherter Zustand eines Tabs (GSettings `open-tabs`, JSON).
+/// Gespeicherter Zustand der Leseansicht (GSettings `reader-state`, JSON).
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct TabState {
+pub struct ReaderState {
     /// Eine oder zwei Ansichten; die zweite bedeutet geteilte Ansicht.
     pub panes: Vec<PaneRef>,
     #[serde(default)]
@@ -43,9 +43,9 @@ pub struct PaneRef {
     pub norm: String,
 }
 
-type NormChangedCallback = Box<dyn Fn(&LexLawTab, u32)>;
-type NavigateCallback = Box<dyn Fn(&LexLawTab, u32, NormRef, bool)>;
-type AnnotationCallback = Box<dyn Fn(&LexLawTab, u32, AnnotationEvent)>;
+type NormChangedCallback = Box<dyn Fn(&LexReader, u32)>;
+type NavigateCallback = Box<dyn Fn(&LexReader, u32, NormRef, bool)>;
+type AnnotationCallback = Box<dyn Fn(&LexReader, u32, AnnotationEvent)>;
 
 /// Liest Norm, Gesetz, Gliederungspfad und Notiz für eine Ansicht.
 fn load_page(db: &Database, norm_id: i64) -> Result<Option<(NormPage, LawInfo)>, rusqlite::Error> {
@@ -71,6 +71,39 @@ fn load_page(db: &Database, norm_id: i64) -> Result<Option<(NormPage, LawInfo)>,
         }
         None => (None, Vec::new()),
     };
+    let chip = |abbrev: &str, enbez: &str| RefChip {
+        label: if abbrev.eq_ignore_ascii_case(&law.jurabk) {
+            enbez.to_owned()
+        } else {
+            format!("{enbez} {abbrev}")
+        },
+        target: NormRef {
+            law: if abbrev.eq_ignore_ascii_case(&law.jurabk) {
+                LawRef::Same
+            } else {
+                LawRef::Abbrev(abbrev.to_owned())
+            },
+            norm: Some(enbez.to_owned()),
+            sub_section: None,
+            paragraph: None,
+            sentence: None,
+            number: None,
+        },
+    };
+    let outgoing = db
+        .outgoing_refs(norm.info.id)?
+        .iter()
+        .map(|(abbrev, enbez)| chip(abbrev, enbez))
+        .collect();
+    let incoming = match norm.info.enbez.as_deref() {
+        Some(enbez) => db
+            .incoming_refs(&law.jurabk, enbez, 40)?
+            .iter()
+            .filter(|(info, _)| info.id != norm.info.id)
+            .filter_map(|(info, abbrev)| info.enbez.as_deref().map(|e| chip(abbrev, e)))
+            .collect(),
+        None => Vec::new(),
+    };
     Ok(Some((
         NormPage {
             norm,
@@ -78,6 +111,8 @@ fn load_page(db: &Database, norm_id: i64) -> Result<Option<(NormPage, LawInfo)>,
             law_abbrev: law.jurabk.clone(),
             note,
             annotations,
+            outgoing,
+            incoming,
         },
         law,
     )))
@@ -87,9 +122,9 @@ mod imp {
     use super::*;
 
     #[derive(Default, CompositeTemplate, glib::Properties)]
-    #[template(resource = "/org/gnomelex/Gesetze/ui/law_tab.ui")]
-    #[properties(wrapper_type = super::LexLawTab)]
-    pub struct LexLawTab {
+    #[template(resource = "/org/gnomelex/Gesetze/ui/reader.ui")]
+    #[properties(wrapper_type = super::LexReader)]
+    pub struct LexReader {
         #[template_child]
         pub paned: TemplateChild<gtk::Paned>,
         #[template_child]
@@ -125,9 +160,9 @@ mod imp {
     }
 
     #[glib::object_subclass]
-    impl ObjectSubclass for LexLawTab {
-        const NAME: &'static str = "LexLawTab";
-        type Type = super::LexLawTab;
+    impl ObjectSubclass for LexReader {
+        const NAME: &'static str = "LexReader";
+        type Type = super::LexReader;
         type ParentType = adw::Bin;
 
         fn class_init(klass: &mut Self::Class) {
@@ -141,7 +176,7 @@ mod imp {
     }
 
     #[glib::derived_properties]
-    impl ObjectImpl for LexLawTab {
+    impl ObjectImpl for LexReader {
         fn constructed(&self) {
             self.parent_constructed();
             let obj = self.obj();
@@ -150,23 +185,23 @@ mod imp {
         }
     }
 
-    impl WidgetImpl for LexLawTab {}
-    impl BinImpl for LexLawTab {}
+    impl WidgetImpl for LexReader {}
+    impl BinImpl for LexReader {}
 }
 
 glib::wrapper! {
-    pub struct LexLawTab(ObjectSubclass<imp::LexLawTab>)
+    pub struct LexReader(ObjectSubclass<imp::LexReader>)
         @extends gtk::Widget, adw::Bin,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }
 
-impl Default for LexLawTab {
+impl Default for LexReader {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl LexLawTab {
+impl LexReader {
     pub fn new() -> Self {
         glib::Object::new()
     }
@@ -178,7 +213,7 @@ impl LexLawTab {
     }
 
     /// Wird aufgerufen, wenn in einer Ansicht ein Verweis angeklickt wurde
-    /// (Ansicht, Ziel, neuer Tab gewünscht).
+    /// (Ansicht, Ziel, zweite Ansicht gewünscht).
     pub fn connect_navigate(&self, f: impl Fn(&Self, u32, NormRef, bool) + 'static) {
         *self.imp().on_navigate.borrow_mut() = Some(Box::new(f));
     }
@@ -442,6 +477,17 @@ impl LexLawTab {
         self.set_split(!self.split());
     }
 
+    /// Zeigt eine Norm in der jeweils anderen Ansicht (schaltet die Teilung
+    /// bei Bedarf ein) und macht diese aktiv – Ersatz für „in neuem Tab“.
+    pub fn show_in_other_pane(&self, norm_id: i64) {
+        if !self.split() {
+            self.set_split(true);
+        }
+        let other = 1 - self.active_pane().min(1);
+        self.show_norm_in_pane(norm_id, other);
+        self.set_active_pane(other);
+    }
+
     /// Zeigt eine Norm in der aktiven Ansicht.
     pub fn show_norm(&self, norm_id: i64) {
         self.show_norm_in_pane(norm_id, self.active_pane());
@@ -530,7 +576,7 @@ impl LexLawTab {
     }
 
     /// Zustand für die Wiederherstellung beim nächsten Start.
-    pub fn state(&self) -> TabState {
+    pub fn state(&self) -> ReaderState {
         let mut panes = Vec::new();
         for index in 0..=1u32 {
             if index == 1 && !self.split() {
@@ -545,7 +591,7 @@ impl LexLawTab {
                 }
             }
         }
-        TabState {
+        ReaderState {
             panes,
             active: self.active_pane(),
         }
@@ -563,7 +609,7 @@ impl LexLawTab {
     }
 }
 
-/// Tab-Titel und Untertitel für eine Ansicht.
+/// Titel und Untertitel für eine Ansicht.
 fn pane_title(info: &PaneInfo) -> (String, String) {
     let title = match &info.norm.enbez {
         Some(enbez) => format!("{enbez} {}", info.law_abbrev),
@@ -620,7 +666,7 @@ mod tests {
 
     #[test]
     fn tab_state_roundtrip() {
-        let state = TabState {
+        let state = ReaderState {
             panes: vec![
                 PaneRef {
                     law: "bgb".into(),
@@ -634,8 +680,8 @@ mod tests {
             active: 1,
         };
         let json = serde_json::to_string(&state).unwrap();
-        assert_eq!(serde_json::from_str::<TabState>(&json).unwrap(), state);
-        let old: TabState = serde_json::from_str(r#"{"panes":[]}"#).unwrap();
+        assert_eq!(serde_json::from_str::<ReaderState>(&json).unwrap(), state);
+        let old: ReaderState = serde_json::from_str(r#"{"panes":[]}"#).unwrap();
         assert_eq!(old.active, 0);
     }
 }

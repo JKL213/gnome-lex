@@ -4,7 +4,6 @@
 //! SQLite-Datenhaltung: Gesetze, Gliederung, Normen, Absätze, Volltextindex
 //! (FTS5) und Annotationen.
 // Wird ab den folgenden Stufen von der Oberfläche genutzt.
-#![allow(dead_code)]
 
 use std::path::{Path, PathBuf};
 
@@ -13,6 +12,7 @@ use rusqlite::{params, Connection, OptionalExtension, Transaction};
 use crate::importer::xml::ParsedLaw;
 use crate::model::text::{block_search_text, flatten_blocks, paragraph_label, Block, Footnote};
 use crate::model::{Annotation, AnnotationKind, LawInfo, LinkTarget, Norm, NormInfo, UnitInfo};
+use crate::refs::{find_references, LawRef};
 
 pub type Result<T> = std::result::Result<T, rusqlite::Error>;
 
@@ -88,9 +88,17 @@ CREATE TABLE IF NOT EXISTS annotations (
     orphaned INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS annotations_norm ON annotations(law, norm);
+CREATE TABLE IF NOT EXISTS norm_refs (
+    from_norm_id INTEGER NOT NULL REFERENCES norms(id) ON DELETE CASCADE,
+    law_abbrev TEXT NOT NULL,
+    enbez TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS norm_refs_target ON norm_refs(law_abbrev, enbez);
+CREATE INDEX IF NOT EXISTS norm_refs_from ON norm_refs(from_norm_id);
 "#;
 
-/// Treffer der Volltextsuche.
+/// Treffer der Volltextsuche (Stufe 5, noch ohne Oberfläche).
+#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SearchHit {
     pub norm: NormInfo,
@@ -135,10 +143,6 @@ impl Database {
         glib::user_data_dir().join("gesetze").join("gesetze.db")
     }
 
-    pub fn open_default() -> Result<Self> {
-        Self::open(&Self::default_path())
-    }
-
     pub fn open(path: &Path) -> Result<Self> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| {
@@ -152,6 +156,7 @@ impl Database {
         Self::init(conn)
     }
 
+    #[cfg(test)]
     pub fn open_in_memory() -> Result<Self> {
         Self::init(Connection::open_in_memory()?)
     }
@@ -280,6 +285,9 @@ impl Database {
             let mut fts_stmt = tx.prepare(
                 "INSERT INTO norms_fts (enbez, titel, body, norm_id, law_id) VALUES (?1, ?2, ?3, ?4, ?5)",
             )?;
+            let mut ref_stmt = tx.prepare(
+                "INSERT INTO norm_refs (from_norm_id, law_abbrev, enbez) VALUES (?1, ?2, ?3)",
+            )?;
             for (i, n) in parsed.norms.iter().enumerate() {
                 let blocks = serde_json::to_string(&n.blocks).unwrap_or_else(|_| "[]".into());
                 let footnotes = serde_json::to_string(&n.footnotes).unwrap_or_else(|_| "[]".into());
@@ -308,24 +316,26 @@ impl Database {
                     body.push_str(&block_search_text(block));
                 }
                 fts_stmt.execute(params![n.enbez, n.titel, body, norm_id, law_id])?;
+                // Verweisindex: welche Normen zitiert diese Norm?
+                let text = flatten_blocks(&n.blocks).text();
+                let mut seen = std::collections::HashSet::new();
+                for reference in find_references(&text, &parsed.meta.jurabk) {
+                    let abbrev = match &reference.target.law {
+                        LawRef::Same => parsed.meta.jurabk.clone(),
+                        LawRef::Abbrev(a) => a.clone(),
+                        LawRef::Unknown => continue,
+                    };
+                    let Some(enbez) = reference.target.enbez_candidates().into_iter().next() else {
+                        continue;
+                    };
+                    if seen.insert((abbrev.clone(), enbez.clone())) {
+                        ref_stmt.execute(params![norm_id, abbrev, enbez])?;
+                    }
+                }
             }
         }
         tx.commit()?;
         Ok(law_id)
-    }
-
-    pub fn delete_law(&mut self, slug: &str) -> Result<()> {
-        let tx = self.conn.transaction()?;
-        if let Some(old_id) = tx
-            .query_row("SELECT id FROM laws WHERE slug = ?1", [slug], |r| {
-                r.get::<_, i64>(0)
-            })
-            .optional()?
-        {
-            tx.execute("DELETE FROM norms_fts WHERE law_id = ?1", [old_id])?;
-            tx.execute("DELETE FROM laws WHERE id = ?1", [old_id])?;
-        }
-        tx.commit()
     }
 
     // ------------------------------------------------------------------
@@ -361,16 +371,6 @@ impl Database {
         rows.collect()
     }
 
-    pub fn norm_info(&self, id: i64) -> Result<Option<NormInfo>> {
-        self.conn
-            .query_row(
-                "SELECT id, law_id, unit_id, doknr, enbez, titel, position FROM norms WHERE id = ?1",
-                [id],
-                row_to_norm_info,
-            )
-            .optional()
-    }
-
     pub fn norm(&self, id: i64) -> Result<Option<Norm>> {
         self.conn
             .query_row(
@@ -382,6 +382,7 @@ impl Database {
             .optional()
     }
 
+    #[cfg(test)]
     pub fn norm_by_enbez(&self, law_id: i64, enbez: &str) -> Result<Option<Norm>> {
         self.conn
             .query_row(
@@ -429,6 +430,37 @@ impl Database {
              ORDER BY n2.position ASC LIMIT 1"
         };
         self.conn.query_row(sql, [id], |r| r.get(0)).optional()
+    }
+
+    /// Normen, auf die `norm_id` verweist: (Gesetzeskürzel, Bezeichnung) in
+    /// Textreihenfolge, ohne Dubletten.
+    pub fn outgoing_refs(&self, norm_id: i64) -> Result<Vec<(String, String)>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT law_abbrev, enbez FROM norm_refs WHERE from_norm_id = ?1 ORDER BY rowid",
+        )?;
+        let rows = stmt.query_map([norm_id], |r| Ok((r.get(0)?, r.get(1)?)))?;
+        rows.collect()
+    }
+
+    /// Normen, die auf (`law_abbrev`, `enbez`) verweisen, mit dem Kürzel
+    /// ihres Gesetzes; nur lesbare Normen, höchstens `limit`.
+    pub fn incoming_refs(
+        &self,
+        law_abbrev: &str,
+        enbez: &str,
+        limit: usize,
+    ) -> Result<Vec<(NormInfo, String)>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT DISTINCT n.id, n.law_id, n.unit_id, n.doknr, n.enbez, n.titel, n.position, l.jurabk
+             FROM norm_refs r JOIN norms n ON n.id = r.from_norm_id JOIN laws l ON l.id = n.law_id
+             WHERE r.law_abbrev = ?1 COLLATE NOCASE AND r.enbez = ?2
+               AND n.enbez IS NOT NULL AND n.enbez <> 'Inhaltsübersicht'
+             ORDER BY (l.jurabk = ?1 COLLATE NOCASE) DESC, l.jurabk, n.position LIMIT ?3",
+        )?;
+        let rows = stmt.query_map(params![law_abbrev, enbez, limit as i64], |r| {
+            Ok((row_to_norm_info(r)?, r.get(7)?))
+        })?;
+        rows.collect()
     }
 
     /// Gliederungspfad einer Einheit von der Wurzel bis zur Einheit selbst.
@@ -526,6 +558,7 @@ impl Database {
 
     /// Volltextsuche. Die Eingabe wird in Präfix-Terme zerlegt, damit auch
     /// Wortanfänge treffen; FTS-Sonderzeichen werden neutralisiert.
+    #[allow(dead_code)] // Stufe 5 (Volltextsuche mit Trefferliste)
     pub fn search(&self, law_id: Option<i64>, query: &str, limit: usize) -> Result<Vec<SearchHit>> {
         let Some(fts_query) = build_fts_query(query) else {
             return Ok(Vec::new());
@@ -668,6 +701,7 @@ impl Database {
         rows.collect()
     }
 
+    #[cfg(test)]
     pub fn annotation(&self, id: i64) -> Result<Option<Annotation>> {
         self.conn
             .query_row(
@@ -744,6 +778,7 @@ impl Database {
     }
 
     /// Exportiert alle Annotationen als JSON.
+    #[allow(dead_code)] // JSON-Export in der Oberfläche steht noch aus (Stufe 7)
     pub fn export_annotations_json(&self) -> Result<String> {
         let all = self.all_annotations()?;
         Ok(serde_json::to_string_pretty(&AnnotationExport {
@@ -757,6 +792,7 @@ impl Database {
 
     /// Importiert Annotationen aus JSON; identische Einträge (gleicher Anker
     /// und Inhalt) werden übersprungen. Liefert die Zahl neuer Einträge.
+    #[allow(dead_code)] // JSON-Import in der Oberfläche steht noch aus (Stufe 7)
     pub fn import_annotations_json(&mut self, json: &str) -> std::result::Result<usize, String> {
         let export: AnnotationExport = serde_json::from_str(json)
             .or_else(|_| {
@@ -837,6 +873,7 @@ impl Database {
         Ok(report)
     }
 
+    #[allow(dead_code)] // nur vom JSON-Import genutzt
     pub fn reanchor_all(&mut self) -> Result<ReanchorReport> {
         let mut total = ReanchorReport::default();
         for law in self.laws()? {
@@ -891,6 +928,7 @@ enum Anchor {
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
+#[allow(dead_code)]
 struct AnnotationExport {
     #[serde(default)]
     format: String,
@@ -901,6 +939,7 @@ struct AnnotationExport {
     annotations: Vec<Annotation>,
 }
 
+#[allow(dead_code)]
 fn insert_annotation_tx(tx: &Transaction<'_>, a: &Annotation) -> Result<()> {
     let now = Annotation::now();
     tx.execute(
@@ -1238,6 +1277,32 @@ mod tests {
         assert_eq!(hits[0].norm.enbez.as_deref(), Some("§ 1"));
 
         assert!(db.quick_search("", None, 10).unwrap().is_empty());
+    }
+
+    #[test]
+    fn reference_index() {
+        let mut db = Database::open_in_memory().unwrap();
+        let law_id = db
+            .replace_law(
+                "bgb",
+                &sample_law("(2) Siehe § 1 und § 433 Abs. 1 sowie § 253 ZPO."),
+            )
+            .unwrap();
+        let n433 = db.norm_by_enbez(law_id, "§ 433").unwrap().unwrap();
+        let out = db.outgoing_refs(n433.info.id).unwrap();
+        assert_eq!(
+            out,
+            vec![
+                ("BGB".to_string(), "§ 1".to_string()),
+                ("BGB".to_string(), "§ 433".to_string()),
+                ("ZPO".to_string(), "§ 253".to_string())
+            ]
+        );
+        let incoming = db.incoming_refs("BGB", "§ 1", 10).unwrap();
+        assert_eq!(incoming.len(), 1);
+        assert_eq!(incoming[0].0.enbez.as_deref(), Some("§ 433"));
+        assert_eq!(incoming[0].1, "BGB");
+        assert!(db.incoming_refs("ZPO", "§ 1", 10).unwrap().is_empty());
     }
 
     #[test]

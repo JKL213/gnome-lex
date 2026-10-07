@@ -12,6 +12,18 @@ desktop_file = i18n.merge_file(
   install: true,
   install_dir: datadir / 'applications',
 )
+# D-Bus-Service-Datei (die Desktop-Datei ist DBusActivatable).
+service_conf = configuration_data()
+service_conf.set('app_id', application_id)
+service_conf.set('bindir', bindir)
+configure_file(
+  input: '@0@.service.in'.format(base_id),
+  output: '@0@.service'.format(application_id),
+  configuration: service_conf,
+  install: true,
+  install_dir: datadir / 'dbus-1' / 'services',
+)
+
 if desktop_file_validate.found()
   test('Validate desktop file', desktop_file_validate, args: [desktop_file])
 endif
@@ -59,11 +71,13 @@ data_sources = files(
 )
 blueprint_sources = files(
   'ui/window.blp',
-  'ui/law_tab.blp',
+  'ui/reader.blp',
   'ui/norm_view.blp',
   'ui/outline_row.blp',
   'ui/annotation_row.blp',
   'ui/search_row.blp',
+  'ui/quick_search.blp',
+  'ui/download_center.blp',
   'ui/preferences.blp',
   'ui/shortcuts.blp',
 )

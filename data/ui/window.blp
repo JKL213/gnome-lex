@@ -16,7 +16,6 @@ template $LexWindow : Adw.ApplicationWindow {
       notes_split.collapsed: true;
       search_button.visible: false;
       split_button.visible: false;
-      new_tab_button.visible: false;
       history_button.visible: false;
     }
   }
@@ -207,11 +206,7 @@ template $LexWindow : Adw.ApplicationWindow {
                 }
               };
 
-              content: Adw.TabOverview tab_overview {
-              view: tab_view;
-              enable-new-tab: true;
-
-              child: Adw.ToolbarView {
+              content: Adw.ToolbarView {
                 [top]
                 Adw.HeaderBar {
                   [start]
@@ -302,36 +297,16 @@ template $LexWindow : Adw.ApplicationWindow {
                   }
 
                   [end]
-                  Adw.TabButton {
-                    view: tab_view;
-                    action-name: "overview.open";
-                    tooltip-text: _("Tab-Übersicht");
-                  }
-
-                  [end]
                   ToggleButton split_button {
                     icon-name: "view-dual-symbolic";
                     tooltip-text: _("Geteilte Ansicht (Strg+Umschalt+D)");
                     action-name: "win.split";
                   }
 
-                  [end]
-                  Button new_tab_button {
-                    icon-name: "tab-new-symbolic";
-                    tooltip-text: _("Neuer Tab (Strg+T)");
-                    action-name: "win.new-tab";
-                  }
                 }
 
-                [top]
-                Adw.TabBar {
-                  view: tab_view;
-                  autohide: true;
-                }
-
-                content: Adw.TabView tab_view {};
+                content: $LexReader reader {};
               };
-            };
             };
           };
         };
@@ -345,10 +320,6 @@ menu primary_menu {
     item {
       label: _("_Schnellsuche");
       action: "win.quick-search";
-    }
-    item {
-      label: _("Neuer _Tab");
-      action: "win.new-tab";
     }
     item {
       label: _("_Geteilte Ansicht");

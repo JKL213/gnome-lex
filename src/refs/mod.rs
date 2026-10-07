@@ -8,7 +8,6 @@
 //! Verweis innerhalb derselben Norm. Offsets sind Zeichenoffsets (Unicode-
 //! Skalare), wie sie `GtkTextBuffer` verwendet.
 // Wird ab den folgenden Stufen von der Oberfläche genutzt.
-#![allow(dead_code)]
 
 use std::sync::OnceLock;
 

@@ -2,7 +2,7 @@ data/org.gnomelex.Gesetze.desktop.in
 data/org.gnomelex.Gesetze.metainfo.xml.in
 data/org.gnomelex.Gesetze.gschema.xml
 data/ui/download_center.blp
-data/ui/law_tab.blp
+data/ui/reader.blp
 data/ui/norm_view.blp
 data/ui/outline_row.blp
 data/ui/preferences.blp
@@ -10,7 +10,7 @@ data/ui/quick_search.blp
 data/ui/window.blp
 src/application.rs
 src/widgets/download_center.rs
-src/widgets/law_tab.rs
+src/widgets/reader.rs
 src/widgets/norm_view.rs
 src/widgets/preferences.rs
 src/widgets/quick_search.rs

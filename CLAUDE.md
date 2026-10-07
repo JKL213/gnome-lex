@@ -87,7 +87,7 @@ Unit-Tests für Importer und Verweisparser sind Pflicht.
 
 ---
 
-## 3. Stand: Stufe 4 abgeschlossen (nicht committet), plus ZPO und Schnellsuche
+## 3. Stand: Leseansicht ohne Tabs, Verweisindex, Annotationen im Kern (siehe unten)
 
 Alles Folgende ist gebaut und geprüft (cargo build/test/clippy/fmt grün,
 Stufe 1 zusätzlich mit Meson-Tests und Flatpak-Build; Stufe 2 wurde über
@@ -511,6 +511,80 @@ Stufe 1 zusätzlich mit Meson-Tests und Flatpak-Build; Stufe 2 wurde über
     `save_state_before_quit` ruft `tab.flush_note_edits()`.
   - Test-Hooks: `view-test select a b`, `view-test hl <farbe>`,
     `view-test note`, `view-test type <Text>` (fügt am Cursor ein).
+- **Fünfte Rückmeldungsrunde (07.10.2026):** fmt, clippy `-D warnings`,
+  55 Tests grün; Screenshots `o*.png`.
+  - **Normtext verschwand beim Speichern der Schema-Notiz:** `note_end`
+    wurde mit Rechtsgravitation *vor* dem Einfügen des Normtexts angelegt
+    und wanderte hinter den gesamten Text; `set_note` löschte dann alles
+    dazwischen. Jetzt wird die Marke nach `insert_note` mit
+    Linksgravitation gesetzt. Gleiche Korrektur für `Anchored::end` und
+    `block_end` (sonst wuchsen Markierungen bzw. Notizblöcke, wenn direkt
+    dahinter eingefügt wurde). **Regel:** Endmarken immer Linksgravitation
+    und erst nach dem Einfügen anlegen; Anfangsmarken Linksgravitation vor
+    dem Einfügen; Einfügemarken Rechtsgravitation.
+  - **Absturz beim Schließen über die Fensterschaltfläche:** Popovers, die
+    per `set_parent` am TextView hängen (Auswahl-Popover, Kontextmenü),
+    müssen in `ObjectImpl::dispose` abgehängt werden (`unparent`), sonst
+    „finalized with children left“ (Critical → unter dem Debugger Abbruch).
+    Zusätzlich `popdown` in `WidgetImpl::unroot`.
+  - **Kontextmenü (Rechtsklick):** `GestureClick` (Taste 3, Capture, Claimed)
+    unterdrückt das GTK-Standardmenü; `show_context_menu` ermittelt
+    `MenuContext {highlight, note, link, has_selection}`, wählt ohne Auswahl
+    das Wort unter dem Zeiger und baut per `build_context_menu` ein
+    `gio::Menu`: Verweis öffnen / in neuem Tab, Notizfarbe / Notiz löschen,
+    Markierungsfarbe / Markierung entfernen, Markieren (Farben), Notiz
+    hinzufügen (Farben), Kopieren, Auswahl in der Schnellsuche, Favorit,
+    Schema-Panel, Norm in neuem Tab. Aktionen in der Gruppe `lex` am
+    TextView (`highlight(s)`, `note(s)`, `recolor(s)`, `remove`, `copy`,
+    `search-selection`, `open-link`, `open-link-tab`); `win.*`-Aktionen
+    werden durchgereicht. `PopoverMenu` mit `NESTED`-Untermenüs. Unter
+    Broadway ist das Menü nicht sichtbar (`gdk_monitor_get_geometry`
+    fehlt), die Aktionen sind per `view-test action lex.note green` geprüft.
+  - Test-Hooks: `view-test menu <x> <y>`, `view-test action <aktion> [param]`.
+- **Tippen in Inline-Notizen (07.10.2026):** Bei `editable=false` reicht
+  der `GtkTextView` Tastendrücke nicht an die Eingabemethode weiter, Tag-
+  Editierbarkeit greift dann nie. Deshalb ist der TextView jetzt
+  `editable: true`; das Tag `base` (unterste Priorität, über jedem
+  Abschnitt) hat `editable = false` und sperrt den Normtext, die später
+  angelegten Notiz-Tags geben ihre Blöcke frei. Interaktives Einfügen in
+  Notizblöcken angenommen, im Normtext abgelehnt (Hooks `view-test itype
+  <Text>`, `view-test cursor <offset>`).
+- **Umbau 08.10.2026 (Auftrag): Tabs entfernt, Verweis-Pfeile, Aufräumen.**
+  fmt, clippy `-D warnings`, 56 Tests grün; Screenshots `q*.png`.
+  - **Tabsystem entfernt:** `AdwTabView`/`TabBar`/`TabOverview` und die
+    Aktionen `new-tab`, `close-tab`, `next-/prev-tab`, `tab-overview`,
+    `open-in-new-tab` sind weg. Die Inhaltsseite ist ein `Adw.ToolbarView`
+    mit Kopfleiste und genau einer Leseansicht. `LexLawTab` heißt jetzt
+    **`LexReader`** (`src/widgets/reader.rs`, `data/ui/reader.blp`,
+    `ReaderState`); das Fenster greift über `reader()` darauf zu. Alles,
+    was früher „in neuem Tab“ öffnete (Strg+Klick in Gliederung und auf
+    Verweise, Strg+Eingabe in der Schnellsuche, Kontextmenü), öffnet jetzt
+    in der **zweiten Ansicht** (`LexReader::show_in_other_pane`, Aktion
+    `win.open-in-other-pane(x)`; schaltet die Teilung ein). Strg+W schließt
+    das Fenster (`window.close`). Persistenz: GSettings `reader-state` (s,
+    JSON `ReaderState`) statt `open-tabs`/`active-tab`
+    (`save_reader_state`/`restore_reader_state`).
+  - **Verweis-Pfeile:** Tabelle `norm_refs (from_norm_id, law_abbrev,
+    enbez)` wird in `replace_law` aus `find_references` über den Normtext
+    gefüllt (Same → eigenes Kürzel; erster `enbez_candidates`-Eintrag;
+    Dubletten je Norm entfernt; `ON DELETE CASCADE`). Abfragen
+    `outgoing_refs(norm_id)` und `incoming_refs(abbrev, enbez, limit)`
+    (lesbare Normen, eigenes Gesetz zuerst). `load_page` baut daraus
+    `NormPage.outgoing`/`incoming` als `RefChip {label, target: NormRef}`;
+    die Ansicht setzt unter die Überschrift je eine Zeile „→ § 434 · § 437“
+    (wohin die Norm zeigt) und „← § 453 · § 475 …“ (wer auf sie zeigt),
+    Tag `ref-chip` (klein, Akzent), klickbar wie Verweise im Text, maximal
+    `MAX_REF_CHIPS` (12) plus „+n weitere“. Test `reference_index`.
+    **Bestehende Datenbanken neu importieren**, sonst bleibt `norm_refs`
+    leer (Testdaten-DB ist neu importiert).
+  - **Aufräumen:** `#![allow(dead_code)]` aus `db`, `model`, `refs`
+    entfernt; gelöscht: `Database::open_default`, `delete_law`, `norm_info`;
+    `open_in_memory`, `norm_by_enbez`, `annotation` nur noch `#[cfg(test)]`;
+    gezielt mit Begründung erlaubt: `search`/`SearchHit` (Stufe 5),
+    `export_/import_annotations_json`, `AnnotationExport`,
+    `insert_annotation_tx`, `reanchor_all` (JSON-Export/-Import der
+    Oberfläche steht aus). Kontextmenü ohne „Norm in neuem Tab“,
+    Kürzeldialog ohne Tab-Einträge.
 - **Tooling:** `.vscode/` (settings, tasks, launch, extensions; Tasks
   `sdk: cargo build|run|qualität` für die SDK-Sandbox),
   `build-aux/sdk-cargo.sh` (führt Cargo in `org.gnome.Sdk//51` mit
@@ -596,8 +670,7 @@ als Sprungfunktion bestehen.
   wächst beim Durchscrollen eines ganzen Gesetzes); `prev-/next-norm`
   laden neu statt zum Nachbarabschnitt zu springen; der ViewSwitcher der
   Seitenleiste wird bei programmatischem Wechsel nicht hervorgehoben.
-- Einstellungsdialog (`preferences.blp`) mit Schaltern für `check-updates`
-  und `color-scheme`; Kürzelübersicht (`shortcuts.blp`) im Hilfemenü.
 - Update-Prüfung per HEAD (ETag/Last-Modified) statt Vollarchiv.
 - Fehlender D-Bus-Export des Fensters (siehe Fallstricke).
-- Gemeinsamer TextBuffer je Norm über Tabs; `po/gesetze.pot` nachziehen.
+- `po/gesetze.pot` nachziehen; Annotationsliste in der Seitenleiste,
+  JSON-Export/-Import in der Oberfläche.

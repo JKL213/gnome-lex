@@ -23,7 +23,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use glib::translate::IntoGlib;
-use gtk::{glib, pango, CompositeTemplate};
+use gtk::{gio, glib, pango, CompositeTemplate};
 
 use crate::model::text::{
     flatten_blocks, paragraph_label, spans_text, Block, Flattened, Seg, SegTag, TableData,
@@ -64,10 +64,24 @@ pub struct NormPage {
     pub note: Option<String>,
     /// Im Text verankerte Markierungen und Notizen.
     pub annotations: Vec<Annotation>,
+    /// Normen, auf die diese Norm verweist (→).
+    pub outgoing: Vec<RefChip>,
+    /// Normen, die auf diese Norm verweisen (←).
+    pub incoming: Vec<RefChip>,
 }
 
+/// Ein kleiner, klickbarer Verweis unter der Überschrift („§ 434“, „§ 253 ZPO“).
+#[derive(Debug, Clone)]
+pub struct RefChip {
+    pub label: String,
+    pub target: NormRef,
+}
+
+/// Höchstzahl der Verweis-Pfeile je Richtung.
+const MAX_REF_CHIPS: usize = 12;
+
 /// Änderungswunsch an Annotationen, den die Ansicht nach außen meldet.
-/// Bei `Create` ist `law` noch leer; der Tab ergänzt den Slug.
+/// Bei `Create` ist `law` noch leer; die Leseansicht ergänzt den Slug.
 #[derive(Debug, Clone)]
 pub enum AnnotationEvent {
     Create(Annotation),
@@ -110,6 +124,19 @@ pub struct Section {
     block_lens: Vec<i32>,
     /// Ende des Normtexts (Linksgravitation, vor den Fußnoten).
     content_end: gtk::TextMark,
+}
+
+/// Worauf sich das Kontextmenü bezieht (Rechtsklickposition).
+#[derive(Debug, Clone, Default)]
+pub struct MenuContext {
+    /// Markierung unter dem Zeiger.
+    highlight: Option<i64>,
+    /// Notizblock unter dem Zeiger.
+    note: Option<i64>,
+    /// Verweis unter dem Zeiger.
+    link: Option<LinkTarget>,
+    /// Es gibt eine Textauswahl, die markiert werden kann.
+    has_selection: bool,
 }
 
 type AnnotationCallback = Box<dyn Fn(&LexNormView, AnnotationEvent)>;
@@ -168,6 +195,9 @@ mod imp {
         pub note_button: OnceCell<gtk::Widget>,
         /// Annotation, auf die sich das Popover bezieht (None = Textauswahl).
         pub popover_target: Cell<Option<i64>>,
+        /// Kontextmenü (Rechtsklick) und sein Zustand.
+        pub context_menu: OnceCell<gtk::PopoverMenu>,
+        pub context: RefCell<Option<MenuContext>>,
     }
 
     #[glib::object_subclass]
@@ -193,11 +223,34 @@ mod imp {
             self.tags.set(obj.build_tag_table()).ok();
             obj.setup_controllers();
             obj.setup_selection_popover();
+            obj.setup_context_menu();
             obj.reset_buffer();
+        }
+
+        fn dispose(&self) {
+            if let Some(popover) = self.selection_popover.get() {
+                popover.unparent();
+            }
+            if let Some(menu) = self.context_menu.get() {
+                menu.unparent();
+            }
         }
     }
 
-    impl WidgetImpl for LexNormView {}
+    impl WidgetImpl for LexNormView {
+        fn unroot(&self) {
+            // Popovers hängen direkt am TextView; vor dem Zerstören abhängen,
+            // sonst meldet GTK „finalized with children left“ (Absturz unter
+            // dem Debugger beim Schließen des Fensters).
+            if let Some(popover) = self.selection_popover.get() {
+                popover.popdown();
+            }
+            if let Some(menu) = self.context_menu.get() {
+                menu.popdown();
+            }
+            self.parent_unroot();
+        }
+    }
     impl BinImpl for LexNormView {}
 }
 
@@ -288,7 +341,7 @@ impl LexNormView {
         *self.imp().on_visible_changed.borrow_mut() = Some(Box::new(f));
     }
 
-    /// Wird gerufen, wenn ein Verweis angeklickt wurde (`true` = neuer Tab).
+    /// Wird gerufen, wenn ein Verweis angeklickt wurde (`true` = zweite Ansicht).
     pub fn connect_navigate(&self, f: impl Fn(&Self, NormRef, bool) + 'static) {
         *self.imp().on_navigate.borrow_mut() = Some(Box::new(f));
     }
@@ -507,9 +560,12 @@ impl LexNormView {
         let add = |tag: gtk::TextTag| {
             table.add(&tag);
         };
+        // „base“ liegt unter allem und sperrt den Text; die später angelegten
+        // Notiz-Tags (höhere Priorität) geben ihre Blöcke wieder frei.
         add(gtk::TextTag::builder()
             .name("base")
             .size_points(self.font_size() as f64)
+            .editable(false)
             .build());
         add(gtk::TextTag::builder()
             .name("norm-title")
@@ -544,6 +600,13 @@ impl LexNormView {
             .scale(0.8)
             .foreground("#8c8c8c")
             .pixels_below_lines(0)
+            .build());
+        // Verweis-Pfeile unter der Überschrift: klein, eng gesetzt.
+        add(gtk::TextTag::builder()
+            .name("ref-chip")
+            .scale(0.85)
+            .pixels_above_lines(0)
+            .pixels_below_lines(2)
             .build());
         // Eigene Notiz (Schema) unter der Überschrift.
         add(gtk::TextTag::builder()
@@ -799,6 +862,8 @@ impl LexNormView {
             law_abbrev,
             note,
             annotations,
+            outgoing,
+            incoming,
         } = page;
         let is_first = imp.sections.borrow().is_empty();
         let old_chars = buffer.char_count();
@@ -848,10 +913,16 @@ impl LexNormView {
         let title_tags = self.tags_for(&[], &["norm-title"]);
         self.insert_text(&buffer, &at, &format!("{title}\n"), &title_tags);
 
+        // Verweis-Pfeile: → wohin diese Norm zeigt, ← wer auf sie zeigt.
+        self.insert_ref_chips(&buffer, &at, "→", &outgoing);
+        self.insert_ref_chips(&buffer, &at, "←", &incoming);
+
         // Notiz (Schema) zwischen Überschrift und Text
         let note_start = buffer.create_mark(None, &buffer.iter_at_mark(&at), true);
-        let note_end = buffer.create_mark(None, &buffer.iter_at_mark(&at), false);
         self.insert_note(&buffer, &at, note.as_deref());
+        // Linksgravitation: der danach eingefügte Normtext darf die Marke
+        // nicht mitnehmen (sonst löscht `set_note` den ganzen Text).
+        let note_end = buffer.create_mark(None, &buffer.iter_at_mark(&at), true);
         let content_offset = buffer.iter_at_mark(&at).offset() - section_offset;
 
         // Normtext
@@ -999,6 +1070,41 @@ impl LexNormView {
         self.insert_text(buffer, at, "\n", &gap);
         self.insert_text(buffer, at, "\u{2009}\n", &rule);
         self.insert_text(buffer, at, "\n", &gap);
+    }
+
+    /// Fügt eine Zeile klickbarer Verweis-Pfeile ein („→ § 434 · § 437“).
+    fn insert_ref_chips(
+        &self,
+        buffer: &gtk::TextBuffer,
+        at: &gtk::TextMark,
+        arrow: &str,
+        chips: &[RefChip],
+    ) {
+        if chips.is_empty() {
+            return;
+        }
+        let imp = self.imp();
+        let dim = self.tags_for(&[], &["ref-chip", "unit-heading"]);
+        let link = self.tags_for(&[], &["ref-chip", "reference"]);
+        self.insert_text(buffer, at, &format!("{arrow} "), &dim);
+        for (i, chip) in chips.iter().take(MAX_REF_CHIPS).enumerate() {
+            if i > 0 {
+                self.insert_text(buffer, at, " · ", &dim);
+            }
+            let start = buffer.iter_at_mark(at).offset();
+            self.insert_text(buffer, at, &chip.label, &link);
+            imp.links.borrow_mut().push(LinkRange {
+                start,
+                end: buffer.iter_at_mark(at).offset(),
+                target: LinkTarget::Reference(chip.target.clone()),
+            });
+        }
+        if chips.len() > MAX_REF_CHIPS {
+            let more =
+                gettext("+{n} weitere").replace("{n}", &(chips.len() - MAX_REF_CHIPS).to_string());
+            self.insert_text(buffer, at, &format!(" · {more}"), &dim);
+        }
+        self.insert_text(buffer, at, "\n", &dim);
     }
 
     /// Fügt die Notiz (Schema) als hervorgehobenen Block ein.
@@ -1355,6 +1461,32 @@ impl LexNormView {
                 self.on_color_chosen(AnnotationKind::Highlight, color);
             }
             ["note"] => self.on_color_chosen(AnnotationKind::Note, "yellow"),
+            ["action", name, rest @ ..] => {
+                let param = (!rest.is_empty()).then(|| rest.join(" ").to_variant());
+                if let Err(err) = self.imp().text_view.activate_action(name, param.as_ref()) {
+                    log::warn!("Aktion {name} nicht erreichbar: {err}");
+                }
+            }
+            ["menu", x, y] => {
+                if let (Ok(x), Ok(y)) = (x.parse::<f64>(), y.parse::<f64>()) {
+                    self.show_context_menu(x, y);
+                }
+            }
+            ["itype", rest @ ..] => {
+                // Wie eine Tastatureingabe: respektiert die Editierbarkeit der Tags.
+                let buffer = self.imp().text_view.buffer();
+                let ok = buffer.insert_interactive_at_cursor(&rest.join(" "), true);
+                log::info!(
+                    "interaktive Eingabe {}",
+                    if ok { "angenommen" } else { "abgelehnt" }
+                );
+            }
+            ["cursor", pos] => {
+                if let Ok(pos) = pos.parse::<i32>() {
+                    let buffer = self.imp().text_view.buffer();
+                    buffer.place_cursor(&buffer.iter_at_offset(pos));
+                }
+            }
             ["type", rest @ ..] => {
                 let buffer = self.imp().text_view.buffer();
                 buffer.insert_at_cursor(&rest.join(" "));
@@ -1444,7 +1576,7 @@ impl LexNormView {
             );
         }
         let start = buffer.create_mark(None, &buffer.iter_at_offset(from), true);
-        let end = buffer.create_mark(None, &buffer.iter_at_offset(to), false);
+        let end = buffer.create_mark(None, &buffer.iter_at_offset(to), true);
         let mut block_marks = None;
         if annotation.kind == AnnotationKind::Note {
             // Hinter vorhandene Notizblöcke desselben Absatzes einreihen.
@@ -1498,7 +1630,7 @@ impl LexNormView {
         let body_tags = self.tags_for(&[], &["note-body", &format!("inline-note-{color}")]);
         let refs: Vec<&gtk::TextTag> = body_tags.iter().collect();
         buffer.insert_with_tags(&mut iter, &format!("{text}\n"), &refs);
-        let block_end = buffer.create_mark(None, &iter, false);
+        let block_end = buffer.create_mark(None, &iter, true);
         // Text vor einem Tag-Anfang erbt sonst dessen Tags (siehe render_section).
         let from = buffer.iter_at_offset(at);
         buffer.remove_all_tags(&from, &iter);
@@ -1629,6 +1761,183 @@ impl LexNormView {
             }
             self.emit_annotation(AnnotationEvent::Update(updated));
         }
+    }
+
+    /// Rechtsklick-Menü: Aktionen in der Gruppe `lex` am TextView, Menü je
+    /// nach Kontext (Auswahl, Markierung, Notiz, Verweis) zusammengesetzt.
+    fn setup_context_menu(&self) {
+        let imp = self.imp();
+        let group = gio::SimpleActionGroup::new();
+        let string = String::static_variant_type();
+        let add_color = |name: &str, kind: AnnotationKind, recolor: bool| {
+            let action = gio::SimpleAction::new(name, Some(&string));
+            action.connect_activate(glib::clone!(
+                #[weak(rename_to = view)]
+                self,
+                move |_, param| {
+                    let Some(color) = param.and_then(|p| p.get::<String>()) else {
+                        return;
+                    };
+                    let Some(color) = HIGHLIGHT_COLORS.iter().map(|c| c.0).find(|c| *c == color)
+                    else {
+                        return;
+                    };
+                    let imp = view.imp();
+                    let target = if recolor {
+                        let ctx = imp.context.borrow().clone().unwrap_or_default();
+                        ctx.note.or(ctx.highlight)
+                    } else {
+                        None
+                    };
+                    imp.popover_target.set(target);
+                    view.on_color_chosen(kind, color);
+                    imp.popover_target.set(None);
+                }
+            ));
+            group.add_action(&action);
+        };
+        add_color("highlight", AnnotationKind::Highlight, false);
+        add_color("note", AnnotationKind::Note, false);
+        add_color("recolor", AnnotationKind::Highlight, true);
+        let simple = |name: &str, f: Box<dyn Fn(&Self)>| {
+            let action = gio::SimpleAction::new(name, None);
+            action.connect_activate(glib::clone!(
+                #[weak(rename_to = view)]
+                self,
+                move |_, _| f(&view)
+            ));
+            group.add_action(&action);
+        };
+        simple(
+            "remove",
+            Box::new(|view| {
+                let ctx = view.imp().context.borrow().clone().unwrap_or_default();
+                if let Some(id) = ctx.note.or(ctx.highlight) {
+                    view.emit_annotation(AnnotationEvent::Delete(id));
+                }
+            }),
+        );
+        simple(
+            "copy",
+            Box::new(|view| {
+                let buffer = view.imp().text_view.buffer();
+                buffer.copy_clipboard(&view.clipboard());
+            }),
+        );
+        simple(
+            "search-selection",
+            Box::new(|view| {
+                let buffer = view.imp().text_view.buffer();
+                if let Some((a, b)) = buffer.selection_bounds() {
+                    let text = buffer.text(&a, &b, false).to_string();
+                    let query = text
+                        .split_whitespace()
+                        .take(6)
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    if let Err(err) =
+                        view.activate_action("win.quick-search-query", Some(&query.to_variant()))
+                    {
+                        log::warn!("Schnellsuche nicht erreichbar: {err}");
+                    }
+                }
+            }),
+        );
+        simple(
+            "open-link",
+            Box::new(|view| {
+                let link = view.imp().context.borrow().clone().and_then(|c| c.link);
+                if let Some(link) = link {
+                    view.follow_link(&link, false);
+                }
+            }),
+        );
+        simple(
+            "open-link-tab",
+            Box::new(|view| {
+                let link = view.imp().context.borrow().clone().and_then(|c| c.link);
+                if let Some(link) = link {
+                    view.follow_link(&link, true);
+                }
+            }),
+        );
+        imp.text_view.insert_action_group("lex", Some(&group));
+
+        // Untermenüs verschachtelt (eigene Popovers): braucht keine
+        // Monitorgeometrie und funktioniert damit auch unter Broadway.
+        let menu =
+            gtk::PopoverMenu::from_model_full(&gio::Menu::new(), gtk::PopoverMenuFlags::NESTED);
+        menu.set_parent(&*imp.text_view);
+        menu.set_has_arrow(false);
+        imp.context_menu.set(menu).ok();
+
+        // Rechtsklick abfangen, bevor der TextView sein Standardmenü zeigt.
+        let gesture = gtk::GestureClick::builder()
+            .button(3)
+            .propagation_phase(gtk::PropagationPhase::Capture)
+            .build();
+        gesture.connect_pressed(glib::clone!(
+            #[weak(rename_to = view)]
+            self,
+            move |gesture, _, x, y| {
+                gesture.set_state(gtk::EventSequenceState::Claimed);
+                view.show_context_menu(x, y);
+            }
+        ));
+        imp.text_view.add_controller(gesture);
+    }
+
+    /// Ermittelt den Kontext unter dem Zeiger und zeigt das Menü.
+    fn show_context_menu(&self, x: f64, y: f64) {
+        let imp = self.imp();
+        let Some(menu) = imp.context_menu.get() else {
+            return;
+        };
+        if let Some(popover) = imp.selection_popover.get() {
+            popover.popdown();
+        }
+        let buffer = imp.text_view.buffer();
+        let (bx, by) =
+            imp.text_view
+                .window_to_buffer_coords(gtk::TextWindowType::Widget, x as i32, y as i32);
+        let iter = imp.text_view.iter_at_location(bx, by);
+        let offset = iter.as_ref().map(|i| i.offset());
+        let mut ctx = MenuContext {
+            link: self.link_at(x, y),
+            ..Default::default()
+        };
+        if let Some(offset) = offset {
+            ctx.note = self.note_block_at(offset);
+            ctx.highlight = self.annotation_at(offset, Some(AnnotationKind::Highlight));
+            // Ohne Auswahl (oder Klick außerhalb) das Wort unter dem Zeiger wählen,
+            // damit Markieren/Notiz direkt gehen – nicht in Notizblöcken.
+            let inside_selection = buffer
+                .selection_bounds()
+                .is_some_and(|(a, b)| a.offset() <= offset && offset < b.offset());
+            if !inside_selection && ctx.note.is_none() {
+                if let Some(iter) = iter.as_ref() {
+                    let mut start = *iter;
+                    let mut end = *iter;
+                    if !start.starts_word() {
+                        start.backward_word_start();
+                    }
+                    if !end.ends_word() {
+                        end.forward_word_end();
+                    }
+                    if start.offset() < end.offset() {
+                        buffer.select_range(&start, &end);
+                    }
+                }
+            }
+        }
+        ctx.has_selection = buffer.selection_bounds().is_some_and(|(a, b)| {
+            a.offset() != b.offset() && self.note_block_at(a.offset()).is_none()
+        });
+        let model = build_context_menu(&ctx);
+        *imp.context.borrow_mut() = Some(ctx);
+        menu.set_menu_model(Some(&model));
+        menu.set_pointing_to(Some(&gtk::gdk::Rectangle::new(x as i32, y as i32, 1, 1)));
+        menu.popup();
     }
 
     /// Baut das Popover für die Textauswahl: Farben für Markierung und
@@ -2042,6 +2351,70 @@ fn heading_tag_name(level: u8) -> &'static str {
         2 => "heading2",
         _ => "heading3",
     }
+}
+
+/// Menümodell für den Rechtsklick je nach Kontext.
+fn build_context_menu(ctx: &MenuContext) -> gio::Menu {
+    let colors = |action: &str| {
+        let sub = gio::Menu::new();
+        for (name, label, _, _) in HIGHLIGHT_COLORS {
+            let item = gio::MenuItem::new(Some(label), None);
+            item.set_action_and_target_value(Some(action), Some(&name.to_variant()));
+            sub.append_item(&item);
+        }
+        sub
+    };
+    let menu = gio::Menu::new();
+    if let Some(link) = &ctx.link {
+        let section = gio::Menu::new();
+        let label = match link {
+            LinkTarget::Reference(r) => gettext("{ref} öffnen").replace("{ref}", &r.label()),
+            LinkTarget::Footnote(_) => gettext("Zur Fußnote"),
+        };
+        section.append(Some(&label), Some("lex.open-link"));
+        if matches!(link, LinkTarget::Reference(_)) {
+            section.append(
+                Some(&gettext("In zweiter Ansicht öffnen")),
+                Some("lex.open-link-tab"),
+            );
+        }
+        menu.append_section(None, &section);
+    }
+    if ctx.note.is_some() {
+        let section = gio::Menu::new();
+        section.append_submenu(Some(&gettext("Notizfarbe")), &colors("lex.recolor"));
+        section.append(Some(&gettext("Notiz löschen")), Some("lex.remove"));
+        menu.append_section(None, &section);
+    } else if ctx.highlight.is_some() {
+        let section = gio::Menu::new();
+        section.append_submenu(Some(&gettext("Markierungsfarbe")), &colors("lex.recolor"));
+        section.append(Some(&gettext("Markierung entfernen")), Some("lex.remove"));
+        menu.append_section(None, &section);
+    }
+    if ctx.has_selection {
+        let section = gio::Menu::new();
+        section.append_submenu(Some(&gettext("Markieren")), &colors("lex.highlight"));
+        section.append_submenu(Some(&gettext("Notiz hinzufügen")), &colors("lex.note"));
+        menu.append_section(None, &section);
+        let section = gio::Menu::new();
+        section.append(Some(&gettext("Kopieren")), Some("lex.copy"));
+        section.append(
+            Some(&gettext("Auswahl in der Schnellsuche")),
+            Some("lex.search-selection"),
+        );
+        menu.append_section(None, &section);
+    }
+    let section = gio::Menu::new();
+    section.append(
+        Some(&gettext("Norm als Favorit")),
+        Some("win.toggle-favorite"),
+    );
+    section.append(
+        Some(&gettext("Schema / Notiz zur Norm")),
+        Some("win.toggle-notes"),
+    );
+    menu.append_section(None, &section);
+    menu
 }
 
 /// Setzt die Farben einer Markierung (hell/dunkel) und der Notiz-Unterstreichung.

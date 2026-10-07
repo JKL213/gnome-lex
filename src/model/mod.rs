@@ -4,7 +4,6 @@
 //! Datenmodell: das Block-Modell des Normtexts (serialisierbar, ohne GTK)
 //! sowie GObject-Subklassen für Listen und Bäume in der Oberfläche.
 // Wird ab den folgenden Stufen von der Oberfläche genutzt.
-#![allow(dead_code)]
 
 pub mod objects;
 pub mod text;

@@ -1,0 +1,44 @@
+# Baut bei jedem Push auf main (und manuell) das Flatpak-Bundle und hängt es
+# als Artefakt an; bei Tags „v*“ zusätzlich als Release-Download.
+name: Flatpak
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  flatpak:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Flatpak und Laufzeiten installieren
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y --noninteractive flathub \
+            org.gnome.Platform//51 org.gnome.Sdk//51 \
+            org.freedesktop.Sdk.Extension.rust-stable//26.08
+
+      - name: Bauen
+        run: |
+          flatpak-builder --user --force-clean --repo="$PWD/_flatpak-repo" \
+            _flatpak build-aux/org.gnomelex.Gesetze.Devel.json
+
+      - name: Bundle erzeugen
+        run: |
+          flatpak build-bundle "$PWD/_flatpak-repo" gesetze-devel.flatpak org.gnomelex.Gesetze.Devel
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gesetze-devel.flatpak
+          path: gesetze-devel.flatpak
+
+      - name: Release-Datei anhängen
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: gesetze-devel.flatpak

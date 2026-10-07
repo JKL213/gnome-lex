@@ -12,7 +12,9 @@ template $LexNormView : Adw.Bin {
       tightening-threshold: 620;
 
       child: TextView text_view {
-        editable: false;
+        // Editierbar, damit Tastatureingaben ankommen; der Normtext ist über das
+        // Tag „base“ (editable = false) gesperrt, nur Notizblöcke sind frei.
+        editable: true;
         cursor-visible: false;
         wrap-mode: word_char;
         left-margin: 32;

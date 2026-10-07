@@ -17,7 +17,7 @@ use crate::db::{Database, QuickHit};
 /// Höchstzahl angezeigter Treffer.
 const LIMIT: usize = 30;
 
-/// Aufruf beim Sprung: Norm-ID und ob ein neuer Tab gewünscht ist.
+/// Aufruf beim Sprung: Norm-ID und ob die zweite Ansicht gewünscht ist.
 type JumpCallback = Box<dyn Fn(i64, bool)>;
 
 mod imp {
