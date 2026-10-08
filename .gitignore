@@ -14,3 +14,6 @@ docs/SETUP-FEDORA-KDE.md
 CLAUDE.md
 CLAUDE.md
 _flatpak-repo/
+
+# Lokales Hilfsskript für das Projektbanner
+build-aux/make-banner.py
