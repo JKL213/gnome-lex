@@ -496,6 +496,9 @@ impl LexWindow {
             .label(gettext("BGB herunterladen"))
             .halign(gtk::Align::Center)
             .action_name("win.download")
+            .tooltip_text(gettext(
+                "Bürgerliches Gesetzbuch von gesetze-im-internet.de laden",
+            ))
             .css_classes(["pill", "suggested-action"])
             .build();
         bgb.set_action_target_value(Some(&"bgb".to_variant()));
@@ -504,6 +507,9 @@ impl LexWindow {
             .label(gettext("Weitere Gesetze …"))
             .halign(gtk::Align::Center)
             .action_name("win.download-center")
+            .tooltip_text(gettext(
+                "Download-Center mit allen verfügbaren Gesetzen öffnen",
+            ))
             .css_classes(["pill"])
             .build();
         imp.download_buttons.append(&more);

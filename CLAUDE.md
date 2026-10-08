@@ -585,6 +585,16 @@ Stufe 1 zusätzlich mit Meson-Tests und Flatpak-Build; Stufe 2 wurde über
     `insert_annotation_tx`, `reanchor_all` (JSON-Export/-Import der
     Oberfläche steht aus). Kontextmenü ohne „Norm in neuem Tab“,
     Kürzeldialog ohne Tab-Einträge.
+- **Verweise und Tooltips (09.10.2026):** Die klickbare Fläche eines
+  Verweises schließt jetzt das vorangestellte „§“/„§§“/„Art.“ ein
+  (`sign_prefix_start`, Test `link_includes_sign`). Trefferprüfung über
+  `char_offset_at` (`iter_at_position`, Zeichen unter dem Zeiger statt
+  nächster Cursorposition, kein Treffer rechts vom Zeilenende); beim
+  Überfahren wird der Verweis unterstrichen (Tag `link-hover`) und ein
+  Tooltip zeigt Ziel und Strg+Klick-Hinweis. Weitere Tooltips: Farbfelder
+  („Gelb markieren“/„Notiz in Gelb anheften“), Entfernen, vor/zurück mit
+  Kürzel, Verlauf, Download-Schaltflächen. Abgeschnittene Oberkante der
+  „7“ (Bildschirm mit Skalierung 1,25) unter Broadway nicht reproduzierbar.
 - **Tooling:** `.vscode/` (settings, tasks, launch, extensions; Tasks
   `sdk: cargo build|run|qualität` für die SDK-Sandbox),
   `build-aux/sdk-cargo.sh` (führt Cargo in `org.gnome.Sdk//51` mit

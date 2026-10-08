@@ -87,6 +87,10 @@ impl LexDownloadCenter {
                 .label(button_label)
                 .valign(gtk::Align::Center)
                 .action_name("win.download")
+                .tooltip_text(
+                    gettext("{abbrev} von gesetze-im-internet.de laden")
+                        .replace("{abbrev}", source.abbrev),
+                )
                 .build();
             button.set_action_target_value(Some(&source.slug.to_variant()));
             if installed.is_none() {

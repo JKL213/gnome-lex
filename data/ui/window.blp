@@ -215,13 +215,13 @@ template $LexWindow : Adw.ApplicationWindow {
 
                     Button {
                       icon-name: "go-previous-symbolic";
-                      tooltip-text: _("Vorherige Norm");
+                      tooltip-text: _("Vorherige Norm (Alt+Bild↑)");
                       action-name: "win.prev-norm";
                     }
 
                     Button {
                       icon-name: "go-next-symbolic";
-                      tooltip-text: _("Nächste Norm");
+                      tooltip-text: _("Nächste Norm (Alt+Bild↓)");
                       action-name: "win.next-norm";
                     }
                   }
@@ -236,7 +236,7 @@ template $LexWindow : Adw.ApplicationWindow {
                   [start]
                   MenuButton history_button {
                     icon-name: "document-open-recent-symbolic";
-                    tooltip-text: _("Verlauf");
+                    tooltip-text: _("Zuletzt gelesene Normen");
 
                     popover: Popover history_popover {
                       child: Box {

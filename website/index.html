@@ -49,6 +49,16 @@
   .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 32px; align-items: start; }
   .grid h3 { margin: 16px 0 0; font-size: 17px; font-weight: 700; text-align: center; }
   .grid .phone { max-width: 320px; margin: 0 auto; }
+  /* Über das Projekt */
+  .about { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
+  .about h3 { margin: 14px 0 6px; font-size: 17px; font-weight: 700; }
+  .about p { margin: 0; color: var(--dim); font-size: 15px; }
+  .about .ic {
+    width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
+    background: rgba(53, 132, 228, 0.14); color: var(--accent);
+  }
+  .about .ic svg { width: 22px; height: 22px; }
+  .more { margin: 28px 0 0; text-align: center; font-size: 15px; }
   /* Installation: Voraussetzungen als Chips, Schritte als Zeitleiste */
   .install { max-width: 780px; margin: 0 auto; }
   .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 36px; padding: 0; list-style: none; }
@@ -68,8 +78,7 @@
   .step:not(:last-child)::after {
     content: ""; position: absolute; left: 19px; top: 44px; bottom: 4px; width: 2px; background: var(--border);
   }
-  .step h3 { margin: 8px 0 2px; font-size: 17px; font-weight: 700; }
-  .step p { margin: 0 0 10px; font-size: 14px; color: var(--dim); }
+  .step h3 { margin: 8px 0 12px; font-size: 17px; font-weight: 700; }
   .term { grid-column: 2; border-radius: 12px; overflow: hidden; background: var(--code-bg); box-shadow: var(--shadow); }
   .term-bar {
     display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 6px 6px 14px;
@@ -93,7 +102,7 @@
   footer { padding: 28px 0 40px; border-top: 1px solid var(--border); font-size: 14px; color: var(--dim);
     display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
   @media (max-width: 720px) {
-    .grid { grid-template-columns: 1fr; }
+    .grid, .about { grid-template-columns: 1fr; }
     .hero { padding-top: 24px; }
   }
 </style>
@@ -117,6 +126,28 @@
       <img class="shot" src="img/notizen.png" width="1024" height="713"
            alt="Gesetze zeigt § 433 BGB mit Gliederung, Verweisen, Schema-Notiz und einer Markierung in § 434.">
     </div>
+
+    <section>
+      <h2>Für die Examensvorbereitung</h2>
+      <div class="about">
+        <div>
+          <div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M4 4.5h11l5 5v10H4z M15 4.5v5h5 M8 13h8 M8 16.5h5"/></svg></div>
+          <h3>Arbeiten wie im Habersack</h3>
+          <p>Post-it an die Norm? Gern! Unterstreichen? Klappt auch! Zwei Gesetzbücher nebeneinander? Sure!</p>
+        </div>
+        <div>
+          <div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M3.5 9h17 M9 9v10.5"/></svg></div>
+          <h3>Nativ statt Webapp</h3>
+          <p>In GTK 4 + libadwaita umgesetzt – ohne RAM-Fresserei, fünftausend offene Browsertabs und Onlinezwang.</p>
+        </div>
+        <div>
+          <div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 20.5s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.9c0 5.4-7.5 10-7.5 10z"/></svg></div>
+          <h3>Frei</h3>
+          <p>Ohne Cloud und ohne Bezahlfunktionen. Quellcode unter LGPL v3 – Forks und PRs äußerst erwünscht.</p>
+        </div>
+      </div>
+      <p class="more"><a href="https://jankoch.dev/posts/gnome-lex-ankuendigung">Warum gnome-lex? Zur Ankündigung →</a></p>
+    </section>
 
     <section>
       <div class="grid">
@@ -147,7 +178,6 @@
           <li class="step">
             <div>
               <h3>Laufzeit und Rust holen</h3>
-              <p>Einmalig, aus Flathub.</p>
             </div>
             <div class="term">
               <div class="term-bar"><span>Terminal</span><button class="copy" type="button">Kopieren</button></div>
@@ -157,7 +187,6 @@
           <li class="step">
             <div>
               <h3>Quellcode klonen</h3>
-              <p>Direkt von GitHub.</p>
             </div>
             <div class="term">
               <div class="term-bar"><span>Terminal</span><button class="copy" type="button">Kopieren</button></div>
@@ -167,7 +196,6 @@
           <li class="step">
             <div>
               <h3>Bauen und installieren</h3>
-              <p>Baut die App in der Sandbox und installiert sie für deinen Benutzer.</p>
             </div>
             <div class="term">
               <div class="term-bar"><span>Terminal</span><button class="copy" type="button">Kopieren</button></div>
@@ -177,7 +205,6 @@
           <li class="step">
             <div>
               <h3>Starten</h3>
-              <p>Oder einfach „Gesetze“ in der Übersicht suchen.</p>
             </div>
             <div class="term">
               <div class="term-bar"><span>Terminal</span><button class="copy" type="button">Kopieren</button></div>

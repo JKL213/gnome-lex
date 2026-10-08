@@ -167,7 +167,8 @@ mod imp {
         pub font_size: Cell<i32>,
         pub links: RefCell<Vec<LinkRange>>,
         pub table_labels: RefCell<Vec<gtk::Label>>,
-        pub hovering_link: Cell<bool>,
+        /// Verweis unter dem Zeiger (Pufferoffsets), unterstrichen.
+        pub hovered_link: Cell<Option<(i32, i32)>>,
         /// Zählt jedes `set_norm`; Nachladeantworten älterer Generationen
         /// werden verworfen.
         pub generation: Cell<u64>,
@@ -734,6 +735,10 @@ impl LexNormView {
         ));
         add(footnote_ref);
         add(reference);
+        add(gtk::TextTag::builder()
+            .name("link-hover")
+            .underline(pango::Underline::Single)
+            .build());
         add(note_background);
 
         // Markierungsfarben (hell/dunkel) und Unterstreichung angehefteter Notizen.
@@ -1135,11 +1140,14 @@ impl LexNormView {
             return;
         };
         let text = flat.text();
+        let chars: Vec<char> = text.chars().collect();
         for reference in find_references(&text, law_abbrev) {
             if reference.target.norm.is_none() {
                 continue;
             }
-            let from = base + reference.start as i32;
+            // Das vorangestellte „§“, „§§“ oder „Art.“ gehört zur klickbaren
+            // Fläche, sonst bleibt bei „§ 7“ nur eine Ziffer als Ziel.
+            let from = base + sign_prefix_start(&chars, reference.start) as i32;
             let to = base + reference.end as i32;
             buffer.apply_tag(
                 &tag,
@@ -1359,14 +1367,37 @@ impl LexNormView {
         motion.connect_motion(glib::clone!(
             #[weak(rename_to = view)]
             self,
-            move |_, x, y| {
-                let over = view.link_at(x, y).is_some();
-                let imp = view.imp();
-                if imp.hovering_link.replace(over) != over {
-                    imp.text_view
-                        .set_cursor_from_name(Some(if over { "pointer" } else { "text" }));
+            move |_, x, y| view.set_hovered_link(view.link_range_at(x, y))
+        ));
+        // Tooltip über Verweisen: Ziel und Hinweis auf Strg+Klick.
+        imp.text_view.set_has_tooltip(true);
+        imp.text_view.connect_query_tooltip(glib::clone!(
+            #[weak(rename_to = view)]
+            self,
+            #[upgrade_or]
+            false,
+            move |_, x, y, keyboard, tooltip| {
+                if keyboard {
+                    return false;
                 }
+                let Some(link) = view.link_at(x as f64, y as f64) else {
+                    return false;
+                };
+                let text = match link {
+                    LinkTarget::Footnote(_) => gettext("Zur Fußnote springen"),
+                    LinkTarget::Reference(target) => {
+                        gettext("{target} öffnen\nStrg+Klick: in der zweiten Ansicht öffnen")
+                            .replace("{target}", &target.label())
+                    }
+                };
+                tooltip.set_text(Some(&text));
+                true
             }
+        ));
+        motion.connect_leave(glib::clone!(
+            #[weak(rename_to = view)]
+            self,
+            move |_| view.set_hovered_link(None)
         ));
         imp.text_view.add_controller(motion);
 
@@ -1965,9 +1996,14 @@ impl LexNormView {
                 let swatch = gtk::Box::builder()
                     .css_classes(["highlight-swatch", name])
                     .build();
+                let tooltip = match kind {
+                    AnnotationKind::Note => gettext("Notiz in {farbe} anheften"),
+                    _ => gettext("{farbe} markieren"),
+                }
+                .replace("{farbe}", &gettext(*label));
                 let button = gtk::Button::builder()
                     .child(&swatch)
-                    .tooltip_text(*label)
+                    .tooltip_text(tooltip)
                     .css_classes(["flat", "circular"])
                     .build();
                 button.connect_clicked(glib::clone!(
@@ -1980,6 +2016,7 @@ impl LexNormView {
         }
         let remove_button = gtk::Button::builder()
             .label(gettext("Entfernen"))
+            .tooltip_text(gettext("Markierung oder Notiz entfernen"))
             .css_classes(["flat", "destructive-action"])
             .visible(false)
             .build();
@@ -2306,17 +2343,74 @@ impl LexNormView {
 
     /// Verweis unter der Zeigerposition (Widget-Koordinaten).
     fn link_at(&self, x: f64, y: f64) -> Option<LinkTarget> {
-        let imp = self.imp();
-        let (bx, by) =
-            imp.text_view
-                .window_to_buffer_coords(gtk::TextWindowType::Widget, x as i32, y as i32);
-        let iter = imp.text_view.iter_at_location(bx, by)?;
-        let offset = iter.offset();
-        imp.links
+        let offset = self.char_offset_at(x, y)?;
+        self.imp()
+            .links
             .borrow()
             .iter()
             .find(|l| l.start <= offset && offset < l.end)
             .map(|l| l.target.clone())
+    }
+
+    /// Pufferbereich des Verweises unter der Zeigerposition.
+    fn link_range_at(&self, x: f64, y: f64) -> Option<(i32, i32)> {
+        let offset = self.char_offset_at(x, y)?;
+        self.imp()
+            .links
+            .borrow()
+            .iter()
+            .find(|l| l.start <= offset && offset < l.end)
+            .map(|l| (l.start, l.end))
+    }
+
+    /// Offset des Zeichens, auf dem der Zeiger liegt. Anders als
+    /// `iter_at_location` (nächste Cursorposition, also ggf. schon das
+    /// Folgezeichen) trifft das genau die Glyphe unter dem Zeiger; außerhalb
+    /// des Textes (rechts vom Zeilenende) gibt es keinen Treffer.
+    fn char_offset_at(&self, x: f64, y: f64) -> Option<i32> {
+        let imp = self.imp();
+        let (bx, by) =
+            imp.text_view
+                .window_to_buffer_coords(gtk::TextWindowType::Widget, x as i32, y as i32);
+        let (iter, _trailing) = imp.text_view.iter_at_position(bx, by)?;
+        let location = imp.text_view.iter_location(&iter);
+        // Zeilenumbruch oder Zeilenende: kein Zeichen unter dem Zeiger.
+        if iter.ends_line() || bx > location.x() + location.width().max(1) {
+            return None;
+        }
+        Some(iter.offset())
+    }
+
+    /// Unterstreicht den Verweis unter dem Zeiger und setzt den Mauszeiger.
+    fn set_hovered_link(&self, range: Option<(i32, i32)>) {
+        let imp = self.imp();
+        let previous = imp.hovered_link.replace(range);
+        if previous == range {
+            return;
+        }
+        let buffer = imp.text_view.buffer();
+        if let Some((start, end)) = previous {
+            let len = buffer.char_count();
+            buffer.remove_tag_by_name(
+                "link-hover",
+                &buffer.iter_at_offset(start.min(len)),
+                &buffer.iter_at_offset(end.min(len)),
+            );
+        }
+        if let Some((start, end)) = range {
+            buffer.apply_tag_by_name(
+                "link-hover",
+                &buffer.iter_at_offset(start),
+                &buffer.iter_at_offset(end),
+            );
+        }
+        if previous.is_some() != range.is_some() {
+            imp.text_view.set_cursor_from_name(Some(if range.is_some() {
+                "pointer"
+            } else {
+                "text"
+            }));
+        }
     }
 
     fn follow_link(&self, target: &LinkTarget, new_tab: bool) {
@@ -2529,9 +2623,40 @@ fn cell_markup(segs: &[Seg]) -> String {
     out
 }
 
+/// Beginn eines unmittelbar vor `start` stehenden Normzeichens („§ “, „§§ “,
+/// „Art. “, „Artikel “), sonst `start`.
+fn sign_prefix_start(chars: &[char], start: usize) -> usize {
+    let mut i = start.min(chars.len());
+    while i > 0 && matches!(chars[i - 1], ' ' | '\u{a0}' | '\u{202f}') {
+        i -= 1;
+    }
+    let before: String = chars[i.saturating_sub(8)..i].iter().collect();
+    for sign in ["§§", "§", "Art.", "Artikel"] {
+        if before.ends_with(sign) {
+            return i - sign.chars().count();
+        }
+    }
+    start
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn link_includes_sign() {
+        let c: Vec<char> = "nach § 439 und §§ 440, 323 sowie Art. 229"
+            .chars()
+            .collect();
+        let at = |n: &str| {
+            let t: String = c.iter().collect();
+            t[..t.find(n).unwrap()].chars().count()
+        };
+        assert_eq!(sign_prefix_start(&c, at("439")), at("§ 439"));
+        assert_eq!(sign_prefix_start(&c, at("440")), at("§§ 440"));
+        assert_eq!(sign_prefix_start(&c, at("323")), at("323"));
+        assert_eq!(sign_prefix_start(&c, at("229")), at("Art. 229"));
+    }
 
     #[test]
     fn repealed_titles() {
