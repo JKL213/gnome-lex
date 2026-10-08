@@ -10,9 +10,8 @@
   "chat.agentFilesLocations": {
     ".github/agents": true
   },
-  "rust-analyzer.cargo.extraEnv": {
-    "PKG_CONFIG_PATH": "${env:HOME}/.cache/gnome-lex/pc"
-  },
+  "rust-analyzer.server.path": "${workspaceFolder}/build-aux/sdk-rust-analyzer.sh",
+  "rust-analyzer.cargo.targetDir": true,
   "rust-analyzer.check.command": "clippy",
   "rust-analyzer.check.extraArgs": [
     "--all-targets",

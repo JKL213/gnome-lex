@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gesetze – Bundesgesetze lesen und annotieren</title>
+<meta name="description" content="Native GNOME-App zum Lesen und Annotieren deutscher Bundesgesetze. Open Source, offline, GTK 4 und libadwaita.">
+<link rel="icon" href="img/logo.svg" type="image/svg+xml">
+<style>
+  /* Farben aus dem Gesetze-Design-System (libadwaita-Standardwerte).
+     Keine externen Schriften: Inter bzw. Adwaita Sans, wenn installiert. */
+  :root {
+    --bg: #fafafb; --view: #ffffff; --fg: rgba(0, 0, 6, 0.8); --dim: rgba(0, 0, 6, 0.6);
+    --border: rgba(0, 0, 6, 0.12); --accent: #0461be; --accent-bg: #3584e4;
+    --code-bg: #1d1d20; --code-fg: #ffffff;
+    --shadow: 0 0 0 1px rgba(0, 0, 6, 0.06), 0 4px 16px 2px rgba(0, 0, 6, 0.1), 0 16px 48px 4px rgba(0, 0, 6, 0.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #222226; --view: #1d1d20; --fg: #ffffff; --dim: rgba(255, 255, 255, 0.6);
+      --border: rgba(255, 255, 255, 0.12); --accent: #81d0ff; --code-bg: #2e2e32;
+      --shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 32px 4px rgba(0, 0, 0, 0.4);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.5 "Inter", "Inter Variable", "Adwaita Sans", "Cantarell", system-ui, sans-serif;
+  }
+  a { color: var(--accent); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 0; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; color: var(--fg); text-decoration: none; }
+  .brand img { width: 32px; height: 32px; }
+  .btn {
+    display: inline-flex; align-items: center; min-height: 40px; padding: 0 18px; border-radius: 9999px;
+    background: rgba(128, 128, 128, 0.14); color: var(--fg); font-weight: 700; text-decoration: none;
+  }
+  .btn.primary { background: var(--accent-bg); color: #ffffff; }
+  .hero { text-align: center; padding: 48px 0 40px; }
+  .hero img.icon { width: 112px; height: 112px; }
+  h1 { margin: 12px 0 8px; font-size: clamp(40px, 7vw, 60px); line-height: 1.05; font-weight: 800; letter-spacing: -1px; }
+  .lead { margin: 0 0 24px; font-size: 19px; color: var(--dim); }
+  .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+  .shot { display: block; width: 100%; height: auto; border-radius: 12px; box-shadow: var(--shadow); }
+  .hero .shot { margin-top: 48px; }
+  section { padding: 56px 0; }
+  h2 { margin: 0 0 20px; font-size: 28px; line-height: 1.2; font-weight: 800; text-align: center; }
+  .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 32px; align-items: start; }
+  .grid h3 { margin: 16px 0 0; font-size: 17px; font-weight: 700; text-align: center; }
+  .grid .phone { max-width: 320px; margin: 0 auto; }
+  pre {
+    margin: 0 auto; max-width: 760px; padding: 20px 24px; border-radius: 12px; overflow-x: auto;
+    background: var(--code-bg); color: var(--code-fg); font: 14px/1.8 "Adwaita Mono", "Source Code Pro", ui-monospace, monospace;
+  }
+  pre .p { color: rgba(255, 255, 255, 0.5); user-select: none; }
+  .note { max-width: 760px; margin: 12px auto 0; font-size: 14px; color: var(--dim); text-align: center; }
+  footer { padding: 28px 0 40px; border-top: 1px solid var(--border); font-size: 14px; color: var(--dim);
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+  @media (max-width: 720px) {
+    .grid { grid-template-columns: 1fr; }
+    .hero { padding-top: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="brand" href="./"><img src="img/logo.svg" alt="">Gesetze</a>
+    <a class="btn" href="https://github.com/gnome-lex/gnome-lex">GitHub</a>
+  </header>
+
+  <main>
+    <div class="hero">
+      <img class="icon" src="img/logo.svg" alt="">
+      <h1>Gesetze</h1>
+      <p class="lead">Bundesgesetze lesen und annotieren – nativ für GNOME.</p>
+      <div class="actions">
+        <a class="btn primary" href="#installation">Installieren</a>
+        <a class="btn" href="https://github.com/gnome-lex/gnome-lex">Quellcode</a>
+      </div>
+      <img class="shot" src="img/notizen.png" width="1024" height="713"
+           alt="Gesetze zeigt § 433 BGB mit Gliederung, Verweisen, Schema-Notiz und einer Markierung in § 434.">
+    </div>
+
+    <section>
+      <div class="grid">
+        <figure style="margin: 0">
+          <img class="shot" src="img/zpo.png" width="1024" height="713" loading="lazy"
+               alt="§ 253 ZPO mit Gliederung der Zivilprozessordnung und klickbaren Verweisen.">
+          <h3>BGB, ZPO und 31 weitere Gesetze</h3>
+        </figure>
+        <figure class="phone" style="margin: 0 auto">
+          <img class="shot" src="img/schmal.png" width="420" height="720" loading="lazy"
+               alt="§ 14 BGB in schmaler Fensterbreite mit Fußnote.">
+          <h3>Bis Smartphone-Breite</h3>
+        </figure>
+      </div>
+    </section>
+
+    <section id="installation">
+      <h2>Installation</h2>
+<pre><code><span class="p">$ </span>git clone https://github.com/gnome-lex/gnome-lex
+<span class="p">$ </span>cd gnome-lex
+<span class="p">$ </span>flatpak-builder --user --install --force-clean _flatpak build-aux/org.gnomelex.Gesetze.Devel.json
+<span class="p">$ </span>flatpak run org.gnomelex.Gesetze.Devel</code></pre>
+      <p class="note">Benötigt <code>org.gnome.Sdk//51</code> und die Erweiterung <code>rust-stable</code> von Flathub. Flathub-Paket folgt.</p>
+    </section>
+  </main>
+
+  <footer>
+    <span>Freie Software unter LGPL-3.0-or-later</span>
+    <span>Gesetzestexte: <a href="https://www.gesetze-im-internet.de/">gesetze-im-internet.de</a></span>
+  </footer>
+</div>
+</body>
+</html>

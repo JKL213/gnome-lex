@@ -30,7 +30,8 @@ jobs:
 
       - name: Bundle erzeugen
         run: |
-          flatpak build-bundle "$PWD/_flatpak-repo" gesetze-devel.flatpak org.gnomelex.Gesetze.Devel
+          flatpak build-bundle --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
+            "$PWD/_flatpak-repo" gesetze-devel.flatpak org.gnomelex.Gesetze.Devel
 
       - uses: actions/upload-artifact@v4
         with:

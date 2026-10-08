@@ -22,18 +22,49 @@
         "/run/build/gesetze": "${workspaceFolder}"
       },
       "environment": [
-        { "name": "RUST_BACKTRACE", "value": "1" },
-        { "name": "G_MESSAGES_DEBUG", "value": "all" },
-        { "name": "GTK_DEBUG", "value": "interactive" }
+        {
+          "name": "RUST_BACKTRACE",
+          "value": "1"
+        },
+        {
+          "name": "G_MESSAGES_DEBUG",
+          "value": "all"
+        },
+        {
+          "name": "GTK_DEBUG",
+          "value": "interactive"
+        }
       ],
       "setupCommands": [
-        { "description": "Debug-Symbole des Flatpak-Builds", "text": "set debug-file-directory /app/lib/debug:/usr/lib/debug", "ignoreFailures": false },
-        { "description": "Pretty-Printing", "text": "-enable-pretty-printing", "ignoreFailures": true },
-        { "description": "Rust-Pretty-Printer aus dem SDK", "text": "python import sys; sys.path.insert(0, '/usr/lib/sdk/rust-stable/lib/rustlib/etc'); import gdb_lookup; gdb_lookup.register_printers(gdb.current_objfile())", "ignoreFailures": true },
-        { "description": "Breakpoints vor dem Laden erlauben", "text": "set breakpoint pending on", "ignoreFailures": true },
-        { "description": "Rust-Panics anhalten", "text": "break rust_panic", "ignoreFailures": true }
+        {
+          "description": "Debug-Symbole des Flatpak-Builds",
+          "text": "set debug-file-directory /app/lib/debug:/usr/lib/debug",
+          "ignoreFailures": false
+        },
+        {
+          "description": "Pretty-Printing",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Rust-Pretty-Printer aus dem SDK",
+          "text": "python import sys; sys.path.insert(0, '/usr/lib/sdk/rust-stable/lib/rustlib/etc'); import gdb_lookup; gdb_lookup.register_printers(gdb.current_objfile())",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Breakpoints vor dem Laden erlauben",
+          "text": "set breakpoint pending on",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Rust-Panics anhalten",
+          "text": "break rust_panic",
+          "ignoreFailures": true
+        }
       ],
-      "logging": { "engineLogging": false }
+      "logging": {
+        "engineLogging": false
+      }
     },
     {
       "name": "Flatpak: Gesetze debuggen (ohne Neubau)",
@@ -55,15 +86,35 @@
         "/run/build/gesetze": "${workspaceFolder}"
       },
       "environment": [
-        { "name": "RUST_BACKTRACE", "value": "1" },
-        { "name": "G_MESSAGES_DEBUG", "value": "all" }
+        {
+          "name": "RUST_BACKTRACE",
+          "value": "1"
+        },
+        {
+          "name": "G_MESSAGES_DEBUG",
+          "value": "all"
+        }
       ],
       "setupCommands": [
-        { "text": "set debug-file-directory /app/lib/debug:/usr/lib/debug" },
-        { "text": "-enable-pretty-printing", "ignoreFailures": true },
-        { "text": "python import sys; sys.path.insert(0, '/usr/lib/sdk/rust-stable/lib/rustlib/etc'); import gdb_lookup; gdb_lookup.register_printers(gdb.current_objfile())", "ignoreFailures": true },
-        { "text": "set breakpoint pending on", "ignoreFailures": true },
-        { "text": "break rust_panic", "ignoreFailures": true }
+        {
+          "text": "set debug-file-directory /app/lib/debug:/usr/lib/debug"
+        },
+        {
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "text": "python import sys; sys.path.insert(0, '/usr/lib/sdk/rust-stable/lib/rustlib/etc'); import gdb_lookup; gdb_lookup.register_printers(gdb.current_objfile())",
+          "ignoreFailures": true
+        },
+        {
+          "text": "set breakpoint pending on",
+          "ignoreFailures": true
+        },
+        {
+          "text": "break rust_panic",
+          "ignoreFailures": true
+        }
       ]
     },
     {
@@ -76,13 +127,28 @@
       "MIMode": "gdb",
       "externalConsole": false,
       "environment": [
-        { "name": "RUST_BACKTRACE", "value": "1" },
-        { "name": "G_MESSAGES_DEBUG", "value": "all" }
+        {
+          "name": "RUST_BACKTRACE",
+          "value": "1"
+        },
+        {
+          "name": "G_MESSAGES_DEBUG",
+          "value": "all"
+        }
       ],
       "setupCommands": [
-        { "text": "-enable-pretty-printing", "ignoreFailures": true },
-        { "text": "set breakpoint pending on", "ignoreFailures": true },
-        { "text": "break rust_panic", "ignoreFailures": true }
+        {
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "text": "set breakpoint pending on",
+          "ignoreFailures": true
+        },
+        {
+          "text": "break rust_panic",
+          "ignoreFailures": true
+        }
       ]
     }
   ]

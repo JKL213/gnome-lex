@@ -590,7 +590,10 @@ Stufe 1 zusätzlich mit Meson-Tests und Flatpak-Build; Stufe 2 wurde über
   `build-aux/sdk-cargo.sh` (führt Cargo in `org.gnome.Sdk//51` mit
   rust-stable aus, Ziel `target-sdk/`, in `.gitignore`; nötig, wenn der Host
   keine gtk4-/libadwaita-Entwicklungspakete oder nur glib < 2.88 hat, wie
-  Fedora 43), `build-aux/flatpak-run.sh` (startet Sandbox per `flatpak build
+  Fedora 43), `build-aux/sdk-rust-analyzer.sh` (startet rust-analyzer in
+  derselben Sandbox; in `.vscode/settings.json` als
+  `rust-analyzer.server.path` eingetragen, weil dem Host rust-src, clippy
+  und passende GTK-Pakete fehlen), `build-aux/flatpak-run.sh` (startet Sandbox per `flatpak build
   --with-appdir` auf `_flatpak`, reicht Display-/D-Bus-Variablen durch,
   fasst Argumente zu einer `sh -c`-Kommandozeile zusammen, weil cppdbg
   „gdb --interpreter=mi“ als ein Argument übergibt), Copilot-Konfiguration
