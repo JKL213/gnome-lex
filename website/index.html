@@ -49,12 +49,47 @@
   .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 32px; align-items: start; }
   .grid h3 { margin: 16px 0 0; font-size: 17px; font-weight: 700; text-align: center; }
   .grid .phone { max-width: 320px; margin: 0 auto; }
-  pre {
-    margin: 0 auto; max-width: 760px; padding: 20px 24px; border-radius: 12px; overflow-x: auto;
-    background: var(--code-bg); color: var(--code-fg); font: 14px/1.8 "Adwaita Mono", "Source Code Pro", ui-monospace, monospace;
+  /* Installation: Voraussetzungen als Chips, Schritte als Zeitleiste */
+  .install { max-width: 780px; margin: 0 auto; }
+  .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 36px; padding: 0; list-style: none; }
+  .chips li {
+    display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 9999px;
+    background: var(--view); box-shadow: 0 0 0 1px var(--border); font-size: 14px; font-weight: 500;
   }
-  pre .p { color: rgba(255, 255, 255, 0.5); user-select: none; }
-  .note { max-width: 760px; margin: 12px auto 0; font-size: 14px; color: var(--dim); text-align: center; }
+  .chips svg { width: 16px; height: 16px; color: var(--accent); flex: none; }
+  .steps { margin: 0; padding: 0; list-style: none; counter-reset: step; }
+  .step { position: relative; display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: 18px; padding-bottom: 28px; }
+  .step:last-child { padding-bottom: 0; }
+  .step::before {
+    counter-increment: step; content: counter(step);
+    width: 40px; height: 40px; border-radius: 9999px; display: grid; place-items: center;
+    background: var(--accent-bg); color: #ffffff; font-weight: 800; position: relative; z-index: 1;
+  }
+  .step:not(:last-child)::after {
+    content: ""; position: absolute; left: 19px; top: 44px; bottom: 4px; width: 2px; background: var(--border);
+  }
+  .step h3 { margin: 8px 0 2px; font-size: 17px; font-weight: 700; }
+  .step p { margin: 0 0 10px; font-size: 14px; color: var(--dim); }
+  .term { grid-column: 2; border-radius: 12px; overflow: hidden; background: var(--code-bg); box-shadow: var(--shadow); }
+  .term-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 6px 6px 14px;
+    background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.6); font-size: 12px; font-weight: 700;
+  }
+  .copy {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 12px; border: 0; border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1); color: #ffffff; font: inherit; font-weight: 700; cursor: pointer;
+  }
+  .copy:hover { background: rgba(255, 255, 255, 0.18); }
+  .copy.done { background: #26a269; }
+  .copy svg { width: 14px; height: 14px; }
+  pre {
+    margin: 0; padding: 14px 18px 16px; white-space: pre-wrap; overflow-wrap: anywhere;
+    color: var(--code-fg); font: 14px/1.75 "Adwaita Mono", "Source Code Pro", ui-monospace, monospace;
+  }
+  pre .l { display: block; padding-left: 18px; text-indent: -18px; }
+  pre .p { color: #81d0ff; user-select: none; }
+  .done-line { margin: 32px 0 0; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--dim); font-size: 15px; }
+  .done-line img { width: 28px; height: 28px; }
   footer { padding: 28px 0 40px; border-top: 1px solid var(--border); font-size: 14px; color: var(--dim);
     display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
   @media (max-width: 720px) {
@@ -67,7 +102,7 @@
 <div class="wrap">
   <header>
     <a class="brand" href="./"><img src="img/logo.svg" alt="">Gesetze</a>
-    <a class="btn" href="https://github.com/gnome-lex/gnome-lex">GitHub</a>
+    <a class="btn" href="https://github.com/JKL213/gnome-lex">GitHub</a>
   </header>
 
   <main>
@@ -77,7 +112,7 @@
       <p class="lead">Bundesgesetze lesen und annotieren – nativ für GNOME.</p>
       <div class="actions">
         <a class="btn primary" href="#installation">Installieren</a>
-        <a class="btn" href="https://github.com/gnome-lex/gnome-lex">Quellcode</a>
+        <a class="btn" href="https://github.com/JKL213/gnome-lex">Quellcode</a>
       </div>
       <img class="shot" src="img/notizen.png" width="1024" height="713"
            alt="Gesetze zeigt § 433 BGB mit Gliederung, Verweisen, Schema-Notiz und einer Markierung in § 434.">
@@ -100,11 +135,59 @@
 
     <section id="installation">
       <h2>Installation</h2>
-<pre><code><span class="p">$ </span>git clone https://github.com/gnome-lex/gnome-lex
-<span class="p">$ </span>cd gnome-lex
-<span class="p">$ </span>flatpak-builder --user --install --force-clean _flatpak build-aux/org.gnomelex.Gesetze.Devel.json
-<span class="p">$ </span>flatpak run org.gnomelex.Gesetze.Devel</code></pre>
-      <p class="note">Benötigt <code>org.gnome.Sdk//51</code> und die Erweiterung <code>rust-stable</code> von Flathub. Flathub-Paket folgt.</p>
+      <div class="install">
+        <ul class="chips">
+          <li><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M8 1.5 14 4.8v6.4L8 14.5 2 11.2V4.8Z M2 4.8 8 8l6-3.2M8 8v6.5"/></svg>Flatpak + flatpak-builder</li>
+          <li><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="8" r="2" fill="currentColor"/></svg>GNOME SDK 51</li>
+          <li><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="m5 4-3.5 4L5 12m6-8 3.5 4L11 12"/></svg>Rust stable</li>
+          <li><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M2 5.5h12M2 10.5h12M6.5 2 5 14M11 2 9.5 14"/></svg>Git</li>
+        </ul>
+
+        <ol class="steps">
+          <li class="step">
+            <div>
+              <h3>Laufzeit und Rust holen</h3>
+              <p>Einmalig, aus Flathub.</p>
+            </div>
+            <div class="term">
+              <div class="term-bar"><span>Terminal</span><button class="copy" type="button">Kopieren</button></div>
+<pre><code><span class="l"><span class="p">$ </span>flatpak install flathub org.gnome.Sdk//51 org.freedesktop.Sdk.Extension.rust-stable//26.08</span></code></pre>
+            </div>
+          </li>
+          <li class="step">
+            <div>
+              <h3>Quellcode klonen</h3>
+              <p>Direkt von GitHub.</p>
+            </div>
+            <div class="term">
+              <div class="term-bar"><span>Terminal</span><button class="copy" type="button">Kopieren</button></div>
+<pre><code><span class="l"><span class="p">$ </span>git clone https://github.com/JKL213/gnome-lex</span><span class="l"><span class="p">$ </span>cd gnome-lex</span></code></pre>
+            </div>
+          </li>
+          <li class="step">
+            <div>
+              <h3>Bauen und installieren</h3>
+              <p>Baut die App in der Sandbox und installiert sie für deinen Benutzer.</p>
+            </div>
+            <div class="term">
+              <div class="term-bar"><span>Terminal</span><button class="copy" type="button">Kopieren</button></div>
+<pre><code><span class="l"><span class="p">$ </span>flatpak-builder --user --install --force-clean _flatpak build-aux/org.gnomelex.Gesetze.Devel.json</span></code></pre>
+            </div>
+          </li>
+          <li class="step">
+            <div>
+              <h3>Starten</h3>
+              <p>Oder einfach „Gesetze“ in der Übersicht suchen.</p>
+            </div>
+            <div class="term">
+              <div class="term-bar"><span>Terminal</span><button class="copy" type="button">Kopieren</button></div>
+<pre><code><span class="l"><span class="p">$ </span>flatpak run org.gnomelex.Gesetze.Devel</span></code></pre>
+            </div>
+          </li>
+        </ol>
+
+        <p class="done-line"><img src="img/logo.svg" alt="">Beim ersten Start BGB oder ZPO herunterladen – fertig.</p>
+      </div>
     </section>
   </main>
 
@@ -113,5 +196,23 @@
     <span>Gesetzestexte: <a href="https://www.gesetze-im-internet.de/">gesetze-im-internet.de</a></span>
   </footer>
 </div>
+<script>
+  // Kopiert die Befehle eines Terminal-Blocks ohne die „$“-Prompts.
+  document.querySelectorAll(".copy").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const code = button.closest(".term").querySelector("code").cloneNode(true);
+      code.querySelectorAll(".p").forEach((p) => p.remove());
+      const text = [...code.querySelectorAll(".l")].map((l) => l.textContent).join("\n");
+      try {
+        await navigator.clipboard.writeText(text);
+        button.textContent = "Kopiert";
+        button.classList.add("done");
+        setTimeout(() => { button.textContent = "Kopieren"; button.classList.remove("done"); }, 1600);
+      } catch (e) {
+        button.textContent = "Nicht möglich";
+      }
+    });
+  });
+</script>
 </body>
 </html>
