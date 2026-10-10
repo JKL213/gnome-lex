@@ -14,6 +14,9 @@ on:
 jobs:
   flatpak:
     runs-on: ubuntu-latest
+    # Nötig, damit das Release angelegt und die Datei angehängt werden kann.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -46,3 +49,4 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: gesetze-devel.flatpak
+          generate_release_notes: true
