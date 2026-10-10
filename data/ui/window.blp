@@ -14,7 +14,7 @@ template $LexWindow : Adw.ApplicationWindow {
     setters {
       split_view.collapsed: true;
       notes_split.collapsed: true;
-      search_button.visible: false;
+      jump_bar.compact: true;
       split_button.visible: false;
       history_button.visible: false;
     }
@@ -227,13 +227,6 @@ template $LexWindow : Adw.ApplicationWindow {
                   }
 
                   [start]
-                  Button search_button {
-                    icon-name: "edit-find-symbolic";
-                    tooltip-text: _("Schnellsuche (Strg+K oder /)");
-                    action-name: "win.quick-search";
-                  }
-
-                  [start]
                   MenuButton history_button {
                     icon-name: "document-open-recent-symbolic";
                     tooltip-text: _("Zuletzt gelesene Normen");
@@ -269,9 +262,9 @@ template $LexWindow : Adw.ApplicationWindow {
                     };
                   }
 
-                  title-widget: Adw.WindowTitle norm_title {
-                    title: "";
-                    subtitle: "";
+                  title-widget: $LexJumpBar jump_bar {
+                    margin-start: 6;
+                    margin-end: 6;
                   };
 
                   [end]
@@ -318,7 +311,7 @@ template $LexWindow : Adw.ApplicationWindow {
 menu primary_menu {
   section {
     item {
-      label: _("_Schnellsuche");
+      label: _("_Springen …");
       action: "win.quick-search";
     }
     item {

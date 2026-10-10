@@ -151,7 +151,7 @@ impl LexApplication {
         self.set_accels_for_action("win.switch-pane", &["F6"]);
         self.set_accels_for_action("win.toggle-favorite", &["<Control>d"]);
         // „/“ wird zusätzlich im Fenster abgefangen (nur außerhalb von Eingabefeldern).
-        self.set_accels_for_action("win.quick-search", &["<Control>k"]);
+        self.set_accels_for_action("win.quick-search", &["<Super>k", "<Control>k"]);
         self.set_accels_for_action("win.prev-norm", &["<Alt>Page_Up"]);
         self.set_accels_for_action("win.next-norm", &["<Alt>Page_Down"]);
         self.set_accels_for_action(
@@ -181,7 +181,10 @@ impl LexApplication {
             (
                 &gettext("Navigation"),
                 &[
-                    (&gettext("Schnellsuche"), "<Control>k slash"),
+                    (
+                        &gettext("Springen (Sprungleiste)"),
+                        "<Super>k <Control>k slash",
+                    ),
                     (&gettext("Vorherige Norm"), "<Alt>Page_Up"),
                     (&gettext("Nächste Norm"), "<Alt>Page_Down"),
                     (&gettext("Favorit setzen oder entfernen"), "<Control>d"),

@@ -7,7 +7,7 @@
     <file compressed="true" preprocess="xml-stripblanks">ui/outline_row.ui</file>
     <file compressed="true" preprocess="xml-stripblanks">ui/annotation_row.ui</file>
     <file compressed="true" preprocess="xml-stripblanks">ui/search_row.ui</file>
-    <file compressed="true" preprocess="xml-stripblanks">ui/quick_search.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/jump_bar.ui</file>
     <file compressed="true" preprocess="xml-stripblanks">ui/download_center.ui</file>
     <file compressed="true" preprocess="xml-stripblanks">ui/preferences.ui</file>
     <file compressed="true" preprocess="xml-stripblanks">ui/shortcuts.ui</file>

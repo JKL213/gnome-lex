@@ -1,0 +1,41 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Sprungleiste in der Kopfleiste: Gesetz, Paragraf oder Stichwort in
+// beliebiger Reihenfolge eingeben, Treffer mit Vorschau darunter.
+// Die Trefferliste (Popover) wird im Code aufgebaut.
+template $LexJumpBar : Adw.Bin {
+  hexpand: true;
+
+  child: Adw.Clamp {
+    maximum-size: 560;
+    tightening-threshold: 360;
+
+    child: Overlay {
+      child: Entry entry {
+        hexpand: true;
+        primary-icon-name: "edit-find-symbolic";
+        placeholder-text: _("Springen … (Super+K)");
+        input-hints: no_spellcheck;
+
+        accessibility {
+          label: _("Springen zu Norm, Gesetz oder Stichwort");
+        }
+
+        styles ["jump-entry"]
+      };
+
+      [overlay]
+      Label context_label {
+        halign: end;
+        valign: center;
+        margin-end: 10;
+        max-width-chars: 36;
+        ellipsize: end;
+        can-target: false;
+
+        styles ["jump-context", "dim-label"]
+      }
+    };
+  };
+}

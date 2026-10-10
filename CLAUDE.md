@@ -622,6 +622,24 @@ Stufe 1 zusätzlich mit Meson-Tests und Flatpak-Build; Stufe 2 wurde über
     (`release_pin`). `update_visible_norm` und `prepend_norm` rechnen über
     `window_to_buffer_coords` statt über den Adjustment-Wert (der Rand der
     Textansicht wurde vorher mitgezählt).
+- **Sprungleiste (10.10.2026, Auftrag):** Der Such-Knopf und der Dialog
+  `LexQuickSearch` sind ersetzt durch `LexJumpBar` (`src/widgets/jump_bar.rs`,
+  `data/ui/jump_bar.blp`) als `title-widget` der Inhaltskopfleiste: `Entry`
+  in `Adw.Clamp` (560), Platzhalter „Springen … (Super+K)“ kursiv (CSS
+  `entry.jump-entry > text > placeholder`), rechts im leeren Feld die
+  aktuelle Norm (`set_context`, ersetzt `norm_title`). Darunter ein
+  `GtkPopover` ohne Autohide (nimmt den Fokus nicht, am Bin geparentet,
+  `present()` in `size_allocate`, `unparent` in `dispose`) mit Trefferliste
+  und Vorschau (erste ~700 Zeichen aus `Database::paragraphs`, Cache je
+  Norm). Inline-Vervollständigung: nach Weitertippen wird der beste Treffer
+  ergänzt und der Rest markiert (`complete`, Schreibweisen „§ 433 BGB“,
+  „433 BGB“, „BGB 433“, Titel); Tab übernimmt, Pfeile/Bild wählen,
+  Eingabe springt, Strg+Eingabe zweite Ansicht, Escape leert bzw. gibt den
+  Fokus an die Leseansicht zurück. Kürzel Super+K, Strg+K, „/“
+  (`win.quick-search`), `quick-search-query` füllt die Leiste. Breakpoint
+  setzt `jump_bar.compact` (ohne Vorschau und Normhinweis). Nur statisch
+  geprüft (clippy `-D warnings` mit Stub-pkg-config, fmt, reine Funktionen
+  separat getestet); Sichtprüfung unter GNOME steht aus.
 - **Tooling:** `.vscode/` (settings, tasks, launch, extensions; Tasks
   `sdk: cargo build|run|qualität` für die SDK-Sandbox),
   `build-aux/sdk-cargo.sh` (führt Cargo in `org.gnome.Sdk//51` mit
