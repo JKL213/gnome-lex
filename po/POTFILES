@@ -6,12 +6,12 @@ data/ui/reader.blp
 data/ui/norm_view.blp
 data/ui/outline_row.blp
 data/ui/preferences.blp
-data/ui/quick_search.blp
+data/ui/jump_bar.blp
 data/ui/window.blp
 src/application.rs
 src/widgets/download_center.rs
 src/widgets/reader.rs
 src/widgets/norm_view.rs
 src/widgets/preferences.rs
-src/widgets/quick_search.rs
+src/widgets/jump_bar.rs
 src/window.rs

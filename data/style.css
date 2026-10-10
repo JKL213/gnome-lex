@@ -112,3 +112,18 @@ window {
 .highlight-swatch.blue   { background: #99c1f1; }
 .highlight-swatch.pink   { background: #f4a6c7; }
 .highlight-swatch.orange { background: #ffbe6f; }
+
+/* Sprungleiste in der Kopfleiste */
+entry.jump-entry > text > placeholder {
+  font-style: italic;
+}
+.jump-context {
+  font-size: 0.9em;
+}
+.jump-popover > contents {
+  padding: 0;
+}
+.jump-preview-body {
+  font-size: 0.92em;
+  line-height: 1.35;
+}

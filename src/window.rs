@@ -4,7 +4,7 @@
 //! Hauptfenster: Erststart mit Download-Angebot, Fortschrittsanzeige während
 //! des Imports, Prüfung auf neue Gesetzesfassungen, Gliederung (Seitenleiste
 //! mit Gesetzesauswahl), die Leseansicht mit optionaler Teilung und die
-//! Schnellsuche.
+//! Sprungleiste in der Kopfleiste.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::path::PathBuf;
@@ -21,7 +21,7 @@ use crate::model::{Annotation, AnnotationKind, LawInfo, NormInfo, UnitInfo};
 use crate::refs::{LawRef, NormRef};
 use crate::settings;
 use crate::widgets::{
-    norm_view::AnnotationEvent, reader::PaneInfo, LexDownloadCenter, LexOutlineRow, LexQuickSearch,
+    norm_view::AnnotationEvent, reader::PaneInfo, LexDownloadCenter, LexJumpBar, LexOutlineRow,
     LexReader, Outline, ReaderState,
 };
 
@@ -75,7 +75,7 @@ mod imp {
         #[template_child]
         pub content_page: TemplateChild<adw::NavigationPage>,
         #[template_child]
-        pub norm_title: TemplateChild<adw::WindowTitle>,
+        pub jump_bar: TemplateChild<LexJumpBar>,
         #[template_child]
         pub reader: TemplateChild<LexReader>,
         #[template_child]
@@ -132,6 +132,7 @@ mod imp {
         fn class_init(klass: &mut Self::Class) {
             LexReader::ensure_type();
             LexOutlineRow::ensure_type();
+            LexJumpBar::ensure_type();
             klass.bind_template();
         }
 
@@ -167,6 +168,7 @@ mod imp {
             obj.setup_breakpoint();
             obj.setup_actions();
             obj.setup_slash_shortcut();
+            obj.setup_jump_bar();
             obj.setup_favorites();
             obj.setup_notes();
             obj.setup_history();
@@ -333,7 +335,8 @@ impl LexWindow {
         let clear_history = gio::ActionEntry::builder("clear-history")
             .activate(|win: &Self, _, _| win.clear_history())
             .build();
-        // Nur für Tests: Schnellsuche mit vorbelegter Eingabe öffnen.
+        // Sprungleiste mit vorbelegter Eingabe (Kontextmenü „Auswahl in der
+        // Schnellsuche“, Tests).
         let quick_query = gio::ActionEntry::builder("quick-search-query")
             .parameter_type(Some(&String::static_variant_type()))
             .activate(|win: &Self, _, param| {
@@ -552,7 +555,7 @@ impl LexWindow {
         self.reader().set_vertical(narrow);
     }
 
-    /// „/“ öffnet die Schnellsuche, solange kein Eingabefeld den Fokus hat.
+    /// „/“ fokussiert die Sprungleiste, solange kein Eingabefeld den Fokus hat.
     fn setup_slash_shortcut(&self) {
         let controller = gtk::ShortcutController::new();
         controller.set_propagation_phase(gtk::PropagationPhase::Capture);
@@ -1469,8 +1472,9 @@ impl LexWindow {
     fn update_header(&self) {
         let imp = self.imp();
         let reader = self.reader();
-        imp.norm_title.set_title(&reader.title());
-        imp.norm_title.set_subtitle(&reader.subtitle());
+        imp.jump_bar
+            .set_context(&reader.title(), &reader.subtitle());
+        imp.jump_bar.set_preferred_law(self.preferred_law());
     }
 
     /// Zeigt eine Norm in der aktiven Ansicht.
@@ -1802,15 +1806,24 @@ impl LexWindow {
     // Schnellsuche
     // ------------------------------------------------------------------
 
+    /// Setzt den Fokus in die Sprungleiste.
     fn open_quick_search(&self) {
         self.open_quick_search_with(None);
     }
 
-    /// Öffnet die Schnellsuche, optional mit vorbelegter Eingabe (Tests).
+    /// Fokussiert die Sprungleiste, optional mit vorbelegter Eingabe.
     fn open_quick_search_with(&self, query: Option<&str>) {
-        let dialog = LexQuickSearch::new();
-        dialog.set_preferred_law(self.preferred_law());
-        dialog.connect_jump(glib::clone!(
+        let bar = &self.imp().jump_bar;
+        bar.set_preferred_law(self.preferred_law());
+        match query {
+            Some(query) => bar.set_query(query),
+            None => bar.activate_search(),
+        }
+    }
+
+    fn setup_jump_bar(&self) {
+        let bar = &self.imp().jump_bar;
+        bar.connect_jump(glib::clone!(
             #[weak(rename_to = win)]
             self,
             move |norm_id, other_pane| {
@@ -1822,10 +1835,14 @@ impl LexWindow {
                 win.reveal_content();
             }
         ));
-        dialog.present(Some(self));
-        if let Some(query) = query {
-            dialog.set_query(query);
-        }
+        // Nach Sprung oder Escape weiterlesen: Fokus zurück in die Leseansicht.
+        bar.connect_done(glib::clone!(
+            #[weak(rename_to = win)]
+            self,
+            move || {
+                win.reader().child_focus(gtk::DirectionType::TabForward);
+            }
+        ));
     }
 
     // ------------------------------------------------------------------
