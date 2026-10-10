@@ -1,11 +1,14 @@
 # Baut bei jedem Push auf main (und manuell) das Flatpak-Bundle und hängt es
 # als Artefakt an; bei Tags „v*“ zusätzlich als Release-Download.
+# Pushes, die nur die Webseite ändern, lösen keinen Build aus.
 name: Flatpak
 
 on:
   push:
     branches: [main]
     tags: ["v*"]
+    paths-ignore:
+      - "website/**"
   workflow_dispatch:
 
 jobs:
