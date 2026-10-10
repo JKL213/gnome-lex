@@ -26,6 +26,12 @@ const PREVIEW_CHARS: usize = 700;
 /// Breite der Trefferliste und der Vorschau.
 const LIST_WIDTH: i32 = 340;
 const PREVIEW_WIDTH: i32 = 360;
+/// Platz für Suchsymbol und Innenabstand links vom Platzhalter.
+const ICON_SPACE: i32 = 36;
+/// Mindestabstand zwischen Platzhalter und Normhinweis.
+const CONTEXT_GAP: i32 = 18;
+/// Schmaler als das lohnt sich der Normhinweis nicht mehr.
+const CONTEXT_MIN_WIDTH: i32 = 72;
 
 /// Aufruf beim Sprung: Norm-ID und ob die zweite Ansicht gewünscht ist.
 type JumpCallback = Box<dyn Fn(i64, bool)>;
@@ -41,6 +47,8 @@ mod imp {
     pub struct LexJumpBar {
         #[template_child]
         pub entry: TemplateChild<gtk::Entry>,
+        #[template_child]
+        pub overlay: TemplateChild<gtk::Overlay>,
         #[template_child]
         pub context_label: TemplateChild<gtk::Label>,
         /// Schmale Darstellung: Treffer ohne Vorschau, kein Normhinweis.
@@ -99,6 +107,7 @@ mod imp {
             let obj = self.obj();
             obj.build_popover();
             obj.setup_entry();
+            obj.setup_context_position();
         }
 
         fn dispose(&self) {
@@ -306,6 +315,40 @@ impl LexJumpBar {
         imp.preview_title.set(preview_title).ok();
         imp.preview_subtitle.set(preview_subtitle).ok();
         imp.preview_body.set(preview_body).ok();
+    }
+
+    /// Der Normhinweis darf nur den Platz rechts vom Platzhalter belegen:
+    /// Er wird auf die freie Breite gekürzt und bei zu wenig Platz
+    /// ausgeblendet, damit beide Texte nicht ineinanderlaufen.
+    fn setup_context_position(&self) {
+        let imp = self.imp();
+        let entry = imp.entry.clone();
+        imp.overlay
+            .connect_get_child_position(move |overlay, child| {
+                let width = overlay.width();
+                let height = overlay.height();
+                let placeholder = entry.placeholder_text().unwrap_or_default();
+                // Platzhalter kursiv setzen wie im CSS, sonst ist er zu schmal.
+                let layout = entry.create_pango_layout(Some(&placeholder));
+                let mut font = layout.context().font_description().unwrap_or_default();
+                font.set_style(gtk::pango::Style::Italic);
+                layout.set_font_description(Some(&font));
+                let (placeholder_width, _) = layout.pixel_size();
+                let free = width - ICON_SPACE - placeholder_width - CONTEXT_GAP;
+
+                let (min, natural, _, _) = child.measure(gtk::Orientation::Horizontal, -1);
+                let child_width = natural.min(free).max(min);
+                child.set_child_visible(free >= CONTEXT_MIN_WIDTH.max(min));
+                let (_, child_height, _, _) =
+                    child.measure(gtk::Orientation::Vertical, child_width);
+                let child_height = child_height.min(height);
+                Some(gdk::Rectangle::new(
+                    width - child_width,
+                    (height - child_height) / 2,
+                    child_width,
+                    child_height,
+                ))
+            });
     }
 
     fn setup_entry(&self) {

@@ -688,11 +688,12 @@ impl LexNormView {
             .foreground("#8c8c8c")
             .pixels_below_lines(0)
             .build());
-        // Verweis-Pfeile unter der Überschrift: klein, eng gesetzt.
+        // Verweis-Pfeile unter der Überschrift, eng gesetzt. Bewusst ohne
+        // Verkleinerung: Bei gebrochener Bildschirmskalierung (125 %) wurde
+        // die Oberkante verkleinerter Ziffern („7“) abgeschnitten.
         add(gtk::TextTag::builder()
             .name("ref-chip")
-            .scale(0.85)
-            .pixels_above_lines(0)
+            .pixels_above_lines(2)
             .pixels_below_lines(2)
             .build());
         // Eigene Notiz (Schema) unter der Überschrift.

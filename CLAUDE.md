@@ -640,6 +640,14 @@ Stufe 1 zusätzlich mit Meson-Tests und Flatpak-Build; Stufe 2 wurde über
   setzt `jump_bar.compact` (ohne Vorschau und Normhinweis). Nur statisch
   geprüft (clippy `-D warnings` mit Stub-pkg-config, fmt, reine Funktionen
   separat getestet); Sichtprüfung unter GNOME steht aus.
+- **Kopfleiste und Verweiszeilen (10.10.2026):** Der Normhinweis der
+  Sprungleiste lief bei schmalem Fenster in den Platzhalter. Die Position
+  kommt jetzt aus `Overlay::get-child-position` (`setup_context_position`):
+  Breite = Feldbreite minus Suchsymbol, kursiver Platzhalter und Abstand;
+  unter `CONTEXT_MIN_WIDTH` wird der Hinweis per `set_child_visible`
+  ausgeblendet. Die Verweis-Pfeile (`ref-chip`) sind nicht mehr verkleinert;
+  bei 125 % Skalierung fehlte verkleinerten Ziffern die Oberkante („7“
+  wirkte wie „/“). Nur statisch geprüft (fmt, clippy mit Stub-pkg-config).
 - **Tooling:** `.vscode/` (settings, tasks, launch, extensions; Tasks
   `sdk: cargo build|run|qualität` für die SDK-Sandbox),
   `build-aux/sdk-cargo.sh` (führt Cargo in `org.gnome.Sdk//51` mit
