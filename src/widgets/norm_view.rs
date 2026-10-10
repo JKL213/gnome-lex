@@ -105,6 +105,14 @@ const NOTE_GLYPH: &str = "✎ ";
 /// Verzögerung, nach der Änderungen an Inline-Notizen gemeldet werden.
 const NOTE_EDIT_DELAY_MS: u64 = 700;
 
+/// Platzhalter für einen überfahrenen Verweis, dessen Offsets nach einer
+/// Pufferänderung nicht mehr stimmen (siehe `invalidate_hover`).
+const STALE_HOVER: (i32, i32) = (-1, -1);
+
+/// So lange hält die Ansicht nach einem Sprung den Anfang der Zielnorm
+/// oben, sofern der Leser nicht vorher selbst scrollt, klickt oder tippt.
+const JUMP_PIN_MS: u64 = 800;
+
 /// Ein im Puffer dargestellter Normabschnitt.
 pub struct Section {
     norm: NormInfo,
@@ -178,6 +186,10 @@ mod imp {
         pub end_prev: Cell<bool>,
         /// Zuletzt gemeldete oben sichtbare Norm (0 = keine).
         pub visible_norm: Cell<i64>,
+        /// Nach einem Sprung: Zielnorm oben halten, bis das Layout steht
+        /// oder der Leser eingreift (siehe `pin_to_top`).
+        pub pinned: Cell<bool>,
+        pub pin_timer: RefCell<Option<glib::SourceId>>,
         /// Während `render_section` erfasste Tag-Bereiche (Offset von, bis,
         /// Tags), um sie beim Voranstellen sauber neu anzuwenden: Text, der
         /// vor einem Tag-Anfang eingefügt wird, erbt sonst dessen Tags.
@@ -287,9 +299,13 @@ impl LexNormView {
                 imp.visible_norm.set(page.norm.info.id);
                 self.render_section(page, false);
                 self.scroll_to_top();
+                self.pin_to_top();
                 self.schedule_edge_check();
             }
-            None => imp.visible_norm.set(0),
+            None => {
+                self.release_pin();
+                imp.visible_norm.set(0);
+            }
         }
     }
 
@@ -304,15 +320,29 @@ impl LexNormView {
         self.schedule_edge_check();
     }
 
-    /// Stellt die vorherige Norm als Abschnitt voran; GTK hält dabei den
-    /// sichtbaren Text an seiner Position.
+    /// Stellt die vorherige Norm als Abschnitt voran, ohne dass der
+    /// sichtbare Text springt.
     pub fn prepend_norm(&self, page: NormPage, generation: u64) {
         let imp = self.imp();
         if imp.generation.get() != generation {
             return;
         }
         imp.loading_prev.set(false);
+        // GTK hält die oberste sichtbare Zeile über eine Marke mit
+        // Linksgravitation fest. Liegt sie am Pufferanfang (der Normalfall,
+        // denn vorgeladen wird erst am oberen Rand), bleibt sie vor dem neuen
+        // Text stehen, und die Ansicht springt an den Anfang der vorherigen
+        // Norm. Dann den bisherigen Anfang ausdrücklich oben halten.
+        let anchor = imp.sections.borrow().first().map(|s| s.start.clone());
+        let (_, top_y) = imp
+            .text_view
+            .window_to_buffer_coords(gtk::TextWindowType::Widget, 0, 0);
+        let (top_line, _) = imp.text_view.line_at_y(top_y);
+        let pin = top_line.offset() == 0;
         self.render_section(page, true);
+        if let Some(anchor) = anchor.filter(|_| pin) {
+            imp.text_view.scroll_to_mark(&anchor, 0.0, true, 0.0, 0.0);
+        }
         self.schedule_edge_check();
     }
 
@@ -422,9 +452,9 @@ impl LexNormView {
         if let (Some(block_start), Some(block_end)) = (item.block_start, item.block_end) {
             let a = buffer.iter_at_mark(&block_start).offset();
             let b = buffer.iter_at_mark(&block_end).offset();
-            imp.rendering.set(true);
+            let was_rendering = imp.rendering.replace(true);
             buffer.delete(&mut buffer.iter_at_offset(a), &mut buffer.iter_at_offset(b));
-            imp.rendering.set(false);
+            imp.rendering.set(was_rendering);
             self.shift_links(a, a - b);
             buffer.delete_mark(&block_start);
             buffer.delete_mark(&block_end);
@@ -436,6 +466,7 @@ impl LexNormView {
         if delta == 0 {
             return;
         }
+        self.invalidate_hover();
         for link in self.imp().links.borrow_mut().iter_mut() {
             if link.start >= from {
                 link.start += delta;
@@ -465,6 +496,9 @@ impl LexNormView {
         };
         let from = buffer.iter_at_mark(&note_start).offset();
         let old_len = buffer.iter_at_mark(&note_end).offset() - from;
+        // Die Offsets verschiebt diese Funktion selbst (siehe unten); die
+        // Signalhandler aus `watch_buffer` dürfen es nicht zusätzlich tun.
+        let was_rendering = imp.rendering.replace(true);
         buffer.delete(
             &mut buffer.iter_at_mark(&note_start),
             &mut buffer.iter_at_mark(&note_end),
@@ -489,8 +523,10 @@ impl LexNormView {
         }
         buffer.move_mark(&note_end, &buffer.iter_at_mark(&at));
         buffer.delete_mark(&at);
+        imp.rendering.set(was_rendering);
         let delta = (to - from) - old_len;
         if delta != 0 {
+            self.invalidate_hover();
             imp.sections.borrow_mut()[index].content_offset += delta;
             for link in imp.links.borrow_mut().iter_mut() {
                 if link.start >= from {
@@ -536,6 +572,56 @@ impl LexNormView {
 
     pub fn font_size(&self) -> i32 {
         self.imp().font_size.get()
+    }
+
+    /// Hält nach einem Sprung den Anfang der Zielnorm oben. Bis GTK die
+    /// Zeilen des neuen Puffers vermessen hat, liefert das Layout geschätzte
+    /// Höhen; Nachladen und Neuvermessung verschieben in dieser Phase die
+    /// Position, und die Erkennung der sichtbaren Norm meldete die folgende
+    /// (Sprung zu § 750 zeigte § 751, § 750 verschwand am oberen Rand).
+    /// Jede Eingabe des Lesers (Scrollen, Klick, Taste) beendet das sofort.
+    fn pin_to_top(&self) {
+        let imp = self.imp();
+        if let Some(id) = imp.pin_timer.borrow_mut().take() {
+            id.remove();
+        }
+        imp.pinned.set(true);
+        let id = glib::timeout_add_local_once(
+            std::time::Duration::from_millis(JUMP_PIN_MS),
+            glib::clone!(
+                #[weak(rename_to = view)]
+                self,
+                move || {
+                    view.imp().pin_timer.borrow_mut().take();
+                    view.release_pin();
+                }
+            ),
+        );
+        *imp.pin_timer.borrow_mut() = Some(id);
+    }
+
+    /// Beendet das Festhalten nach einem Sprung (Zeitablauf oder Eingabe).
+    fn release_pin(&self) {
+        let imp = self.imp();
+        if let Some(id) = imp.pin_timer.borrow_mut().take() {
+            id.remove();
+        }
+        if imp.pinned.replace(false) {
+            self.update_visible_norm();
+            self.check_edges();
+        }
+    }
+
+    /// Während des Festhaltens: zurück an den Anfang, falls GTK verschoben hat.
+    fn hold_pin(&self) {
+        let imp = self.imp();
+        if !imp.pinned.get() {
+            return;
+        }
+        let adjustment = imp.scrolled.vadjustment();
+        if adjustment.value() != 0.0 {
+            adjustment.set_value(0.0);
+        }
     }
 
     fn scroll_to_top(&self) {
@@ -853,6 +939,9 @@ impl LexNormView {
         if let Some(popover) = imp.selection_popover.get() {
             popover.popdown();
         }
+        if imp.hovered_link.take().is_some() {
+            imp.text_view.set_cursor_from_name(Some("text"));
+        }
         imp.text_view
             .set_buffer(Some(&gtk::TextBuffer::new(Some(table))));
     }
@@ -871,6 +960,13 @@ impl LexNormView {
             incoming,
         } = page;
         let is_first = imp.sections.borrow().is_empty();
+        // Verweis-Offsets verschiebt `render_section` selbst; ohne diesen
+        // Schalter täten es die Signalhandler aus `watch_buffer` beim
+        // Voranstellen ein zweites Mal (Klicks träfen dann falsche Stellen).
+        let was_rendering = imp.rendering.replace(true);
+        if at_start {
+            self.invalidate_hover();
+        }
         let old_chars = buffer.char_count();
         let old_links = imp.links.borrow().len();
         let norm_id = norm.info.id;
@@ -1066,6 +1162,7 @@ impl LexNormView {
         for annotation in &annotations {
             self.place_annotation(index, annotation);
         }
+        imp.rendering.set(was_rendering);
     }
 
     /// Fügt eine Trennlinie (eigene Zeile mit Absatzhintergrund) ein.
@@ -1407,6 +1504,7 @@ impl LexNormView {
             #[weak(rename_to = view)]
             self,
             move |_| {
+                view.hold_pin();
                 view.update_visible_norm();
                 view.check_edges();
             }
@@ -1416,7 +1514,10 @@ impl LexNormView {
         adjustment.connect_changed(glib::clone!(
             #[weak(rename_to = view)]
             self,
-            move |_| view.check_edges()
+            move |_| {
+                view.hold_pin();
+                view.check_edges();
+            }
         ));
         // Am oberen Rand gibt es kein `value-changed` mehr; ein Scrollrad
         // nach oben lädt dann die vorherige Norm.
@@ -1427,6 +1528,7 @@ impl LexNormView {
             #[upgrade_or]
             glib::Propagation::Proceed,
             move |_, _, dy| {
+                view.release_pin();
                 if dy < 0.0 && view.imp().scrolled.vadjustment().value() <= 0.0 {
                     view.request_previous();
                 }
@@ -1434,6 +1536,32 @@ impl LexNormView {
             }
         ));
         imp.scrolled.add_controller(scroll);
+
+        // Eingriffe des Lesers beenden das Festhalten nach einem Sprung:
+        // Klick oder Ziehen (auch an der Bildlaufleiste) und Tasten.
+        let press = gtk::GestureClick::builder()
+            .button(0)
+            .propagation_phase(gtk::PropagationPhase::Capture)
+            .build();
+        press.connect_pressed(glib::clone!(
+            #[weak(rename_to = view)]
+            self,
+            move |_, _, _, _| view.release_pin()
+        ));
+        imp.scrolled.add_controller(press);
+        let keys = gtk::EventControllerKey::new();
+        keys.set_propagation_phase(gtk::PropagationPhase::Capture);
+        keys.connect_key_pressed(glib::clone!(
+            #[weak(rename_to = view)]
+            self,
+            #[upgrade_or]
+            glib::Propagation::Proceed,
+            move |_, _, _, _| {
+                view.release_pin();
+                glib::Propagation::Proceed
+            }
+        ));
+        self.add_controller(keys);
     }
 
     /// Verbindet die Signale eines (neuen) Puffers.
@@ -1529,6 +1657,7 @@ impl LexNormView {
     /// Nur für Tests: scrollt zu einem Anteil der Gesamthöhe („bottom“ = 1.0)
     /// oder fordert mit einem negativen Wert die vorherige Norm an.
     pub fn scroll_to_fraction(&self, fraction: f64) {
+        self.release_pin();
         let adjustment = self.imp().scrolled.vadjustment();
         if fraction < 0.0 {
             self.request_previous();
@@ -1652,7 +1781,7 @@ impl LexNormView {
         text: &str,
     ) -> (gtk::TextMark, gtk::TextMark) {
         let imp = self.imp();
-        imp.rendering.set(true);
+        let was_rendering = imp.rendering.replace(true);
         let block_start = buffer.create_mark(None, &buffer.iter_at_offset(at), true);
         let mut iter = buffer.iter_at_offset(at);
         let glyph_tags = self.tags_for(&[], &["note-glyph", &format!("inline-note-{color}")]);
@@ -1675,7 +1804,7 @@ impl LexNormView {
         if let Some(base) = self.tag("base") {
             buffer.apply_tag(&base, &from, &iter);
         }
-        imp.rendering.set(false);
+        imp.rendering.set(was_rendering);
         let added = iter.offset() - at;
         // Verweise hinter dem Block verschieben (nicht die davor).
         for link in imp.links.borrow_mut().iter_mut() {
@@ -2314,9 +2443,17 @@ impl LexNormView {
     /// Layout-Stand gültig sind.
     fn update_visible_norm(&self) {
         let imp = self.imp();
-        let adjustment = imp.scrolled.vadjustment();
+        // Direkt nach einem Sprung ist die Zielnorm oben; das Layout ist dann
+        // noch unvollständig und `line_at_y` unzuverlässig.
+        if imp.pinned.get() {
+            return;
+        }
         // Die Norm, die am oberen Rand (plus etwas Luft) beginnt bzw. läuft.
-        let y = (adjustment.value() + 32.0) as i32;
+        // Über Pufferkoordinaten, damit Rand und Innenabstand der Textansicht
+        // nicht mitgezählt werden.
+        let (_, y) = imp
+            .text_view
+            .window_to_buffer_coords(gtk::TextWindowType::Widget, 0, 32);
         let (line_iter, _) = imp.text_view.line_at_y(y);
         let edge = line_iter.offset();
         let buffer = imp.text_view.buffer();
@@ -2381,6 +2518,17 @@ impl LexNormView {
         Some(iter.offset())
     }
 
+    /// Die gemerkten Offsets des überfahrenen Verweises gelten nach einer
+    /// Pufferänderung nicht mehr. Nur den Zustand ungültig machen: Tags hier
+    /// zu ändern (etwa aus `insert-text` heraus) würde die Iteratoren des
+    /// laufenden Signals entwerten. Die nächste Zeigerbewegung räumt auf.
+    fn invalidate_hover(&self) {
+        let hovered = &self.imp().hovered_link;
+        if hovered.get().is_some() {
+            hovered.set(Some(STALE_HOVER));
+        }
+    }
+
     /// Unterstreicht den Verweis unter dem Zeiger und setzt den Mauszeiger.
     fn set_hovered_link(&self, range: Option<(i32, i32)>) {
         let imp = self.imp();
@@ -2389,13 +2537,12 @@ impl LexNormView {
             return;
         }
         let buffer = imp.text_view.buffer();
-        if let Some((start, end)) = previous {
-            let len = buffer.char_count();
-            buffer.remove_tag_by_name(
-                "link-hover",
-                &buffer.iter_at_offset(start.min(len)),
-                &buffer.iter_at_offset(end.min(len)),
-            );
+        if previous.is_some() {
+            // Über den ganzen Puffer entfernen: Die gemerkten Offsets können
+            // durch Nachladen oder Notizen verschoben sein, sonst bliebe eine
+            // Unterstreichung an der falschen Stelle stehen.
+            let (start, end) = buffer.bounds();
+            buffer.remove_tag_by_name("link-hover", &start, &end);
         }
         if let Some((start, end)) = range {
             buffer.apply_tag_by_name(

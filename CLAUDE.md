@@ -595,6 +595,33 @@ Stufe 1 zusätzlich mit Meson-Tests und Flatpak-Build; Stufe 2 wurde über
   („Gelb markieren“/„Notiz in Gelb anheften“), Entfernen, vor/zurück mit
   Kürzel, Verlauf, Download-Schaltflächen. Abgeschnittene Oberkante der
   „7“ (Bildschirm mit Skalierung 1,25) unter Broadway nicht reproduzierbar.
+- **Scrollfehler und Artefakte (09.10.2026):** Nur statisch geprüft (fmt,
+  clippy `-D warnings` mit Stub-pkg-config, kein GTK im Container).
+  - **Sprung beim Hochscrollen:** GTK hält die oberste Zeile über eine Marke
+    mit Linksgravitation; am Pufferanfang blieb sie vor der vorangestellten
+    Norm, die Ansicht sprang an deren Anfang und jeder weitere Radschritt
+    lud die nächste. `prepend_norm` hält jetzt den bisherigen Anfang per
+    `scroll_to_mark` oben, wenn die erste Zeile sichtbar war.
+  - **Doppelt verschobene Verweise:** `render_section` (Voranstellen) und
+    `set_note` setzten `rendering` nicht; die `insert-text`/`delete-range`-
+    Handler verschoben die Verweis-Offsets zusätzlich zur eigenen
+    Korrektur. Folge: Klicks, Tooltips und Hover trafen nach dem
+    Hochscrollen oder Speichern der Schema-Notiz falsche Stellen. Beide
+    setzen `rendering` jetzt (mit Wiederherstellung des Vorzustands).
+  - **Hängende Unterstreichungen:** `link-hover` wurde über veraltete
+    Offsets entfernt und blieb stehen. Entfernen jetzt über den ganzen
+    Puffer; Pufferänderungen markieren den Zustand nur als veraltet
+    (`invalidate_hover`, keine Tag-Änderung aus Signalhandlern heraus).
+  - **Sprung zeigte die Folgenorm:** Direkt nach `set_norm` ist das Layout
+    des neuen Puffers unvollständig (unvermessene Zeilen); `line_at_y`
+    lieferte eine Zeile der nachgeladenen Folgenorm, Kopfleiste, Gliederung
+    und Verlauf sprangen auf sie, und Neuvermessung/Nachladen verschoben
+    die Position. `pin_to_top` hält jetzt bis zu `JUMP_PIN_MS` (800 ms) den
+    Anfang oben und unterdrückt `update_visible_norm`; Scrollen, Klick
+    (Capture an der `ScrolledWindow`) oder Taste beenden das sofort
+    (`release_pin`). `update_visible_norm` und `prepend_norm` rechnen über
+    `window_to_buffer_coords` statt über den Adjustment-Wert (der Rand der
+    Textansicht wurde vorher mitgezählt).
 - **Tooling:** `.vscode/` (settings, tasks, launch, extensions; Tasks
   `sdk: cargo build|run|qualität` für die SDK-Sandbox),
   `build-aux/sdk-cargo.sh` (führt Cargo in `org.gnome.Sdk//51` mit
