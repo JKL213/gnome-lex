@@ -1,0 +1,611 @@
+# English translation for gesetze.
+# Copyright (C) 2026 Gnome Lex
+# This file is distributed under the same license as the gesetze package.
+# Gnome Lex, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: gesetze\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-22 23:52+0200\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2026-10-13 22:00+0200\n"
+"Last-Translator: Gnome Lex\n"
+"Language-Team: none\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: data/org.gnomelex.Gesetze.desktop.in:2
+msgid "Gesetze"
+msgstr "Gesetze"
+
+#: data/org.gnomelex.Gesetze.desktop.in:3
+msgid "Deutsche Bundesgesetze lesen und annotieren"
+msgstr "Read and annotate German federal law"
+
+#: data/org.gnomelex.Gesetze.desktop.in:9
+msgid "Gesetz;BGB;Recht;Norm;Paragraph;"
+msgstr "law;BGB;legal;statute;provision;section;Gesetz;"
+
+#: data/org.gnomelex.Gesetze.metainfo.xml.in:9
+msgid "Gesetze zeigt den Text des Bürgerlichen Gesetzbuchs aus der amtlichen Quelle gesetze-im-internet.de mit Gliederung, Volltextsuche und klickbaren Verweisen. Textstellen lassen sich markieren, mit Notizen versehen und als Lesezeichen ablegen."
+msgstr "Gesetze shows the text of the Bürgerliches Gesetzbuch (BGB) from the official source gesetze-im-internet.de with an outline, full-text search and clickable cross-references. Passages can be highlighted, annotated with notes and bookmarked."
+
+#: data/org.gnomelex.Gesetze.metainfo.xml.in:20
+msgid "Gnome Lex"
+msgstr "Gnome Lex"
+
+#: data/org.gnomelex.Gesetze.metainfo.xml.in:38
+msgid "Erste Version: BGB lesen, suchen, verweisen, annotieren."
+msgstr "First release: read, search, cross-reference and annotate the BGB."
+
+#: data/ui/download_center.blp:7
+msgid "Gesetze herunterladen"
+msgstr "Download laws"
+
+#: data/ui/download_center.blp:17
+msgid "Installierte Gesetze auf Aktualisierungen prüfen"
+msgstr "Check installed laws for updates"
+
+#: data/ui/download_center.blp:24
+msgid "Installiert"
+msgstr "Installed"
+
+#: data/ui/download_center.blp:28
+msgid "Verfügbar"
+msgstr "Available"
+
+#: data/ui/download_center.blp:29
+msgid "Quelle: gesetze-im-internet.de (Bundesministerium der Justiz). Die Texte werden lokal gespeichert."
+msgstr "Source: gesetze-im-internet.de (Bundesministerium der Justiz). The texts are stored locally."
+
+#: data/ui/jump_bar.blp:18
+msgid "Springen … (Super+K)"
+msgstr "Jump to … (Super+K)"
+
+#: data/ui/jump_bar.blp:22
+msgid "Springen zu Norm, Gesetz oder Stichwort"
+msgstr "Jump to a provision, law or keyword"
+
+#: data/ui/preferences.blp:6
+msgid "Einstellungen"
+msgstr "Preferences"
+
+#: data/ui/preferences.blp:10
+msgid "Sprache"
+msgstr "Language"
+
+#: data/ui/preferences.blp:13
+msgid "Sprache der Oberfläche"
+msgstr "Interface language"
+
+#: data/ui/preferences.blp:14
+msgid "Wird nach einem Neustart wirksam"
+msgstr "Takes effect after a restart"
+
+#: data/ui/preferences.blp:17 data/ui/preferences.blp:29
+msgid "Wie das System"
+msgstr "Follow the system"
+
+#: data/ui/preferences.blp:23
+msgid "Darstellung"
+msgstr "Appearance"
+
+#: data/ui/preferences.blp:26
+msgid "Farbschema"
+msgstr "Color scheme"
+
+#: data/ui/preferences.blp:29
+msgid "Hell"
+msgstr "Light"
+
+#: data/ui/preferences.blp:29
+msgid "Dunkel"
+msgstr "Dark"
+
+#: data/ui/preferences.blp:34 data/ui/preferences.blp:44
+msgid "Schrift des Gesetzestexts"
+msgstr "Font for the law text"
+
+#: data/ui/preferences.blp:35
+msgid "Standard: Public Sans, sonst Source Sans 3 oder Inter"
+msgstr "Default: Public Sans, otherwise Source Sans 3 or Inter"
+
+#: data/ui/preferences.blp:51
+msgid "Standardschrift verwenden"
+msgstr "Use the default font"
+
+#: data/ui/preferences.blp:59
+msgid "Schriftgröße des Gesetzestexts"
+msgstr "Font size of the law text"
+
+#: data/ui/preferences.blp:60
+msgid "In Punkt; auch über Strg+Plus und Strg+Minus"
+msgstr "In points; also via Ctrl+Plus and Ctrl+Minus"
+
+#: data/ui/preferences.blp:72
+msgid "Aktualisierung"
+msgstr "Updates"
+
+#: data/ui/preferences.blp:75
+msgid "Beim Start auf neue Fassungen prüfen"
+msgstr "Check for new versions at startup"
+
+#: data/ui/preferences.blp:76
+msgid "Höchstens einmal täglich; lädt die Archive von gesetze-im-internet.de"
+msgstr "At most once a day; downloads the archives from gesetze-im-internet.de"
+
+#: data/ui/window.blp:37 data/ui/window.blp:67 data/ui/window.blp:102
+#: data/ui/window.blp:280
+msgid "Hauptmenü"
+msgstr "Main menu"
+
+#: data/ui/window.blp:45
+msgid "Kein Gesetz geladen"
+msgstr "No law loaded"
+
+#: data/ui/window.blp:46
+msgid "Gesetze werden einmalig von gesetze-im-internet.de heruntergeladen und lokal gespeichert."
+msgstr "Laws are downloaded once from gesetze-im-internet.de and stored locally."
+
+#: data/ui/window.blp:73
+msgid "Lade herunter …"
+msgstr "Downloading …"
+
+#: data/ui/window.blp:88 data/ui/window.blp:111
+msgid "Gliederung"
+msgstr "Outline"
+
+#: data/ui/window.blp:96
+msgid "Gesetz der Gliederung"
+msgstr "Law shown in the outline"
+
+#: data/ui/window.blp:127
+msgid "Favoriten"
+msgstr "Favorites"
+
+#: data/ui/window.blp:151
+msgid "Norm"
+msgstr "Provision"
+
+#: data/ui/window.blp:169
+msgid "Schema / Notiz"
+msgstr "Schema / note"
+
+#: data/ui/window.blp:176
+msgid "Panel schließen"
+msgstr "Close panel"
+
+#: data/ui/window.blp:199
+msgid "Wird automatisch gespeichert und unter der Überschrift der Norm angezeigt."
+msgstr "Saved automatically and shown below the heading of the provision."
+
+#: data/ui/window.blp:225
+msgid "Vorherige Norm (Alt+Bild↑)"
+msgstr "Previous provision (Alt+PgUp)"
+
+#: data/ui/window.blp:231
+msgid "Nächste Norm (Alt+Bild↓)"
+msgstr "Next provision (Alt+PgDn)"
+
+#: data/ui/window.blp:239
+msgid "Zuletzt gelesene Normen"
+msgstr "Recently read provisions"
+
+#: data/ui/window.blp:260
+msgid "Verlauf leeren"
+msgstr "Clear history"
+
+#: data/ui/window.blp:288
+msgid "Favorit (Strg+D)"
+msgstr "Favorite (Ctrl+D)"
+
+#: data/ui/window.blp:295
+msgid "Schema / Notiz (Strg+Umschalt+N)"
+msgstr "Schema / note (Ctrl+Shift+N)"
+
+#: data/ui/window.blp:302
+msgid "Geteilte Ansicht (Strg+Umschalt+D)"
+msgstr "Split view (Ctrl+Shift+D)"
+
+#: data/ui/window.blp:309
+msgid "Tab-Übersicht (Strg+Umschalt+O)"
+msgstr "Tab overview (Ctrl+Shift+O)"
+
+#: data/ui/window.blp:316
+msgid "Neuer Tab (Strg+T)"
+msgstr "New tab (Ctrl+T)"
+
+#: data/ui/window.blp:341
+msgid "_Springen …"
+msgstr "_Jump to …"
+
+#: data/ui/window.blp:345
+msgid "Neuer _Tab"
+msgstr "New _Tab"
+
+#: data/ui/window.blp:349
+msgid "_Geteilte Ansicht"
+msgstr "Split _View"
+
+#: data/ui/window.blp:353
+msgid "_Favorit"
+msgstr "_Favorite"
+
+#: data/ui/window.blp:357
+msgid "Schema / _Notiz"
+msgstr "Schema / _Note"
+
+#: data/ui/window.blp:363
+msgid "Schrift ver_größern"
+msgstr "Zoom _In"
+
+#: data/ui/window.blp:367
+msgid "Schrift ver_kleinern"
+msgstr "Zoom _Out"
+
+#: data/ui/window.blp:371
+msgid "Schriftgröße _zurücksetzen"
+msgstr "_Reset Zoom"
+
+#: data/ui/window.blp:377
+msgid "Auf _Aktualisierung prüfen"
+msgstr "Check for _Updates"
+
+#: data/ui/window.blp:381
+msgid "Gesetze _herunterladen …"
+msgstr "_Download Laws …"
+
+#: data/ui/window.blp:387
+msgid "_Einstellungen"
+msgstr "_Preferences"
+
+#: data/ui/window.blp:391
+msgid "_Tastenkürzel"
+msgstr "_Keyboard Shortcuts"
+
+#: data/ui/window.blp:395
+msgid "_Info zu Gesetze"
+msgstr "_About Gesetze"
+
+#: data/ui/window.blp:399
+msgid "_Beenden"
+msgstr "_Quit"
+
+#: src/application.rs:193
+msgid "Navigation"
+msgstr "Navigation"
+
+#: src/application.rs:196
+msgid "Springen (Sprungleiste)"
+msgstr "Jump to (jump bar)"
+
+#: src/application.rs:199
+msgid "Vorherige Norm"
+msgstr "Previous provision"
+
+#: src/application.rs:200
+msgid "Nächste Norm"
+msgstr "Next provision"
+
+#: src/application.rs:201
+msgid "Favorit setzen oder entfernen"
+msgstr "Add or remove favorite"
+
+#: src/application.rs:203
+msgid "Notiz / Schema ein- oder ausblenden"
+msgstr "Show or hide note / schema"
+
+#: src/application.rs:209
+msgid "Ansicht"
+msgstr "View"
+
+#: src/application.rs:211
+msgid "Geteilte Ansicht"
+msgstr "Split view"
+
+#: src/application.rs:212
+msgid "Zwischen den Ansichten wechseln"
+msgstr "Switch between the panes"
+
+#: src/application.rs:213 src/window.rs:1141 src/window.rs:1227
+msgid "Neuer Tab"
+msgstr "New tab"
+
+#: src/application.rs:214
+msgid "Tab schließen"
+msgstr "Close tab"
+
+#: src/application.rs:216
+msgid "Nächster / vorheriger Tab"
+msgstr "Next / previous tab"
+
+#: src/application.rs:219
+msgid "Tab-Übersicht"
+msgstr "Tab overview"
+
+#: src/application.rs:223
+msgid "Schrift"
+msgstr "Font"
+
+#: src/application.rs:225
+msgid "Vergrößern"
+msgstr "Zoom in"
+
+#: src/application.rs:226
+msgid "Verkleinern"
+msgstr "Zoom out"
+
+#: src/application.rs:227
+msgid "Zurücksetzen"
+msgstr "Reset"
+
+#: src/application.rs:231
+msgid "Allgemein"
+msgstr "General"
+
+#: src/application.rs:234
+msgid "Tastenkürzel"
+msgstr "Keyboard shortcuts"
+
+#: src/application.rs:235
+msgid "Beenden"
+msgstr "Quit"
+
+#: src/application.rs:256
+msgid "Deutsche Bundesgesetze lesen und annotieren. Datenquelle: gesetze-im-internet.de"
+msgstr "Read and annotate German federal law. Data source: gesetze-im-internet.de"
+
+#: src/model/mod.rs:162
+msgid "Gelb"
+msgstr "Yellow"
+
+#: src/model/mod.rs:163
+msgid "Grün"
+msgstr "Green"
+
+#: src/model/mod.rs:164
+msgid "Blau"
+msgstr "Blue"
+
+#: src/model/mod.rs:165
+msgid "Rosa"
+msgstr "Pink"
+
+#: src/model/mod.rs:166
+msgid "Orange"
+msgstr "Orange"
+
+#: src/widgets/download_center.rs:80 src/window.rs:809
+msgid "Aktualisieren"
+msgstr "Update"
+
+#: src/widgets/download_center.rs:82
+msgid "{abbrev} · nicht installiert"
+msgstr "{abbrev} · not installed"
+
+#: src/widgets/download_center.rs:83 src/window.rs:1379
+msgid "Herunterladen"
+msgstr "Download"
+
+#: src/widgets/download_center.rs:91
+msgid "{abbrev} von gesetze-im-internet.de laden"
+msgstr "Download {abbrev} from gesetze-im-internet.de"
+
+#: src/widgets/download_center.rs:127
+msgid "importiert am {date}"
+msgstr "imported on {date}"
+
+#: src/widgets/jump_bar.rs:268
+msgid "Eingabe öffnet · Strg+Eingabe in der zweiten Ansicht · Tab vervollständigt"
+msgstr "Enter opens · Ctrl+Enter opens in the second pane · Tab completes"
+
+#: src/widgets/jump_bar.rs:827
+msgid "[Tabelle]"
+msgstr "[Table]"
+
+#: src/widgets/norm_view.rs:1385
+msgid "Fußnoten"
+msgstr "Footnotes"
+
+#: src/widgets/norm_view.rs:1539
+msgid "+{n} weitere"
+msgstr "+{n} more"
+
+#: src/widgets/norm_view.rs:1817
+msgid "Zur Fußnote springen"
+msgstr "Jump to footnote"
+
+#: src/widgets/norm_view.rs:1819
+msgid ""
+"{target} öffnen\n"
+"Strg+Klick: in der zweiten Ansicht öffnen"
+msgstr "Open {target}\nCtrl+click: open in the second pane"
+
+#: src/widgets/norm_view.rs:2468 src/widgets/norm_view.rs:2993
+msgid "Markieren"
+msgstr "Highlight"
+
+#: src/widgets/norm_view.rs:2473
+msgid "Notiz"
+msgstr "Note"
+
+#: src/widgets/norm_view.rs:2485
+msgid "Notiz in {farbe} anheften"
+msgstr "Pin a note in {farbe}"
+
+#: src/widgets/norm_view.rs:2486
+msgid "{farbe} markieren"
+msgstr "Highlight in {farbe}"
+
+#: src/widgets/norm_view.rs:2503
+msgid "Entfernen"
+msgstr "Remove"
+
+#: src/widgets/norm_view.rs:2504
+msgid "Markierung oder Notiz entfernen"
+msgstr "Remove highlight or note"
+
+#: src/widgets/norm_view.rs:2968
+msgid "{ref} öffnen"
+msgstr "Open {ref}"
+
+#: src/widgets/norm_view.rs:2969
+msgid "Zur Fußnote"
+msgstr "Go to footnote"
+
+#: src/widgets/norm_view.rs:2974
+msgid "In zweiter Ansicht öffnen"
+msgstr "Open in second pane"
+
+#: src/widgets/norm_view.rs:2982
+msgid "Notizfarbe"
+msgstr "Note color"
+
+#: src/widgets/norm_view.rs:2983
+msgid "Notiz löschen"
+msgstr "Delete note"
+
+#: src/widgets/norm_view.rs:2987
+msgid "Markierungsfarbe"
+msgstr "Highlight color"
+
+#: src/widgets/norm_view.rs:2988
+msgid "Markierung entfernen"
+msgstr "Remove highlight"
+
+#: src/widgets/norm_view.rs:2994
+msgid "Notiz hinzufügen"
+msgstr "Add note"
+
+#: src/widgets/norm_view.rs:2997
+msgid "Kopieren"
+msgstr "Copy"
+
+#: src/widgets/norm_view.rs:2999
+msgid "Auswahl in der Schnellsuche"
+msgstr "Look up selection in the jump bar"
+
+#: src/widgets/norm_view.rs:3006
+msgid "Norm in neuem Tab öffnen"
+msgstr "Open provision in new tab"
+
+#: src/widgets/norm_view.rs:3011
+msgid "Norm als Favorit"
+msgstr "Add provision to favorites"
+
+#: src/widgets/norm_view.rs:3015
+msgid "Schema / Notiz zur Norm"
+msgstr "Schema / note for this provision"
+
+#: src/widgets/preferences.rs:150
+msgid "Die neue Sprache gilt nach dem nächsten Start."
+msgstr "The new language takes effect after the next start."
+
+#: src/window.rs:533
+msgid "Verarbeite Gesetzestext und schreibe die Datenbank …"
+msgstr "Processing the law text and writing the database …"
+
+#: src/window.rs:563
+msgid "BGB herunterladen"
+msgstr "Download BGB"
+
+#: src/window.rs:566
+msgid "Bürgerliches Gesetzbuch von gesetze-im-internet.de laden"
+msgstr "Download the Bürgerliches Gesetzbuch from gesetze-im-internet.de"
+
+#: src/window.rs:574
+msgid "Weitere Gesetze …"
+msgstr "More laws …"
+
+#: src/window.rs:577
+msgid "Download-Center mit allen verfügbaren Gesetzen öffnen"
+msgstr "Open the download center with all available laws"
+
+#: src/window.rs:675 src/window.rs:678
+msgid "Datenbank konnte nicht geöffnet werden"
+msgstr "The database could not be opened"
+
+#: src/window.rs:717 src/window.rs:756
+msgid "Download fehlgeschlagen"
+msgstr "Download failed"
+
+#: src/window.rs:724
+msgid "Lade {name} herunter …"
+msgstr "Downloading {name} …"
+
+#: src/window.rs:774
+msgid "Prüfe auf Aktualisierung …"
+msgstr "Checking for updates …"
+
+#: src/window.rs:805
+msgid "Neue Fassung: {law}, {stand}"
+msgstr "New version: {law}, {stand}"
+
+#: src/window.rs:820
+msgid "Aktualisierungsprüfung fehlgeschlagen"
+msgstr "Update check failed"
+
+#: src/window.rs:834
+msgid "Auf dem neuesten Stand: {laws}"
+msgstr "Up to date: {laws}"
+
+#: src/window.rs:997 src/window.rs:1001
+msgid "Gliederung konnte nicht geladen werden"
+msgstr "The outline could not be loaded"
+
+#: src/window.rs:1354
+msgid "Verweis {label} wurde nicht gefunden."
+msgstr "Reference {label} was not found."
+
+#: src/window.rs:1375
+msgid "{law} ist nicht installiert."
+msgstr "{law} is not installed."
+
+#: src/window.rs:1432
+msgid "Annotation konnte nicht gespeichert werden"
+msgstr "The annotation could not be saved"
+
+#: src/window.rs:1448
+msgid "Noch keine gelesenen Normen."
+msgstr "No provisions read yet."
+
+#: src/window.rs:1700
+msgid "Notiz konnte nicht gespeichert werden"
+msgstr "The note could not be saved"
+
+#: src/window.rs:1760 src/window.rs:2038
+msgid "Norm {enbez} wurde nicht gefunden."
+msgstr "Provision {enbez} was not found."
+
+#: src/window.rs:1846
+msgid "Noch keine Favoriten. Stern in der Kopfleiste oder Strg+D."
+msgstr "No favorites yet. Use the star in the header bar or Ctrl+D."
+
+#: src/window.rs:1922
+msgid "Nicht mehr vorhanden"
+msgstr "No longer available"
+
+#: src/window.rs:1927
+msgid "Favorit entfernen"
+msgstr "Remove favorite"
+
+#: src/window.rs:1984
+msgid "Favorit konnte nicht gespeichert werden"
+msgstr "The favorite could not be saved"
+
+#: src/window.rs:2004
+msgid "Favorit konnte nicht entfernt werden"
+msgstr "The favorite could not be removed"
+
+#: src/window.rs:2240
+msgid "importiert: {} Norm."
+msgid_plural "importiert: {} Normen."
+msgstr[0] "imported: {} provision."
+msgstr[1] "imported: {} provisions."
+
+#: src/window.rs:2251
+msgid "Annotationen: {moved} verschoben, {orphaned} verwaist, {recovered} wiedergefunden."
+msgstr "Annotations: {moved} moved, {orphaned} orphaned, {recovered} recovered."

@@ -6,47 +6,22 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: PACKAGE VERSION\n"
+"Project-Id-Version: gesetze\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-23 00:00+0200\n"
+"POT-Creation-Date: 2026-09-22 23:52+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: de\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/application.rs:99 data/ui/window.blp:5 data/ui/window.blp:26
 #: data/org.gnomelex.Gesetze.desktop.in:2
-#: data/org.gnomelex.Gesetze.metainfo.xml.in:6
 msgid "Gesetze"
 msgstr ""
 
-#: src/application.rs:105
-msgid ""
-"Deutsche Bundesgesetze lesen und annotieren. Datenquelle: gesetze-im-"
-"internet.de"
-msgstr ""
-
-#: data/ui/window.blp:18
-msgid "Hauptmenü"
-msgstr ""
-
-#: data/ui/window.blp:27
-msgid "Das Bürgerliche Gesetzbuch wird in der nächsten Stufe geladen."
-msgstr ""
-
-#: data/ui/window.blp:36
-msgid "_Info zu Gesetze"
-msgstr ""
-
-#: data/ui/window.blp:40
-msgid "_Beenden"
-msgstr ""
-
 #: data/org.gnomelex.Gesetze.desktop.in:3
-#: data/org.gnomelex.Gesetze.metainfo.xml.in:7
 msgid "Deutsche Bundesgesetze lesen und annotieren"
 msgstr ""
 
@@ -70,42 +45,581 @@ msgstr ""
 msgid "Erste Version: BGB lesen, suchen, verweisen, annotieren."
 msgstr ""
 
-#: data/org.gnomelex.Gesetze.gschema.xml:6
-msgid "Fensterbreite"
+#: data/ui/download_center.blp:7
+msgid "Gesetze herunterladen"
 msgstr ""
 
-#: data/org.gnomelex.Gesetze.gschema.xml:10
-msgid "Fensterhöhe"
+#: data/ui/download_center.blp:17
+msgid "Installierte Gesetze auf Aktualisierungen prüfen"
 msgstr ""
 
-#: data/org.gnomelex.Gesetze.gschema.xml:14
-msgid "Fenster maximiert"
+#: data/ui/download_center.blp:24
+msgid "Installiert"
 msgstr ""
 
-#: data/org.gnomelex.Gesetze.gschema.xml:19
-msgid "Schriftgröße des Normtexts in Punkt"
+#: data/ui/download_center.blp:28
+msgid "Verfügbar"
 msgstr ""
 
-#: data/org.gnomelex.Gesetze.gschema.xml:23
-msgid "Beim Beenden geöffnete Tabs (JSON je Tab)"
+#: data/ui/download_center.blp:29
+msgid ""
+"Quelle: gesetze-im-internet.de (Bundesministerium der Justiz). Die Texte "
+"werden lokal gespeichert."
 msgstr ""
 
-#: data/org.gnomelex.Gesetze.gschema.xml:27
-msgid "Index des zuletzt aktiven Tabs"
+#: data/ui/jump_bar.blp:18
+msgid "Springen … (Super+K)"
 msgstr ""
 
-#: data/org.gnomelex.Gesetze.gschema.xml:31
-msgid "Seitenleiste für Notizen und Lesezeichen sichtbar"
+#: data/ui/jump_bar.blp:22
+msgid "Springen zu Norm, Gesetz oder Stichwort"
 msgstr ""
 
-#: data/org.gnomelex.Gesetze.gschema.xml:40
-msgid "Farbschema: System, hell oder dunkel"
+#: data/ui/preferences.blp:6
+msgid "Einstellungen"
 msgstr ""
 
-#: data/org.gnomelex.Gesetze.gschema.xml:44
-msgid "Beim Start auf neue Gesetzesfassungen prüfen"
+#: data/ui/preferences.blp:10
+msgid "Sprache"
 msgstr ""
 
-#: data/org.gnomelex.Gesetze.gschema.xml:48
-msgid "Zeitpunkt der letzten Aktualisierungsprüfung (ISO 8601)"
+#: data/ui/preferences.blp:13
+msgid "Sprache der Oberfläche"
+msgstr ""
+
+#: data/ui/preferences.blp:14
+msgid "Wird nach einem Neustart wirksam"
+msgstr ""
+
+#: data/ui/preferences.blp:17 data/ui/preferences.blp:29
+msgid "Wie das System"
+msgstr ""
+
+#: data/ui/preferences.blp:23
+msgid "Darstellung"
+msgstr ""
+
+#: data/ui/preferences.blp:26
+msgid "Farbschema"
+msgstr ""
+
+#: data/ui/preferences.blp:29
+msgid "Hell"
+msgstr ""
+
+#: data/ui/preferences.blp:29
+msgid "Dunkel"
+msgstr ""
+
+#: data/ui/preferences.blp:34 data/ui/preferences.blp:44
+msgid "Schrift des Gesetzestexts"
+msgstr ""
+
+#: data/ui/preferences.blp:35
+msgid "Standard: Public Sans, sonst Source Sans 3 oder Inter"
+msgstr ""
+
+#: data/ui/preferences.blp:51
+msgid "Standardschrift verwenden"
+msgstr ""
+
+#: data/ui/preferences.blp:59
+msgid "Schriftgröße des Gesetzestexts"
+msgstr ""
+
+#: data/ui/preferences.blp:60
+msgid "In Punkt; auch über Strg+Plus und Strg+Minus"
+msgstr ""
+
+#: data/ui/preferences.blp:72
+msgid "Aktualisierung"
+msgstr ""
+
+#: data/ui/preferences.blp:75
+msgid "Beim Start auf neue Fassungen prüfen"
+msgstr ""
+
+#: data/ui/preferences.blp:76
+msgid "Höchstens einmal täglich; lädt die Archive von gesetze-im-internet.de"
+msgstr ""
+
+#: data/ui/window.blp:37 data/ui/window.blp:67 data/ui/window.blp:102
+#: data/ui/window.blp:280
+msgid "Hauptmenü"
+msgstr ""
+
+#: data/ui/window.blp:45
+msgid "Kein Gesetz geladen"
+msgstr ""
+
+#: data/ui/window.blp:46
+msgid ""
+"Gesetze werden einmalig von gesetze-im-internet.de heruntergeladen und lokal "
+"gespeichert."
+msgstr ""
+
+#: data/ui/window.blp:73
+msgid "Lade herunter …"
+msgstr ""
+
+#: data/ui/window.blp:88 data/ui/window.blp:111
+msgid "Gliederung"
+msgstr ""
+
+#: data/ui/window.blp:96
+msgid "Gesetz der Gliederung"
+msgstr ""
+
+#: data/ui/window.blp:127
+msgid "Favoriten"
+msgstr ""
+
+#: data/ui/window.blp:151
+msgid "Norm"
+msgstr ""
+
+#: data/ui/window.blp:169
+msgid "Schema / Notiz"
+msgstr ""
+
+#: data/ui/window.blp:176
+msgid "Panel schließen"
+msgstr ""
+
+#: data/ui/window.blp:199
+msgid ""
+"Wird automatisch gespeichert und unter der Überschrift der Norm angezeigt."
+msgstr ""
+
+#: data/ui/window.blp:225
+msgid "Vorherige Norm (Alt+Bild↑)"
+msgstr ""
+
+#: data/ui/window.blp:231
+msgid "Nächste Norm (Alt+Bild↓)"
+msgstr ""
+
+#: data/ui/window.blp:239
+msgid "Zuletzt gelesene Normen"
+msgstr ""
+
+#: data/ui/window.blp:260
+msgid "Verlauf leeren"
+msgstr ""
+
+#: data/ui/window.blp:288
+msgid "Favorit (Strg+D)"
+msgstr ""
+
+#: data/ui/window.blp:295
+msgid "Schema / Notiz (Strg+Umschalt+N)"
+msgstr ""
+
+#: data/ui/window.blp:302
+msgid "Geteilte Ansicht (Strg+Umschalt+D)"
+msgstr ""
+
+#: data/ui/window.blp:309
+msgid "Tab-Übersicht (Strg+Umschalt+O)"
+msgstr ""
+
+#: data/ui/window.blp:316
+msgid "Neuer Tab (Strg+T)"
+msgstr ""
+
+#: data/ui/window.blp:341
+msgid "_Springen …"
+msgstr ""
+
+#: data/ui/window.blp:345
+msgid "Neuer _Tab"
+msgstr ""
+
+#: data/ui/window.blp:349
+msgid "_Geteilte Ansicht"
+msgstr ""
+
+#: data/ui/window.blp:353
+msgid "_Favorit"
+msgstr ""
+
+#: data/ui/window.blp:357
+msgid "Schema / _Notiz"
+msgstr ""
+
+#: data/ui/window.blp:363
+msgid "Schrift ver_größern"
+msgstr ""
+
+#: data/ui/window.blp:367
+msgid "Schrift ver_kleinern"
+msgstr ""
+
+#: data/ui/window.blp:371
+msgid "Schriftgröße _zurücksetzen"
+msgstr ""
+
+#: data/ui/window.blp:377
+msgid "Auf _Aktualisierung prüfen"
+msgstr ""
+
+#: data/ui/window.blp:381
+msgid "Gesetze _herunterladen …"
+msgstr ""
+
+#: data/ui/window.blp:387
+msgid "_Einstellungen"
+msgstr ""
+
+#: data/ui/window.blp:391
+msgid "_Tastenkürzel"
+msgstr ""
+
+#: data/ui/window.blp:395
+msgid "_Info zu Gesetze"
+msgstr ""
+
+#: data/ui/window.blp:399
+msgid "_Beenden"
+msgstr ""
+
+#: src/application.rs:193
+msgid "Navigation"
+msgstr ""
+
+#: src/application.rs:196
+msgid "Springen (Sprungleiste)"
+msgstr ""
+
+#: src/application.rs:199
+msgid "Vorherige Norm"
+msgstr ""
+
+#: src/application.rs:200
+msgid "Nächste Norm"
+msgstr ""
+
+#: src/application.rs:201
+msgid "Favorit setzen oder entfernen"
+msgstr ""
+
+#: src/application.rs:203
+msgid "Notiz / Schema ein- oder ausblenden"
+msgstr ""
+
+#: src/application.rs:209
+msgid "Ansicht"
+msgstr ""
+
+#: src/application.rs:211
+msgid "Geteilte Ansicht"
+msgstr ""
+
+#: src/application.rs:212
+msgid "Zwischen den Ansichten wechseln"
+msgstr ""
+
+#: src/application.rs:213 src/window.rs:1141 src/window.rs:1227
+msgid "Neuer Tab"
+msgstr ""
+
+#: src/application.rs:214
+msgid "Tab schließen"
+msgstr ""
+
+#: src/application.rs:216
+msgid "Nächster / vorheriger Tab"
+msgstr ""
+
+#: src/application.rs:219
+msgid "Tab-Übersicht"
+msgstr ""
+
+#: src/application.rs:223
+msgid "Schrift"
+msgstr ""
+
+#: src/application.rs:225
+msgid "Vergrößern"
+msgstr ""
+
+#: src/application.rs:226
+msgid "Verkleinern"
+msgstr ""
+
+#: src/application.rs:227
+msgid "Zurücksetzen"
+msgstr ""
+
+#: src/application.rs:231
+msgid "Allgemein"
+msgstr ""
+
+#: src/application.rs:234
+msgid "Tastenkürzel"
+msgstr ""
+
+#: src/application.rs:235
+msgid "Beenden"
+msgstr ""
+
+#: src/application.rs:256
+msgid ""
+"Deutsche Bundesgesetze lesen und annotieren. Datenquelle: gesetze-im-"
+"internet.de"
+msgstr ""
+
+#: src/model/mod.rs:162
+msgid "Gelb"
+msgstr ""
+
+#: src/model/mod.rs:163
+msgid "Grün"
+msgstr ""
+
+#: src/model/mod.rs:164
+msgid "Blau"
+msgstr ""
+
+#: src/model/mod.rs:165
+msgid "Rosa"
+msgstr ""
+
+#: src/model/mod.rs:166
+msgid "Orange"
+msgstr ""
+
+#: src/widgets/download_center.rs:80 src/window.rs:809
+msgid "Aktualisieren"
+msgstr ""
+
+#: src/widgets/download_center.rs:82
+msgid "{abbrev} · nicht installiert"
+msgstr ""
+
+#: src/widgets/download_center.rs:83 src/window.rs:1379
+msgid "Herunterladen"
+msgstr ""
+
+#: src/widgets/download_center.rs:91
+msgid "{abbrev} von gesetze-im-internet.de laden"
+msgstr ""
+
+#: src/widgets/download_center.rs:127
+msgid "importiert am {date}"
+msgstr ""
+
+#: src/widgets/jump_bar.rs:268
+msgid ""
+"Eingabe öffnet · Strg+Eingabe in der zweiten Ansicht · Tab vervollständigt"
+msgstr ""
+
+#: src/widgets/jump_bar.rs:827
+msgid "[Tabelle]"
+msgstr ""
+
+#: src/widgets/norm_view.rs:1385
+msgid "Fußnoten"
+msgstr ""
+
+#: src/widgets/norm_view.rs:1539
+msgid "+{n} weitere"
+msgstr ""
+
+#: src/widgets/norm_view.rs:1817
+msgid "Zur Fußnote springen"
+msgstr ""
+
+#: src/widgets/norm_view.rs:1819
+msgid ""
+"{target} öffnen\n"
+"Strg+Klick: in der zweiten Ansicht öffnen"
+msgstr ""
+
+#: src/widgets/norm_view.rs:2468 src/widgets/norm_view.rs:2993
+msgid "Markieren"
+msgstr ""
+
+#: src/widgets/norm_view.rs:2473
+msgid "Notiz"
+msgstr ""
+
+#: src/widgets/norm_view.rs:2485
+msgid "Notiz in {farbe} anheften"
+msgstr ""
+
+#: src/widgets/norm_view.rs:2486
+msgid "{farbe} markieren"
+msgstr ""
+
+#: src/widgets/norm_view.rs:2503
+msgid "Entfernen"
+msgstr ""
+
+#: src/widgets/norm_view.rs:2504
+msgid "Markierung oder Notiz entfernen"
+msgstr ""
+
+#: src/widgets/norm_view.rs:2968
+msgid "{ref} öffnen"
+msgstr ""
+
+#: src/widgets/norm_view.rs:2969
+msgid "Zur Fußnote"
+msgstr ""
+
+#: src/widgets/norm_view.rs:2974
+msgid "In zweiter Ansicht öffnen"
+msgstr ""
+
+#: src/widgets/norm_view.rs:2982
+msgid "Notizfarbe"
+msgstr ""
+
+#: src/widgets/norm_view.rs:2983
+msgid "Notiz löschen"
+msgstr ""
+
+#: src/widgets/norm_view.rs:2987
+msgid "Markierungsfarbe"
+msgstr ""
+
+#: src/widgets/norm_view.rs:2988
+msgid "Markierung entfernen"
+msgstr ""
+
+#: src/widgets/norm_view.rs:2994
+msgid "Notiz hinzufügen"
+msgstr ""
+
+#: src/widgets/norm_view.rs:2997
+msgid "Kopieren"
+msgstr ""
+
+#: src/widgets/norm_view.rs:2999
+msgid "Auswahl in der Schnellsuche"
+msgstr ""
+
+#: src/widgets/norm_view.rs:3006
+msgid "Norm in neuem Tab öffnen"
+msgstr ""
+
+#: src/widgets/norm_view.rs:3011
+msgid "Norm als Favorit"
+msgstr ""
+
+#: src/widgets/norm_view.rs:3015
+msgid "Schema / Notiz zur Norm"
+msgstr ""
+
+#: src/widgets/preferences.rs:150
+msgid "Die neue Sprache gilt nach dem nächsten Start."
+msgstr ""
+
+#: src/window.rs:533
+msgid "Verarbeite Gesetzestext und schreibe die Datenbank …"
+msgstr ""
+
+#: src/window.rs:563
+msgid "BGB herunterladen"
+msgstr ""
+
+#: src/window.rs:566
+msgid "Bürgerliches Gesetzbuch von gesetze-im-internet.de laden"
+msgstr ""
+
+#: src/window.rs:574
+msgid "Weitere Gesetze …"
+msgstr ""
+
+#: src/window.rs:577
+msgid "Download-Center mit allen verfügbaren Gesetzen öffnen"
+msgstr ""
+
+#: src/window.rs:675 src/window.rs:678
+msgid "Datenbank konnte nicht geöffnet werden"
+msgstr ""
+
+#: src/window.rs:717 src/window.rs:756
+msgid "Download fehlgeschlagen"
+msgstr ""
+
+#: src/window.rs:724
+msgid "Lade {name} herunter …"
+msgstr ""
+
+#: src/window.rs:774
+msgid "Prüfe auf Aktualisierung …"
+msgstr ""
+
+#: src/window.rs:805
+msgid "Neue Fassung: {law}, {stand}"
+msgstr ""
+
+#: src/window.rs:820
+msgid "Aktualisierungsprüfung fehlgeschlagen"
+msgstr ""
+
+#: src/window.rs:834
+msgid "Auf dem neuesten Stand: {laws}"
+msgstr ""
+
+#: src/window.rs:997 src/window.rs:1001
+msgid "Gliederung konnte nicht geladen werden"
+msgstr ""
+
+#: src/window.rs:1354
+msgid "Verweis {label} wurde nicht gefunden."
+msgstr ""
+
+#: src/window.rs:1375
+msgid "{law} ist nicht installiert."
+msgstr ""
+
+#: src/window.rs:1432
+msgid "Annotation konnte nicht gespeichert werden"
+msgstr ""
+
+#: src/window.rs:1448
+msgid "Noch keine gelesenen Normen."
+msgstr ""
+
+#: src/window.rs:1700
+msgid "Notiz konnte nicht gespeichert werden"
+msgstr ""
+
+#: src/window.rs:1760 src/window.rs:2038
+msgid "Norm {enbez} wurde nicht gefunden."
+msgstr ""
+
+#: src/window.rs:1846
+msgid "Noch keine Favoriten. Stern in der Kopfleiste oder Strg+D."
+msgstr ""
+
+#: src/window.rs:1922
+msgid "Nicht mehr vorhanden"
+msgstr ""
+
+#: src/window.rs:1927
+msgid "Favorit entfernen"
+msgstr ""
+
+#: src/window.rs:1984
+msgid "Favorit konnte nicht gespeichert werden"
+msgstr ""
+
+#: src/window.rs:2004
+msgid "Favorit konnte nicht entfernt werden"
+msgstr ""
+
+#: src/window.rs:2240
+msgid "importiert: {} Norm."
+msgid_plural "importiert: {} Normen."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/window.rs:2251
+msgid ""
+"Annotationen: {moved} verschoben, {orphaned} verwaist, {recovered} "
+"wiedergefunden."
 msgstr ""

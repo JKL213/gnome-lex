@@ -30,17 +30,23 @@ window {
   border: 2px solid var(--accent-color);
 }
 
-/* Geteilte Ansicht: Beschriftung über jeder Ansicht, aktive in Akzentfarbe */
+/* Geteilte Ansicht: Beschriftung über jeder Ansicht; die aktive Ansicht
+   trägt Akzentfarbe, getönten Hintergrund und eine kräftige Unterkante,
+   damit sofort erkennbar ist, welches Gesetz links und rechts liegt. */
 .pane-caption {
-  padding: 4px 16px;
-  font-size: 0.85em;
-  font-weight: bold;
-  opacity: 0.55;
-  border-bottom: 1px solid alpha(currentColor, 0.12);
+  padding: 7px 16px;
+  font-size: 1em;
+  font-weight: 600;
+  opacity: 0.7;
+  border-bottom: 2px solid alpha(currentColor, 0.12);
+  background: alpha(currentColor, 0.03);
 }
 .pane-caption.active {
   color: var(--accent-color);
   opacity: 1;
+  font-weight: 700;
+  background: alpha(var(--accent-bg-color), 0.12);
+  border-bottom-color: var(--accent-color);
 }
 
 /* Notizpanel */

@@ -484,6 +484,107 @@ impl CharOffsets {
     }
 }
 
+/// Stelle innerhalb einer Norm, zu der ein Verweis führt: Absatz, Satz
+/// und/oder Nummer. Leer, wenn der Verweis nur die Norm nennt.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct JumpTarget {
+    pub paragraph: Option<String>,
+    pub sentence: Option<String>,
+    pub number: Option<String>,
+}
+
+impl JumpTarget {
+    pub fn is_empty(&self) -> bool {
+        self.paragraph.is_none() && self.sentence.is_none() && self.number.is_none()
+    }
+}
+
+impl NormRef {
+    /// Absatz, Satz und Nummer des Verweises als Sprungziel.
+    pub fn inner_target(&self) -> JumpTarget {
+        JumpTarget {
+            paragraph: self.paragraph.clone(),
+            sentence: self.sentence.clone(),
+            number: self.number.clone(),
+        }
+    }
+}
+
+/// Wörter, hinter deren Punkt kein Satz endet.
+const ABBREVIATIONS: &[&str] = &[
+    "abs", "nr", "nrn", "art", "satz", "s", "z", "b", "bzw", "vgl", "usw", "ff", "buchst", "halbs",
+    "hs", "gem", "ziff", "alt", "var", "ggf", "evtl", "insb", "sog", "rn", "i", "v", "m", "d", "h",
+    "u", "a", "str", "ca", "zz", "zzt", "mio", "mrd", "eur", "dm", "jh", "st",
+];
+
+/// Zeichenbereich (Start, Ende) des `n`-ten Satzes eines Absatztexts. Ein
+/// Satz endet an „.“, „!“ oder „?“, wenn danach ein Großbuchstabe, „§“,
+/// eine Ziffer oder eine Klammer folgt und das Wort davor keine bekannte
+/// Abkürzung und kein einzelner Buchstabe ist. Am Textende endet immer ein
+/// Satz.
+pub fn sentence_range(text: &str, n: usize) -> Option<(usize, usize)> {
+    if n == 0 {
+        return None;
+    }
+    let chars: Vec<char> = text.chars().collect();
+    let mut sentences: Vec<(usize, usize)> = Vec::new();
+    let mut start = 0usize;
+    let mut i = 0usize;
+    while i < chars.len() {
+        let c = chars[i];
+        if matches!(c, '.' | '!' | '?') {
+            // Schließende Anführungszeichen oder Klammern gehören zum Satz.
+            let mut end = i + 1;
+            while end < chars.len() && matches!(chars[end], '“' | '"' | '”' | ')' | '\'') {
+                end += 1;
+            }
+            let mut next = end;
+            while next < chars.len() && chars[next].is_whitespace() {
+                next += 1;
+            }
+            let at_text_end = next >= chars.len();
+            let follows_sentence_start = next < chars.len()
+                && (chars[next].is_uppercase()
+                    || chars[next] == '§'
+                    || chars[next] == '('
+                    || chars[next] == '„'
+                    || chars[next].is_ascii_digit());
+            let word: String = chars[..i]
+                .iter()
+                .rev()
+                .take_while(|c| c.is_alphanumeric())
+                .collect::<String>()
+                .chars()
+                .rev()
+                .collect();
+            let abbreviation = c == '.'
+                && (word.chars().count() == 1 && word.chars().all(char::is_alphabetic)
+                    || ABBREVIATIONS.contains(&word.to_lowercase().as_str()));
+            if at_text_end || (follows_sentence_start && !abbreviation && next > end) {
+                let s = (start..end)
+                    .find(|k| !chars[*k].is_whitespace())
+                    .unwrap_or(start);
+                if s < end {
+                    sentences.push((s, end));
+                }
+                start = end;
+                i = end;
+                continue;
+            }
+        }
+        i += 1;
+    }
+    if start < chars.len() {
+        let s = (start..chars.len())
+            .find(|k| !chars[*k].is_whitespace())
+            .unwrap_or(start);
+        if s < chars.len() {
+            sentences.push((s, chars.len()));
+        }
+    }
+    sentences.get(n - 1).copied()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -611,5 +712,38 @@ mod tests {
         assert_eq!(r[0].target.norm.as_deref(), Some("§ 312g"));
         assert_eq!(r[0].target.number.as_deref(), Some("1"));
         assert_eq!(r[1].target.norm.as_deref(), Some("§ 1631b"));
+    }
+
+    #[test]
+    fn sentences_are_split_with_abbreviations() {
+        let text = "Der Käufer kann nach § 437 Nr. 2 zurücktreten. Dies gilt nicht, wenn z. B. der Mangel unerheblich ist. Satz 2 bleibt unberührt.";
+        let (a, b) = sentence_range(text, 1).unwrap();
+        assert_eq!(
+            &text.chars().skip(a).take(b - a).collect::<String>(),
+            "Der Käufer kann nach § 437 Nr. 2 zurücktreten."
+        );
+        let (a, b) = sentence_range(text, 2).unwrap();
+        assert_eq!(
+            &text.chars().skip(a).take(b - a).collect::<String>(),
+            "Dies gilt nicht, wenn z. B. der Mangel unerheblich ist."
+        );
+        let (a, b) = sentence_range(text, 3).unwrap();
+        assert_eq!(
+            &text.chars().skip(a).take(b - a).collect::<String>(),
+            "Satz 2 bleibt unberührt."
+        );
+        assert_eq!(sentence_range(text, 4), None);
+        assert_eq!(sentence_range(text, 0), None);
+        assert_eq!(sentence_range("Ein Satz ohne Punkt", 1), Some((0, 19)));
+    }
+
+    #[test]
+    fn inner_target_from_reference() {
+        let refs = find_references("siehe § 280 Abs. 1 Satz 2", "BGB");
+        let target = refs[0].target.inner_target();
+        assert_eq!(target.paragraph.as_deref(), Some("1"));
+        assert_eq!(target.sentence.as_deref(), Some("2"));
+        assert!(target.number.is_none());
+        assert!(!target.is_empty());
     }
 }

@@ -15,3 +15,4 @@ src/widgets/norm_view.rs
 src/widgets/preferences.rs
 src/widgets/jump_bar.rs
 src/window.rs
+src/model/mod.rs

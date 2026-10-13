@@ -64,3 +64,11 @@ fn candidate_schema_dirs() -> Vec<PathBuf> {
     }
     dirs
 }
+
+/// Sprachcode aus der Einstellung „language“ („de“, „en“, „ru“), `None`
+/// für die Systemsprache. Wird vor der Locale-Initialisierung gelesen.
+pub fn preferred_language() -> Option<String> {
+    use gio::prelude::SettingsExt;
+    let lang = settings().string("language");
+    (!lang.is_empty()).then(|| lang.to_string())
+}

@@ -6,6 +6,7 @@
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
+use gettextrs::gettext;
 use gtk::{gio, glib, pango, CompositeTemplate};
 
 use crate::settings;
@@ -16,6 +17,8 @@ pub const DEFAULT_READING_FONTS: &str =
     "\"Public Sans\", \"Source Sans 3\", \"Inter\", \"Inter Variable\", \"Adwaita Sans\", sans-serif";
 
 /// Werte des GSettings-Schlüssels `color-scheme` in Reihenfolge des Auswahlfelds.
+/// Sprachcodes in der Reihenfolge der Auswahlzeile (Index 0 = System).
+const LANGUAGES: [&str; 4] = ["", "de", "en", "ru"];
 const COLOR_SCHEMES: [&str; 3] = ["default", "light", "dark"];
 
 mod imp {
@@ -24,6 +27,8 @@ mod imp {
     #[derive(Default, CompositeTemplate)]
     #[template(resource = "/org/gnomelex/Gesetze/ui/preferences.ui")]
     pub struct LexPreferences {
+        #[template_child]
+        pub language_row: TemplateChild<adw::ComboRow>,
         #[template_child]
         pub color_scheme_row: TemplateChild<adw::ComboRow>,
         #[template_child]
@@ -116,6 +121,35 @@ impl LexPreferences {
             move |_| {
                 settings.reset("reading-font");
                 button.set_font_desc(&pango::FontDescription::from_string("Public Sans"));
+            }
+        ));
+        // Sprache: Index 0 = Systemsprache, danach wie `LANGUAGES`.
+        let current_lang = settings.string("language");
+        let lang_index = LANGUAGES
+            .iter()
+            .position(|l| *l == current_lang.as_str())
+            .unwrap_or(0);
+        imp.language_row.set_selected(lang_index as u32);
+        imp.language_row.connect_selected_notify(glib::clone!(
+            #[strong]
+            settings,
+            #[weak(rename_to = dialog)]
+            self,
+            move |row| {
+                let value = LANGUAGES
+                    .get(row.selected() as usize)
+                    .copied()
+                    .unwrap_or("");
+                if value == settings.string("language").as_str() {
+                    return;
+                }
+                if let Err(err) = settings.set_string("language", value) {
+                    log::warn!("language konnte nicht gespeichert werden: {err}");
+                    return;
+                }
+                dialog.add_toast(adw::Toast::new(&gettext(
+                    "Die neue Sprache gilt nach dem nächsten Start.",
+                )));
             }
         ));
         let current = settings.string("color-scheme");

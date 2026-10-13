@@ -34,7 +34,44 @@ fn main() {
     compile_blueprints(&data_dir.join("ui"), &out_dir.join("ui"));
     compile_resources(&data_dir, &out_dir);
     compile_schema(&data_dir, &out_dir);
+    compile_translations(&manifest_dir.join("po"), &out_dir.join("locale"));
     export_config(&out_dir);
+}
+
+/// Übersetzt `po/<lang>.po` nach `<out>/<lang>/LC_MESSAGES/gesetze.mo`,
+/// damit auch ein reiner Cargo-Build die Übersetzungen findet (LOCALEDIR
+/// zeigt ohne Meson auf dieses Verzeichnis). Fehlt `msgfmt`, bleibt die
+/// Oberfläche deutsch.
+fn compile_translations(po_dir: &Path, locale_dir: &Path) {
+    println!("cargo:rerun-if-changed=po");
+    let Ok(entries) = fs::read_dir(po_dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("po") {
+            continue;
+        }
+        let Some(lang) = path.file_stem().and_then(|s| s.to_str()) else {
+            continue;
+        };
+        let dir = locale_dir.join(lang).join("LC_MESSAGES");
+        fs::create_dir_all(&dir).expect("create locale dir");
+        let status = Command::new("msgfmt")
+            .arg("--check-format")
+            .arg("-o")
+            .arg(dir.join("gesetze.mo"))
+            .arg(&path)
+            .status();
+        match status {
+            Ok(s) if s.success() => {}
+            Ok(_) => panic!("msgfmt ist für {} fehlgeschlagen", path.display()),
+            Err(_) => {
+                println!("cargo:warning=msgfmt nicht gefunden – Übersetzungen werden nicht gebaut");
+                return;
+            }
+        }
+    }
 }
 
 fn compile_blueprints(ui_dir: &Path, out_ui_dir: &Path) {

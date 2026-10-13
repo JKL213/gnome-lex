@@ -1,0 +1,612 @@
+# Russian translation for gesetze.
+# Copyright (C) 2026 Gnome Lex
+# This file is distributed under the same license as the gesetze package.
+# Gnome Lex, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: gesetze\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-22 23:52+0200\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2026-10-13 22:00+0200\n"
+"Last-Translator: Gnome Lex\n"
+"Language-Team: none\n"
+"Language: ru\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#: data/org.gnomelex.Gesetze.desktop.in:2
+msgid "Gesetze"
+msgstr "Gesetze"
+
+#: data/org.gnomelex.Gesetze.desktop.in:3
+msgid "Deutsche Bundesgesetze lesen und annotieren"
+msgstr "Чтение и аннотирование федеральных законов Германии"
+
+#: data/org.gnomelex.Gesetze.desktop.in:9
+msgid "Gesetz;BGB;Recht;Norm;Paragraph;"
+msgstr "закон;BGB;право;норма;параграф;Gesetz;"
+
+#: data/org.gnomelex.Gesetze.metainfo.xml.in:9
+msgid "Gesetze zeigt den Text des Bürgerlichen Gesetzbuchs aus der amtlichen Quelle gesetze-im-internet.de mit Gliederung, Volltextsuche und klickbaren Verweisen. Textstellen lassen sich markieren, mit Notizen versehen und als Lesezeichen ablegen."
+msgstr "Gesetze показывает текст Bürgerliches Gesetzbuch (BGB) из официального источника gesetze-im-internet.de с оглавлением, полнотекстовым поиском и кликабельными ссылками. Фрагменты текста можно выделять, снабжать заметками и добавлять в закладки."
+
+#: data/org.gnomelex.Gesetze.metainfo.xml.in:20
+msgid "Gnome Lex"
+msgstr "Gnome Lex"
+
+#: data/org.gnomelex.Gesetze.metainfo.xml.in:38
+msgid "Erste Version: BGB lesen, suchen, verweisen, annotieren."
+msgstr "Первая версия: чтение, поиск, ссылки и аннотации для BGB."
+
+#: data/ui/download_center.blp:7
+msgid "Gesetze herunterladen"
+msgstr "Загрузить законы"
+
+#: data/ui/download_center.blp:17
+msgid "Installierte Gesetze auf Aktualisierungen prüfen"
+msgstr "Проверить обновления установленных законов"
+
+#: data/ui/download_center.blp:24
+msgid "Installiert"
+msgstr "Установлено"
+
+#: data/ui/download_center.blp:28
+msgid "Verfügbar"
+msgstr "Доступно"
+
+#: data/ui/download_center.blp:29
+msgid "Quelle: gesetze-im-internet.de (Bundesministerium der Justiz). Die Texte werden lokal gespeichert."
+msgstr "Источник: gesetze-im-internet.de (Bundesministerium der Justiz). Тексты сохраняются локально."
+
+#: data/ui/jump_bar.blp:18
+msgid "Springen … (Super+K)"
+msgstr "Перейти … (Super+K)"
+
+#: data/ui/jump_bar.blp:22
+msgid "Springen zu Norm, Gesetz oder Stichwort"
+msgstr "Переход к норме, закону или ключевому слову"
+
+#: data/ui/preferences.blp:6
+msgid "Einstellungen"
+msgstr "Параметры"
+
+#: data/ui/preferences.blp:10
+msgid "Sprache"
+msgstr "Язык"
+
+#: data/ui/preferences.blp:13
+msgid "Sprache der Oberfläche"
+msgstr "Язык интерфейса"
+
+#: data/ui/preferences.blp:14
+msgid "Wird nach einem Neustart wirksam"
+msgstr "Вступает в силу после перезапуска"
+
+#: data/ui/preferences.blp:17 data/ui/preferences.blp:29
+msgid "Wie das System"
+msgstr "Как в системе"
+
+#: data/ui/preferences.blp:23
+msgid "Darstellung"
+msgstr "Внешний вид"
+
+#: data/ui/preferences.blp:26
+msgid "Farbschema"
+msgstr "Цветовая схема"
+
+#: data/ui/preferences.blp:29
+msgid "Hell"
+msgstr "Светлая"
+
+#: data/ui/preferences.blp:29
+msgid "Dunkel"
+msgstr "Тёмная"
+
+#: data/ui/preferences.blp:34 data/ui/preferences.blp:44
+msgid "Schrift des Gesetzestexts"
+msgstr "Шрифт текста закона"
+
+#: data/ui/preferences.blp:35
+msgid "Standard: Public Sans, sonst Source Sans 3 oder Inter"
+msgstr "По умолчанию: Public Sans, иначе Source Sans 3 или Inter"
+
+#: data/ui/preferences.blp:51
+msgid "Standardschrift verwenden"
+msgstr "Использовать шрифт по умолчанию"
+
+#: data/ui/preferences.blp:59
+msgid "Schriftgröße des Gesetzestexts"
+msgstr "Размер шрифта текста закона"
+
+#: data/ui/preferences.blp:60
+msgid "In Punkt; auch über Strg+Plus und Strg+Minus"
+msgstr "В пунктах; также через Ctrl+Плюс и Ctrl+Минус"
+
+#: data/ui/preferences.blp:72
+msgid "Aktualisierung"
+msgstr "Обновление"
+
+#: data/ui/preferences.blp:75
+msgid "Beim Start auf neue Fassungen prüfen"
+msgstr "Проверять новые редакции при запуске"
+
+#: data/ui/preferences.blp:76
+msgid "Höchstens einmal täglich; lädt die Archive von gesetze-im-internet.de"
+msgstr "Не чаще раза в день; загружает архивы с gesetze-im-internet.de"
+
+#: data/ui/window.blp:37 data/ui/window.blp:67 data/ui/window.blp:102
+#: data/ui/window.blp:280
+msgid "Hauptmenü"
+msgstr "Главное меню"
+
+#: data/ui/window.blp:45
+msgid "Kein Gesetz geladen"
+msgstr "Законы не загружены"
+
+#: data/ui/window.blp:46
+msgid "Gesetze werden einmalig von gesetze-im-internet.de heruntergeladen und lokal gespeichert."
+msgstr "Законы однократно загружаются с gesetze-im-internet.de и сохраняются локально."
+
+#: data/ui/window.blp:73
+msgid "Lade herunter …"
+msgstr "Загрузка …"
+
+#: data/ui/window.blp:88 data/ui/window.blp:111
+msgid "Gliederung"
+msgstr "Оглавление"
+
+#: data/ui/window.blp:96
+msgid "Gesetz der Gliederung"
+msgstr "Закон, показанный в оглавлении"
+
+#: data/ui/window.blp:127
+msgid "Favoriten"
+msgstr "Избранное"
+
+#: data/ui/window.blp:151
+msgid "Norm"
+msgstr "Норма"
+
+#: data/ui/window.blp:169
+msgid "Schema / Notiz"
+msgstr "Схема / заметка"
+
+#: data/ui/window.blp:176
+msgid "Panel schließen"
+msgstr "Закрыть панель"
+
+#: data/ui/window.blp:199
+msgid "Wird automatisch gespeichert und unter der Überschrift der Norm angezeigt."
+msgstr "Сохраняется автоматически и отображается под заголовком нормы."
+
+#: data/ui/window.blp:225
+msgid "Vorherige Norm (Alt+Bild↑)"
+msgstr "Предыдущая норма (Alt+PgUp)"
+
+#: data/ui/window.blp:231
+msgid "Nächste Norm (Alt+Bild↓)"
+msgstr "Следующая норма (Alt+PgDn)"
+
+#: data/ui/window.blp:239
+msgid "Zuletzt gelesene Normen"
+msgstr "Недавно прочитанные нормы"
+
+#: data/ui/window.blp:260
+msgid "Verlauf leeren"
+msgstr "Очистить журнал"
+
+#: data/ui/window.blp:288
+msgid "Favorit (Strg+D)"
+msgstr "В избранное (Ctrl+D)"
+
+#: data/ui/window.blp:295
+msgid "Schema / Notiz (Strg+Umschalt+N)"
+msgstr "Схема / заметка (Ctrl+Shift+N)"
+
+#: data/ui/window.blp:302
+msgid "Geteilte Ansicht (Strg+Umschalt+D)"
+msgstr "Разделённый вид (Ctrl+Shift+D)"
+
+#: data/ui/window.blp:309
+msgid "Tab-Übersicht (Strg+Umschalt+O)"
+msgstr "Обзор вкладок (Ctrl+Shift+O)"
+
+#: data/ui/window.blp:316
+msgid "Neuer Tab (Strg+T)"
+msgstr "Новая вкладка (Ctrl+T)"
+
+#: data/ui/window.blp:341
+msgid "_Springen …"
+msgstr "_Перейти …"
+
+#: data/ui/window.blp:345
+msgid "Neuer _Tab"
+msgstr "Новая _вкладка"
+
+#: data/ui/window.blp:349
+msgid "_Geteilte Ansicht"
+msgstr "_Разделённый вид"
+
+#: data/ui/window.blp:353
+msgid "_Favorit"
+msgstr "В _избранное"
+
+#: data/ui/window.blp:357
+msgid "Schema / _Notiz"
+msgstr "Схема / _заметка"
+
+#: data/ui/window.blp:363
+msgid "Schrift ver_größern"
+msgstr "У_величить шрифт"
+
+#: data/ui/window.blp:367
+msgid "Schrift ver_kleinern"
+msgstr "У_меньшить шрифт"
+
+#: data/ui/window.blp:371
+msgid "Schriftgröße _zurücksetzen"
+msgstr "_Сбросить размер шрифта"
+
+#: data/ui/window.blp:377
+msgid "Auf _Aktualisierung prüfen"
+msgstr "Проверить _обновления"
+
+#: data/ui/window.blp:381
+msgid "Gesetze _herunterladen …"
+msgstr "За_грузить законы …"
+
+#: data/ui/window.blp:387
+msgid "_Einstellungen"
+msgstr "_Параметры"
+
+#: data/ui/window.blp:391
+msgid "_Tastenkürzel"
+msgstr "_Комбинации клавиш"
+
+#: data/ui/window.blp:395
+msgid "_Info zu Gesetze"
+msgstr "_О приложении Gesetze"
+
+#: data/ui/window.blp:399
+msgid "_Beenden"
+msgstr "В_ыйти"
+
+#: src/application.rs:193
+msgid "Navigation"
+msgstr "Навигация"
+
+#: src/application.rs:196
+msgid "Springen (Sprungleiste)"
+msgstr "Перейти (строка перехода)"
+
+#: src/application.rs:199
+msgid "Vorherige Norm"
+msgstr "Предыдущая норма"
+
+#: src/application.rs:200
+msgid "Nächste Norm"
+msgstr "Следующая норма"
+
+#: src/application.rs:201
+msgid "Favorit setzen oder entfernen"
+msgstr "Добавить в избранное или удалить"
+
+#: src/application.rs:203
+msgid "Notiz / Schema ein- oder ausblenden"
+msgstr "Показать или скрыть заметку / схему"
+
+#: src/application.rs:209
+msgid "Ansicht"
+msgstr "Вид"
+
+#: src/application.rs:211
+msgid "Geteilte Ansicht"
+msgstr "Разделённый вид"
+
+#: src/application.rs:212
+msgid "Zwischen den Ansichten wechseln"
+msgstr "Переключиться между панелями"
+
+#: src/application.rs:213 src/window.rs:1141 src/window.rs:1227
+msgid "Neuer Tab"
+msgstr "Новая вкладка"
+
+#: src/application.rs:214
+msgid "Tab schließen"
+msgstr "Закрыть вкладку"
+
+#: src/application.rs:216
+msgid "Nächster / vorheriger Tab"
+msgstr "Следующая / предыдущая вкладка"
+
+#: src/application.rs:219
+msgid "Tab-Übersicht"
+msgstr "Обзор вкладок"
+
+#: src/application.rs:223
+msgid "Schrift"
+msgstr "Шрифт"
+
+#: src/application.rs:225
+msgid "Vergrößern"
+msgstr "Увеличить"
+
+#: src/application.rs:226
+msgid "Verkleinern"
+msgstr "Уменьшить"
+
+#: src/application.rs:227
+msgid "Zurücksetzen"
+msgstr "Сбросить"
+
+#: src/application.rs:231
+msgid "Allgemein"
+msgstr "Общие"
+
+#: src/application.rs:234
+msgid "Tastenkürzel"
+msgstr "Комбинации клавиш"
+
+#: src/application.rs:235
+msgid "Beenden"
+msgstr "Выйти"
+
+#: src/application.rs:256
+msgid "Deutsche Bundesgesetze lesen und annotieren. Datenquelle: gesetze-im-internet.de"
+msgstr "Чтение и аннотирование федеральных законов Германии. Источник данных: gesetze-im-internet.de"
+
+#: src/model/mod.rs:162
+msgid "Gelb"
+msgstr "Жёлтый"
+
+#: src/model/mod.rs:163
+msgid "Grün"
+msgstr "Зелёный"
+
+#: src/model/mod.rs:164
+msgid "Blau"
+msgstr "Синий"
+
+#: src/model/mod.rs:165
+msgid "Rosa"
+msgstr "Розовый"
+
+#: src/model/mod.rs:166
+msgid "Orange"
+msgstr "Оранжевый"
+
+#: src/widgets/download_center.rs:80 src/window.rs:809
+msgid "Aktualisieren"
+msgstr "Обновить"
+
+#: src/widgets/download_center.rs:82
+msgid "{abbrev} · nicht installiert"
+msgstr "{abbrev} · не установлен"
+
+#: src/widgets/download_center.rs:83 src/window.rs:1379
+msgid "Herunterladen"
+msgstr "Загрузить"
+
+#: src/widgets/download_center.rs:91
+msgid "{abbrev} von gesetze-im-internet.de laden"
+msgstr "Загрузить {abbrev} с gesetze-im-internet.de"
+
+#: src/widgets/download_center.rs:127
+msgid "importiert am {date}"
+msgstr "импортировано {date}"
+
+#: src/widgets/jump_bar.rs:268
+msgid "Eingabe öffnet · Strg+Eingabe in der zweiten Ansicht · Tab vervollständigt"
+msgstr "Enter — открыть · Ctrl+Enter — во второй панели · Tab — дополнить"
+
+#: src/widgets/jump_bar.rs:827
+msgid "[Tabelle]"
+msgstr "[Таблица]"
+
+#: src/widgets/norm_view.rs:1385
+msgid "Fußnoten"
+msgstr "Сноски"
+
+#: src/widgets/norm_view.rs:1539
+msgid "+{n} weitere"
+msgstr "+{n} ещё"
+
+#: src/widgets/norm_view.rs:1817
+msgid "Zur Fußnote springen"
+msgstr "Перейти к сноске"
+
+#: src/widgets/norm_view.rs:1819
+msgid ""
+"{target} öffnen\n"
+"Strg+Klick: in der zweiten Ansicht öffnen"
+msgstr "Открыть {target}\nCtrl+щелчок: открыть во второй панели"
+
+#: src/widgets/norm_view.rs:2468 src/widgets/norm_view.rs:2993
+msgid "Markieren"
+msgstr "Выделить"
+
+#: src/widgets/norm_view.rs:2473
+msgid "Notiz"
+msgstr "Заметка"
+
+#: src/widgets/norm_view.rs:2485
+msgid "Notiz in {farbe} anheften"
+msgstr "Прикрепить заметку цветом «{farbe}»"
+
+#: src/widgets/norm_view.rs:2486
+msgid "{farbe} markieren"
+msgstr "Выделить цветом «{farbe}»"
+
+#: src/widgets/norm_view.rs:2503
+msgid "Entfernen"
+msgstr "Удалить"
+
+#: src/widgets/norm_view.rs:2504
+msgid "Markierung oder Notiz entfernen"
+msgstr "Удалить выделение или заметку"
+
+#: src/widgets/norm_view.rs:2968
+msgid "{ref} öffnen"
+msgstr "Открыть {ref}"
+
+#: src/widgets/norm_view.rs:2969
+msgid "Zur Fußnote"
+msgstr "К сноске"
+
+#: src/widgets/norm_view.rs:2974
+msgid "In zweiter Ansicht öffnen"
+msgstr "Открыть во второй панели"
+
+#: src/widgets/norm_view.rs:2982
+msgid "Notizfarbe"
+msgstr "Цвет заметки"
+
+#: src/widgets/norm_view.rs:2983
+msgid "Notiz löschen"
+msgstr "Удалить заметку"
+
+#: src/widgets/norm_view.rs:2987
+msgid "Markierungsfarbe"
+msgstr "Цвет выделения"
+
+#: src/widgets/norm_view.rs:2988
+msgid "Markierung entfernen"
+msgstr "Удалить выделение"
+
+#: src/widgets/norm_view.rs:2994
+msgid "Notiz hinzufügen"
+msgstr "Добавить заметку"
+
+#: src/widgets/norm_view.rs:2997
+msgid "Kopieren"
+msgstr "Копировать"
+
+#: src/widgets/norm_view.rs:2999
+msgid "Auswahl in der Schnellsuche"
+msgstr "Найти выделенное в строке перехода"
+
+#: src/widgets/norm_view.rs:3006
+msgid "Norm in neuem Tab öffnen"
+msgstr "Открыть норму в новой вкладке"
+
+#: src/widgets/norm_view.rs:3011
+msgid "Norm als Favorit"
+msgstr "Добавить норму в избранное"
+
+#: src/widgets/norm_view.rs:3015
+msgid "Schema / Notiz zur Norm"
+msgstr "Схема / заметка к норме"
+
+#: src/widgets/preferences.rs:150
+msgid "Die neue Sprache gilt nach dem nächsten Start."
+msgstr "Новый язык будет применён после следующего запуска."
+
+#: src/window.rs:533
+msgid "Verarbeite Gesetzestext und schreibe die Datenbank …"
+msgstr "Обработка текста закона и запись базы данных …"
+
+#: src/window.rs:563
+msgid "BGB herunterladen"
+msgstr "Загрузить BGB"
+
+#: src/window.rs:566
+msgid "Bürgerliches Gesetzbuch von gesetze-im-internet.de laden"
+msgstr "Загрузить Bürgerliches Gesetzbuch с gesetze-im-internet.de"
+
+#: src/window.rs:574
+msgid "Weitere Gesetze …"
+msgstr "Другие законы …"
+
+#: src/window.rs:577
+msgid "Download-Center mit allen verfügbaren Gesetzen öffnen"
+msgstr "Открыть центр загрузки со всеми доступными законами"
+
+#: src/window.rs:675 src/window.rs:678
+msgid "Datenbank konnte nicht geöffnet werden"
+msgstr "Не удалось открыть базу данных"
+
+#: src/window.rs:717 src/window.rs:756
+msgid "Download fehlgeschlagen"
+msgstr "Ошибка загрузки"
+
+#: src/window.rs:724
+msgid "Lade {name} herunter …"
+msgstr "Загрузка {name} …"
+
+#: src/window.rs:774
+msgid "Prüfe auf Aktualisierung …"
+msgstr "Проверка обновлений …"
+
+#: src/window.rs:805
+msgid "Neue Fassung: {law}, {stand}"
+msgstr "Новая редакция: {law}, {stand}"
+
+#: src/window.rs:820
+msgid "Aktualisierungsprüfung fehlgeschlagen"
+msgstr "Не удалось проверить обновления"
+
+#: src/window.rs:834
+msgid "Auf dem neuesten Stand: {laws}"
+msgstr "Актуальная версия: {laws}"
+
+#: src/window.rs:997 src/window.rs:1001
+msgid "Gliederung konnte nicht geladen werden"
+msgstr "Не удалось загрузить оглавление"
+
+#: src/window.rs:1354
+msgid "Verweis {label} wurde nicht gefunden."
+msgstr "Ссылка {label} не найдена."
+
+#: src/window.rs:1375
+msgid "{law} ist nicht installiert."
+msgstr "{law} не установлен."
+
+#: src/window.rs:1432
+msgid "Annotation konnte nicht gespeichert werden"
+msgstr "Не удалось сохранить аннотацию"
+
+#: src/window.rs:1448
+msgid "Noch keine gelesenen Normen."
+msgstr "Прочитанных норм пока нет."
+
+#: src/window.rs:1700
+msgid "Notiz konnte nicht gespeichert werden"
+msgstr "Не удалось сохранить заметку"
+
+#: src/window.rs:1760 src/window.rs:2038
+msgid "Norm {enbez} wurde nicht gefunden."
+msgstr "Норма {enbez} не найдена."
+
+#: src/window.rs:1846
+msgid "Noch keine Favoriten. Stern in der Kopfleiste oder Strg+D."
+msgstr "Избранного пока нет. Звезда в заголовке окна или Ctrl+D."
+
+#: src/window.rs:1922
+msgid "Nicht mehr vorhanden"
+msgstr "Больше не существует"
+
+#: src/window.rs:1927
+msgid "Favorit entfernen"
+msgstr "Удалить из избранного"
+
+#: src/window.rs:1984
+msgid "Favorit konnte nicht gespeichert werden"
+msgstr "Не удалось сохранить избранное"
+
+#: src/window.rs:2004
+msgid "Favorit konnte nicht entfernt werden"
+msgstr "Не удалось удалить из избранного"
+
+#: src/window.rs:2240
+msgid "importiert: {} Norm."
+msgid_plural "importiert: {} Normen."
+msgstr[0] "импортировано: {} норма."
+msgstr[1] "импортировано: {} нормы."
+msgstr[2] "импортировано: {} норм."
+
+#: src/window.rs:2251
+msgid "Annotationen: {moved} verschoben, {orphaned} verwaist, {recovered} wiedergefunden."
+msgstr "Аннотации: перемещено {moved}, без привязки {orphaned}, восстановлено {recovered}."

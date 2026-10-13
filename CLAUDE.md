@@ -87,7 +87,7 @@ Unit-Tests für Importer und Verweisparser sind Pflicht.
 
 ---
 
-## 3. Stand: Leseansicht ohne Tabs, Verweisindex, Annotationen im Kern (siehe unten)
+## 3. Stand: Leseansicht mit Tabs, Verweisindex, Annotationen im Kern, Übersetzungen (siehe unten)
 
 Alles Folgende ist gebaut und geprüft (cargo build/test/clippy/fmt grün,
 Stufe 1 zusätzlich mit Meson-Tests und Flatpak-Build; Stufe 2 wurde über
@@ -640,6 +640,76 @@ Stufe 1 zusätzlich mit Meson-Tests und Flatpak-Build; Stufe 2 wurde über
   setzt `jump_bar.compact` (ohne Vorschau und Normhinweis). Nur statisch
   geprüft (clippy `-D warnings` mit Stub-pkg-config, fmt, reine Funktionen
   separat getestet); Sichtprüfung unter GNOME steht aus.
+- **Technische Nachbesserungen (13.10.2026, Auftrag):** fmt, clippy
+  `-D warnings`, 61 Tests grün; Broadway-Screenshots `t*.png`, `j*.png`,
+  `u*.png`, `ru*.png`, `en*.png` (mit angehängtem Browser, siehe unten).
+  - **Sprungleiste:** Der Normhinweis (Overlay-Label im Feld) lief bei
+    schmaler Kopfleiste in den Platzhalter. `fit_context` (in
+    `size_allocate`) blendet ihn unter `CONTEXT_MIN_WIDTH` (400 px) aus und
+    kürzt ihn sonst auf die freie Breite (`context_fits`). Zusätzlich ein
+    Breakpoint `max-width: 900sp`, der Verlauf und Neuer-Tab-Schaltfläche
+    ausblendet (der 640sp-Breakpoint wiederholt alle Setter, weil bei
+    mehreren Treffern der letzte gilt).
+  - **Beschriftung der geteilten Ansicht:** `pane_caption_markup` setzt
+    Kürzel und Norm fett, Titel abgesetzt; CSS `.pane-caption` größer,
+    aktive Ansicht mit Akzentfarbe, getöntem Hintergrund und 2-px-Unterkante.
+  - **Verweise auf Absatz/Satz/Nr.:** `refs::JumpTarget` (aus
+    `NormRef::inner_target`) und `refs::sentence_range` (Satzgrenzen mit
+    Abkürzungsliste, Test `sentences_are_split_with_abbreviations`).
+    `LexNormView::set_norm_at`/`jump_within` → `locate_in_section`: Absatz
+    über `paragraph_label` der Blöcke (`block_marks`/`block_lens`), Nummer
+    über die `list-label`-Tagbereiche im Absatz (`number_range`), Satz über
+    `sentence_range` im Absatztext; Ziel wird mit `scroll_to_mark` (8 % von
+    oben) angefahren und leuchtet `JUMP_FLASH_MS` (2,5 s) mit Tag
+    `jump-flash` (Akzent, 28 %) auf. Nicht gefundene Stelle → ganzer Absatz,
+    sonst Normanfang wie bisher. `LexReader::show_norm_in_pane_at`,
+    `show_in_other_pane_at`, `jump_within`; `navigate_reference` springt in
+    derselben Norm ohne Neuladen („Absatz 3“ ohne Norm ebenso).
+    Test-Hook `view-test jump <abs|-> <satz|-> <nr|->`.
+  - **Tabs wieder da:** `Adw.TabOverview` → `Adw.ToolbarView` mit Kopfleiste,
+    `Adw.TabBar` (autohide) und `Adw.TabView tab_view`; je Tab ein
+    `LexReader` (`new_tab`, `readers()`, `reader()` = ausgewählter Tab,
+    `page_of`, `is_current`). Kopfleiste, Gliederung, Verlauf und Notizpanel
+    folgen nur dem ausgewählten Tab; Annotationen, Notizen, Schriftgröße,
+    Ausrichtung und Neuladen nach Import gehen an alle Tabs. Aktionen
+    `new-tab` (Strg+T, kopiert die aktuelle Norm), `close-tab` (Strg+W,
+    letzter Tab → neuer Tab mit erster Norm), `next-/prev-tab`
+    (Strg+Bild↓/↑, Strg+Tab), `tab-overview` (Strg+Umschalt+O),
+    `open-in-new-tab(x)` (Mittelklick in der Gliederung, Kontextmenü „Norm
+    in neuem Tab öffnen“); Strg+Klick bleibt „zweite Ansicht“. Persistenz:
+    `reader-state` enthält jetzt `TabsState {tabs: [ReaderState], active}`,
+    alte Einzelstände werden weiter gelesen.
+  - **Entladen:** (a) Tabs im Hintergrund geben nach `UNLOAD_AFTER_SECS`
+    (120 s) ihre Puffer frei (`LexReader::set_background`/`unload`;
+    `PaneInfo` und Titel bleiben, Wiederauswahl lädt neu). (b) Die
+    Normansicht hält höchstens `MAX_SECTIONS` (8) Abschnitte: `trim_sections`
+    (nach Anhängen/Voranstellen und 150 ms nach dem Layout) entfernt
+    Abschnitte, die mehr als `UNLOAD_DISTANCE_PAGES` (1,5 Seiten) außerhalb
+    liegen (`remove_section`: Text, Marken inkl. `Section::footnote_marks`,
+    Verweis-Offsets, `anchored`, Tabellen-Labels; setzt `end_prev`/`end_next`
+    zurück). Test-Hook `view-test sections`. **Ohne angeschlossenen Browser
+    validiert GTK unter Broadway kein Layout**, dann greift das Entladen
+    nicht – für Scrolltests `chromium-browser --headless --no-sandbox
+    --remote-debugging-port=9222 http://127.0.0.1:8087/ &` laufen lassen.
+  - **Übersetzungen:** GSettings `language` (s: "", de, en, ru); `main.rs`
+    setzt LANGUAGE vor `setlocale` und wählt mit `ensure_messages_locale`
+    eine Nicht-C-Locale für LC_MESSAGES (in „C“/„C.UTF-8“ ignoriert gettext
+    LANGUAGE). Einstellungen: Gruppe „Sprache“ mit `ComboRow` (System,
+    Deutsch, English, Русский) und Toast „gilt nach dem nächsten Start“.
+    `build-aux/update-pot.py` erzeugt `po/gesetze.pot` (xgettext für
+    Desktop/Metainfo/Blueprint, eigener Rust-Extraktor, weil xgettext
+    `&gettext("…")` übergeht); `po/en.po`, `po/ru.po` vollständig (147
+    Strings), `po/de.po` leer (Quelltext ist deutsch), `po/LINGUAS` =
+    de/en/ru. `build.rs` kompiliert `po/*.po` per `msgfmt` nach
+    `OUT_DIR/locale`, damit der reine Cargo-Build übersetzt ist. Deutsche
+    Eigennamen (Gesetze, BGB, Bürgerliches Gesetzbuch, gesetze-im-internet.de,
+    Schema) bleiben unübersetzt. Farbnamen über
+    `model::highlight_color_label`. Nach Stringänderungen:
+    `build-aux/update-pot.py && msgmerge -U po/en.po po/gesetze.pot` (ebenso
+    ru, de) und neue Einträge übersetzen.
+  - Pfadfehler-Hinweis: `pkill -f` mit einem Muster aus der eigenen
+    Befehlszeile (z. B. `remote-debugging-port`) beendet die eigene Shell;
+    `pkill -x` verwenden.
 - **Tooling:** `.vscode/` (settings, tasks, launch, extensions; Tasks
   `sdk: cargo build|run|qualität` für die SDK-Sandbox),
   `build-aux/sdk-cargo.sh` (führt Cargo in `org.gnome.Sdk//51` mit
@@ -724,11 +794,11 @@ Suchbegriff im Text hervorheben. Die Schnellsuche (Strg+K, „/“) bleibt
 als Sprungfunktion bestehen.
 
 **Weiter offen (Reste, nicht Teil von Stufe 5):**
-- Fortlaufendes Lesen: Abschnitte werden nie wieder entladen (Speicher
-  wächst beim Durchscrollen eines ganzen Gesetzes); `prev-/next-norm`
-  laden neu statt zum Nachbarabschnitt zu springen; der ViewSwitcher der
-  Seitenleiste wird bei programmatischem Wechsel nicht hervorgehoben.
+- Fortlaufendes Lesen: `prev-/next-norm` laden neu statt zum
+  Nachbarabschnitt zu springen; der ViewSwitcher der Seitenleiste wird bei
+  programmatischem Wechsel nicht hervorgehoben.
 - Update-Prüfung per HEAD (ETag/Last-Modified) statt Vollarchiv.
 - Fehlender D-Bus-Export des Fensters (siehe Fallstricke).
-- `po/gesetze.pot` nachziehen; Annotationsliste in der Seitenleiste,
-  JSON-Export/-Import in der Oberfläche.
+- Annotationsliste in der Seitenleiste, JSON-Export/-Import in der
+  Oberfläche. Einstellungsdialog und Popovers sind unter Broadway nicht
+  sichtbar (Sprachwahl nur statisch und per Keyfile geprüft).

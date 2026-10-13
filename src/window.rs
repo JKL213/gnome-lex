@@ -22,7 +22,7 @@ use crate::refs::{LawRef, NormRef};
 use crate::settings;
 use crate::widgets::{
     norm_view::AnnotationEvent, reader::PaneInfo, LexDownloadCenter, LexJumpBar, LexOutlineRow,
-    LexReader, Outline, ReaderState,
+    LexReader, Outline, ReaderState, TabsState,
 };
 
 /// Mindestabstand zwischen zwei automatischen Aktualisierungsprüfungen.
@@ -77,7 +77,13 @@ mod imp {
         #[template_child]
         pub jump_bar: TemplateChild<LexJumpBar>,
         #[template_child]
-        pub reader: TemplateChild<LexReader>,
+        pub tab_view: TemplateChild<adw::TabView>,
+        #[template_child]
+        pub tab_overview: TemplateChild<adw::TabOverview>,
+        #[template_child]
+        pub new_tab_button: TemplateChild<gtk::Button>,
+        /// Zuletzt ausgewählter Tab (wird beim Wechsel in den Hintergrund gestellt).
+        pub last_reader: RefCell<Option<LexReader>>,
         #[template_child]
         pub notes_split: TemplateChild<adw::OverlaySplitView>,
         #[template_child]
@@ -163,7 +169,7 @@ mod imp {
                 .set_paintable(Some(&adw::SpinnerPaintable::new(Some(&*self.busy_page))));
             obj.setup_download_buttons();
             obj.setup_outline();
-            obj.setup_reader();
+            obj.setup_tabs();
             obj.setup_font_size();
             obj.setup_breakpoint();
             obj.setup_actions();
@@ -271,6 +277,52 @@ impl LexWindow {
         let quick = gio::ActionEntry::builder("quick-search")
             .activate(|win: &Self, _, _| win.open_quick_search())
             .build();
+        let new_tab = gio::ActionEntry::builder("new-tab")
+            .activate(|win: &Self, _, _| {
+                let current = win.reader().active_norm_id();
+                let reader = win.new_tab();
+                match current {
+                    Some(id) => reader.show_norm(id),
+                    None => win.open_first_norm(),
+                }
+            })
+            .build();
+        let close_tab = gio::ActionEntry::builder("close-tab")
+            .activate(|win: &Self, _, _| win.close_current_tab())
+            .build();
+        let next_tab = gio::ActionEntry::builder("next-tab")
+            .activate(|win: &Self, _, _| {
+                let view = &win.imp().tab_view;
+                if !view.select_next_page() && view.n_pages() > 0 {
+                    view.set_selected_page(&view.nth_page(0));
+                }
+            })
+            .build();
+        let prev_tab = gio::ActionEntry::builder("prev-tab")
+            .activate(|win: &Self, _, _| {
+                let view = &win.imp().tab_view;
+                if !view.select_previous_page() {
+                    let n = view.n_pages();
+                    if n > 0 {
+                        view.set_selected_page(&view.nth_page(n - 1));
+                    }
+                }
+            })
+            .build();
+        let overview = gio::ActionEntry::builder("tab-overview")
+            .activate(|win: &Self, _, _| {
+                let overview = &win.imp().tab_overview;
+                overview.set_open(!overview.is_open());
+            })
+            .build();
+        let open_tab = gio::ActionEntry::builder("open-in-new-tab")
+            .parameter_type(Some(&i64::static_variant_type()))
+            .activate(|win: &Self, _, param| {
+                if let Some(id) = param.and_then(|p| p.get::<i64>()) {
+                    win.new_tab().show_norm(id);
+                }
+            })
+            .build();
         // Nur für Tests: Seite der Seitenleiste („outline“/„favorites“).
         let sidebar_page = gio::ActionEntry::builder("sidebar-page")
             .parameter_type(Some(&String::static_variant_type()))
@@ -357,6 +409,12 @@ impl LexWindow {
             split,
             switch_pane,
             open_other,
+            new_tab,
+            close_tab,
+            next_tab,
+            prev_tab,
+            overview,
+            open_tab,
             quick,
             quick_query,
             sidebar_page,
@@ -391,6 +449,12 @@ impl LexWindow {
             ("open-in-other-pane", installed && !busy),
             ("quick-search", installed && !busy),
             ("quick-search-query", installed && !busy),
+            ("new-tab", installed && !busy),
+            ("close-tab", imp.tab_view.n_pages() > 0),
+            ("next-tab", imp.tab_view.n_pages() > 1),
+            ("prev-tab", imp.tab_view.n_pages() > 1),
+            ("tab-overview", installed),
+            ("open-in-new-tab", installed && !busy),
             ("download-center", !busy),
             ("toggle-favorite", showing),
             ("toggle-notes", installed),
@@ -552,7 +616,9 @@ impl LexWindow {
 
     fn set_narrow(&self, narrow: bool) {
         self.imp().narrow.set(narrow);
-        self.reader().set_vertical(narrow);
+        for reader in self.readers() {
+            reader.set_vertical(narrow);
+        }
     }
 
     /// „/“ fokussiert die Sprungleiste, solange kein Eingabefeld den Fokus hat.
@@ -1008,7 +1074,9 @@ impl LexWindow {
                 #[weak(rename_to = win)]
                 self,
                 move |settings, _| {
-                    win.reader().set_font_size(settings.int("font-size"));
+                    for reader in win.readers() {
+                        reader.set_font_size(settings.int("font-size"));
+                    }
                 }
             ),
         );
@@ -1030,23 +1098,158 @@ impl LexWindow {
     // Tabs
     // ------------------------------------------------------------------
 
-    fn reader(&self) -> &LexReader {
-        &self.imp().reader
+    /// Leseansicht des ausgewählten Tabs; ohne Tab wird einer angelegt.
+    fn reader(&self) -> LexReader {
+        match self.imp().tab_view.selected_page() {
+            Some(page) => page.child().downcast().expect("LexReader"),
+            None => self.new_tab(),
+        }
     }
 
-    /// Verbindet die Leseansicht mit Kopfleiste, Gliederung, Verlauf, Notizen.
-    fn setup_reader(&self) {
-        let reader = self.reader();
+    /// Leseansichten aller Tabs in Reihenfolge der Tab-Leiste.
+    fn readers(&self) -> Vec<LexReader> {
+        let view = &self.imp().tab_view;
+        (0..view.n_pages())
+            .map(|i| view.nth_page(i).child().downcast().expect("LexReader"))
+            .collect()
+    }
+
+    /// Tab-Seite einer Leseansicht, sofern sie schon eingehängt ist.
+    fn page_of(&self, reader: &LexReader) -> Option<adw::TabPage> {
+        reader
+            .parent()
+            .is_some()
+            .then(|| self.imp().tab_view.page(reader))
+    }
+
+    /// Gehört `reader` zum ausgewählten Tab?
+    fn is_current(&self, reader: &LexReader) -> bool {
+        self.imp()
+            .tab_view
+            .selected_page()
+            .is_some_and(|p| p.child() == *reader.upcast_ref::<gtk::Widget>())
+    }
+
+    /// Legt einen neuen, leeren Tab an, wählt ihn aus und liefert seine Leseansicht.
+    fn new_tab(&self) -> LexReader {
+        let imp = self.imp();
+        let reader = LexReader::new();
         reader.set_font_size(self.settings().int("font-size"));
+        reader.set_vertical(imp.narrow.get());
+        self.setup_reader(&reader);
+        let page = imp.tab_view.append(&reader);
+        page.set_title(&gettext("Neuer Tab"));
+        imp.tab_view.set_selected_page(&page);
+        self.update_actions();
+        reader
+    }
+
+    /// Tab-Leiste und -Übersicht: Wechsel, Schließen, Anlegen aus der Übersicht.
+    fn setup_tabs(&self) {
+        let imp = self.imp();
+        imp.tab_view.connect_selected_page_notify(glib::clone!(
+            #[weak(rename_to = win)]
+            self,
+            move |view| {
+                let imp = win.imp();
+                let previous = imp.last_reader.borrow_mut().take();
+                let current: Option<LexReader> =
+                    view.selected_page().and_then(|p| p.child().downcast().ok());
+                if let Some(previous) = previous.filter(|p| Some(p) != current.as_ref()) {
+                    previous.flush_note_edits();
+                    previous.set_background(true);
+                }
+                if let Some(reader) = &current {
+                    reader.set_background(false);
+                    win.update_header();
+                    let info = reader.active_info();
+                    if let Some(info) = &info {
+                        win.sync_outline(info);
+                        win.record_history(info);
+                    }
+                    win.sync_notes_panel(info.as_ref());
+                }
+                *imp.last_reader.borrow_mut() = current;
+                win.update_actions();
+            }
+        ));
+        // Ohne Tabs bliebe die Inhaltsseite leer: neuen Tab mit erster Norm.
+        imp.tab_view.connect_page_detached(glib::clone!(
+            #[weak(rename_to = win)]
+            self,
+            move |view, _, _| {
+                if view.n_pages() == 0 && !win.imp().laws.borrow().is_empty() {
+                    win.new_tab();
+                    win.open_first_norm();
+                }
+                win.update_actions();
+            }
+        ));
+        imp.tab_view.connect_close_page(|_, page| {
+            if let Ok(reader) = page.child().downcast::<LexReader>() {
+                reader.flush_note_edits();
+            }
+            glib::Propagation::Proceed
+        });
+        imp.tab_overview.connect_create_tab(glib::clone!(
+            #[weak(rename_to = win)]
+            self,
+            #[upgrade_or_panic]
+            move |_| {
+                let current = win.reader().active_norm_id();
+                let reader = win.new_tab();
+                match current {
+                    Some(id) => reader.show_norm(id),
+                    None => win.open_first_norm(),
+                }
+                win.imp().tab_view.page(&reader)
+            }
+        ));
+    }
+
+    fn close_current_tab(&self) {
+        let view = &self.imp().tab_view;
+        if let Some(page) = view.selected_page() {
+            view.close_page(&page);
+        }
+    }
+
+    /// Verbindet eine Leseansicht mit Kopfleiste, Gliederung, Verlauf,
+    /// Notizen und Tab-Titel. Kopfleiste und Seitenleiste folgen nur dem
+    /// ausgewählten Tab.
+    fn setup_reader(&self, reader: &LexReader) {
         reader.connect_title_notify(glib::clone!(
             #[weak(rename_to = win)]
             self,
-            move |_| win.update_header()
+            move |reader| {
+                let mut title = reader.title();
+                if title.is_empty() {
+                    title = gettext("Neuer Tab");
+                }
+                if let Some(page) = win.page_of(reader) {
+                    page.set_title(&title);
+                }
+                if win.is_current(reader) {
+                    win.update_header();
+                }
+            }
         ));
         reader.connect_subtitle_notify(glib::clone!(
             #[weak(rename_to = win)]
             self,
-            move |_| win.update_header()
+            move |reader| {
+                if let Some(page) = win.page_of(reader) {
+                    let subtitle = reader.subtitle();
+                    page.set_tooltip(
+                        Some(subtitle.as_str())
+                            .filter(|s| !s.is_empty())
+                            .unwrap_or(""),
+                    );
+                }
+                if win.is_current(reader) {
+                    win.update_header();
+                }
+            }
         ));
         reader.connect_split_notify(glib::clone!(
             #[weak(rename_to = win)]
@@ -1057,6 +1260,9 @@ impl LexWindow {
             #[weak(rename_to = win)]
             self,
             move |reader, _| {
+                if !win.is_current(reader) {
+                    return;
+                }
                 win.update_header();
                 let info = reader.active_info();
                 if let Some(info) = &info {
@@ -1090,10 +1296,20 @@ impl LexWindow {
             LawRef::Abbrev(a) => LawKey::Abbrev(a.clone()),
             LawRef::Unknown => return,
         };
+        let inner = target.inner_target();
         let candidates = target.enbez_candidates();
         if candidates.is_empty() {
+            // „Absatz 3“ ohne Norm: Stelle in der aktuellen Norm.
+            if !other_pane && !self.reader().jump_within(pane, info.norm.id, &inner) {
+                log::info!(
+                    "Stelle {} in {} nicht gefunden",
+                    target.label(),
+                    info.norm.id
+                );
+            }
             return;
         }
+        let current_norm = info.norm.id;
         let label = target.label();
         glib::spawn_future_local(glib::clone!(
             #[weak(rename_to = win)]
@@ -1120,10 +1336,18 @@ impl LexWindow {
                 .await;
                 match result {
                     Ok(Ok(RefLookup::Found(id))) => {
+                        let reader = win.reader();
+                        let jump = Some(inner.clone()).filter(|t| !t.is_empty());
                         if other_pane {
-                            win.reader().show_in_other_pane(id);
+                            reader.show_in_other_pane_at(id, jump);
+                        } else if id == current_norm
+                            && jump
+                                .as_ref()
+                                .is_some_and(|t| reader.jump_within(pane, id, t))
+                        {
+                            // Dieselbe Norm: nur zur Stelle scrollen, nichts neu laden.
                         } else {
-                            win.reader().show_norm_in_pane(id, pane);
+                            reader.show_norm_in_pane_at(id, pane, jump);
                         }
                     }
                     Ok(Ok(RefLookup::NormMissing)) => win.toast(
@@ -1195,9 +1419,15 @@ impl LexWindow {
                     .await;
                 match result {
                     Ok(Ok(AnnotationEvent::Create(a))) | Ok(Ok(AnnotationEvent::Update(a))) => {
-                        win.reader().apply_annotation(law_id, &a);
+                        for reader in win.readers() {
+                            reader.apply_annotation(law_id, &a);
+                        }
                     }
-                    Ok(Ok(AnnotationEvent::Delete(id))) => win.reader().remove_annotation(id),
+                    Ok(Ok(AnnotationEvent::Delete(id))) => {
+                        for reader in win.readers() {
+                            reader.remove_annotation(id);
+                        }
+                    }
                     Ok(Err(err)) => win.toast_error(
                         &gettext("Annotation konnte nicht gespeichert werden"),
                         &ImportError::Db(err),
@@ -1316,7 +1546,9 @@ impl LexWindow {
     /// Vor dem Beenden: Tabs, Verlauf und eine offene Notiz sichern.
     pub fn save_state_before_quit(&self) {
         self.flush_note();
-        self.reader().flush_note_edits();
+        for reader in self.readers() {
+            reader.flush_note_edits();
+        }
         self.save_history();
         self.save_reader_state();
     }
@@ -1460,7 +1692,9 @@ impl LexWindow {
         {
             Ok(()) => {
                 let shown = (!text.trim().is_empty()).then_some(text.trim_end());
-                self.reader().set_note(law_id, &enbez, shown);
+                for reader in self.readers() {
+                    reader.set_note(law_id, &enbez, shown);
+                }
             }
             Err(err) => self.toast_error(
                 &gettext("Notiz konnte nicht gespeichert werden"),
@@ -1573,13 +1807,20 @@ impl LexWindow {
         if *imp.outline_slug.borrow() == slug {
             self.load_outline(&law, None);
         }
-        let reader = self.reader().clone();
-        if reader.active_norm_id().is_none() {
+        if self.reader().active_norm_id().is_none() {
             self.open_first_norm();
             return;
         }
-        for (pane, enbez) in reader.panes_showing(slug) {
-            let reader = reader.clone();
+        let showing: Vec<(LexReader, u32, String)> = self
+            .readers()
+            .into_iter()
+            .flat_map(|r| {
+                r.panes_showing(slug)
+                    .into_iter()
+                    .map(move |(pane, enbez)| (r.clone(), pane, enbez))
+            })
+            .collect();
+        for (reader, pane, enbez) in showing {
             glib::spawn_future_local(async move {
                 let path = Self::db_path();
                 let lookup = enbez.clone();
@@ -1854,22 +2095,45 @@ impl LexWindow {
             // Ohne installiertes Gesetz den alten Stand nicht überschreiben.
             return;
         }
-        let state = self.reader().state();
-        if state.panes.is_empty() {
+        let imp = self.imp();
+        let tabs: Vec<ReaderState> = self
+            .readers()
+            .iter()
+            .map(LexReader::state)
+            .filter(|s| !s.panes.is_empty())
+            .collect();
+        if tabs.is_empty() {
             return;
         }
+        let active = imp
+            .tab_view
+            .selected_page()
+            .map(|p| imp.tab_view.page_position(&p).max(0) as usize)
+            .unwrap_or(0)
+            .min(tabs.len() - 1);
+        let state = TabsState { tabs, active };
         let json = serde_json::to_string(&state).unwrap_or_default();
         if let Err(err) = self.settings().set_string("reader-state", &json) {
             log::warn!("reader-state konnte nicht gespeichert werden: {err}");
         }
     }
 
-    /// Stellt die zuletzt gelesenen Normen wieder her; unbekannte
+    /// Stellt die zuletzt gelesenen Tabs wieder her; unbekannte
     /// Bezeichnungen werden still übersprungen, sonst die erste Norm.
+    /// Ältere Stände (ein Tab ohne Hülle) werden weiterhin gelesen.
     fn restore_reader_state(&self) {
-        let state: Option<ReaderState> =
-            serde_json::from_str(self.settings().string("reader-state").as_str()).ok();
-        let Some(state) = state.filter(|s| !s.panes.is_empty()) else {
+        let json = self.settings().string("reader-state");
+        let state: Option<TabsState> = serde_json::from_str::<TabsState>(json.as_str())
+            .ok()
+            .or_else(|| {
+                serde_json::from_str::<ReaderState>(json.as_str())
+                    .ok()
+                    .map(|single| TabsState {
+                        tabs: vec![single],
+                        active: 0,
+                    })
+            });
+        let Some(state) = state.filter(|s| s.tabs.iter().any(|t| !t.panes.is_empty())) else {
             self.open_first_norm();
             return;
         };
@@ -1878,37 +2142,58 @@ impl LexWindow {
             self,
             async move {
                 let path = Self::db_path();
-                let panes = state.panes.clone();
-                let resolved =
-                    gio::spawn_blocking(move || -> Result<Vec<Option<i64>>, rusqlite::Error> {
+                let tabs = state.tabs.clone();
+                let resolved = gio::spawn_blocking(
+                    move || -> Result<Vec<Vec<Option<i64>>>, rusqlite::Error> {
                         let db = Database::open(&path)?;
-                        let mut ids = Vec::new();
-                        for pane in &panes {
-                            let id = match db.law_by_slug(&pane.law)? {
-                                Some(law) => db.norm_id_by_enbez(law.id, &pane.norm)?,
-                                None => None,
-                            };
-                            ids.push(id);
+                        let mut all = Vec::new();
+                        for tab in &tabs {
+                            let mut ids = Vec::new();
+                            for pane in &tab.panes {
+                                let id = match db.law_by_slug(&pane.law)? {
+                                    Some(law) => db.norm_id_by_enbez(law.id, &pane.norm)?,
+                                    None => None,
+                                };
+                                ids.push(id);
+                            }
+                            all.push(ids);
                         }
-                        Ok(ids)
-                    })
-                    .await;
-                let ids = match resolved {
-                    Ok(Ok(ids)) => ids,
+                        Ok(all)
+                    },
+                )
+                .await;
+                let all = match resolved {
+                    Ok(Ok(all)) => all,
                     _ => Vec::new(),
                 };
-                let reader = win.reader();
-                match ids.first() {
-                    Some(Some(first)) => reader.show_norm_in_pane(*first, 0),
-                    _ => {
-                        win.open_first_norm();
-                        return;
+                let mut restored = 0usize;
+                let mut select: Option<adw::TabPage> = None;
+                for (index, (tab, ids)) in state.tabs.iter().zip(&all).enumerate() {
+                    let Some(Some(first)) = ids.first() else {
+                        continue;
+                    };
+                    // Den leeren Start-Tab wiederverwenden, sonst neuen anlegen.
+                    let reader = match win.imp().tab_view.selected_page() {
+                        Some(page) if restored == 0 => {
+                            page.child().downcast::<LexReader>().expect("LexReader")
+                        }
+                        _ => win.new_tab(),
+                    };
+                    reader.show_norm_in_pane(*first, 0);
+                    if let Some(Some(second)) = ids.get(1) {
+                        reader.set_split(true);
+                        reader.show_norm_in_pane(*second, 1);
+                        reader.set_active_pane(tab.active);
                     }
+                    if index == state.active {
+                        select = win.page_of(&reader);
+                    }
+                    restored += 1;
                 }
-                if let Some(Some(second)) = ids.get(1) {
-                    reader.set_split(true);
-                    reader.show_norm_in_pane(*second, 1);
-                    reader.set_active_pane(state.active);
+                if restored == 0 {
+                    win.open_first_norm();
+                } else if let Some(page) = select {
+                    win.imp().tab_view.set_selected_page(&page);
                 }
             }
         ));

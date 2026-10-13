@@ -7,6 +7,19 @@ template $LexPreferences : Adw.PreferencesDialog {
 
   Adw.PreferencesPage {
     Adw.PreferencesGroup {
+      title: _("Sprache");
+
+      Adw.ComboRow language_row {
+        title: _("Sprache der Oberfläche");
+        subtitle: _("Wird nach einem Neustart wirksam");
+
+        model: StringList {
+          strings [_("Wie das System"), "Deutsch", "English", "Русский"]
+        };
+      }
+    }
+
+    Adw.PreferencesGroup {
       title: _("Darstellung");
 
       Adw.ComboRow color_scheme_row {

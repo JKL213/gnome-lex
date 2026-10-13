@@ -17,4 +17,4 @@ pub use norm_view::LexNormView;
 pub use outline::Outline;
 pub use outline_row::LexOutlineRow;
 pub use preferences::LexPreferences;
-pub use reader::{LexReader, ReaderState};
+pub use reader::{LexReader, ReaderState, TabsState};

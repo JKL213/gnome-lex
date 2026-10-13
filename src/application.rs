@@ -146,7 +146,18 @@ impl LexApplication {
         self.set_accels_for_action("app.preferences", &["<Control>comma"]);
         self.set_accels_for_action("app.shortcuts", &["<Control>question"]);
         self.set_accels_for_action("win.toggle-notes", &["<Control><Shift>n"]);
-        self.set_accels_for_action("window.close", &["<Control>w"]);
+        self.set_accels_for_action("win.new-tab", &["<Control>t"]);
+        self.set_accels_for_action("win.close-tab", &["<Control>w"]);
+        self.set_accels_for_action("win.next-tab", &["<Control>Page_Down", "<Control>Tab"]);
+        self.set_accels_for_action(
+            "win.prev-tab",
+            &[
+                "<Control>Page_Up",
+                "<Control><Shift>Tab",
+                "<Control>ISO_Left_Tab",
+            ],
+        );
+        self.set_accels_for_action("win.tab-overview", &["<Control><Shift>o"]);
         self.set_accels_for_action("win.split", &["<Control><Shift>d"]);
         self.set_accels_for_action("win.switch-pane", &["F6"]);
         self.set_accels_for_action("win.toggle-favorite", &["<Control>d"]);
@@ -199,7 +210,13 @@ impl LexApplication {
                 &[
                     (&gettext("Geteilte Ansicht"), "<Control><Shift>d"),
                     (&gettext("Zwischen den Ansichten wechseln"), "F6"),
-                    (&gettext("Fenster schließen"), "<Control>w"),
+                    (&gettext("Neuer Tab"), "<Control>t"),
+                    (&gettext("Tab schließen"), "<Control>w"),
+                    (
+                        &gettext("Nächster / vorheriger Tab"),
+                        "<Control>Page_Down <Control>Page_Up",
+                    ),
+                    (&gettext("Tab-Übersicht"), "<Control><Shift>o"),
                 ],
             ),
             (

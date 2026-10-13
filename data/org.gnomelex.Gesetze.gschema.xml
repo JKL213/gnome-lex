@@ -43,6 +43,16 @@
       <default>"default"</default>
       <summary>Farbschema: System, hell oder dunkel</summary>
     </key>
+    <key name="language" type="s">
+      <choices>
+        <choice value=""/>
+        <choice value="de"/>
+        <choice value="en"/>
+        <choice value="ru"/>
+      </choices>
+      <default>""</default>
+      <summary>Sprache der Oberfläche (leer = Systemsprache)</summary>
+    </key>
     <key name="check-updates" type="b">
       <default>true</default>
       <summary>Beim Start auf neue Gesetzesfassungen prüfen</summary>

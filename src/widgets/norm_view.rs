@@ -28,14 +28,23 @@ use gtk::{gio, glib, pango, CompositeTemplate};
 use crate::model::text::{
     flatten_blocks, paragraph_label, spans_text, Block, Flattened, Seg, SegTag, TableData,
 };
-use crate::model::{Annotation, AnnotationKind, Norm, NormInfo, UnitInfo, HIGHLIGHT_COLORS};
-use crate::refs::{find_references, NormRef};
+use crate::model::{
+    highlight_color_label, Annotation, AnnotationKind, Norm, NormInfo, UnitInfo, HIGHLIGHT_COLORS,
+};
+use crate::refs::{find_references, sentence_range, JumpTarget, NormRef};
 
 /// Einzug je Listenebene in Pixeln.
 const LIST_INDENT: i32 = 36;
 /// Nachladen beginnt, sobald weniger als so viele Seiten Text unter dem
 /// sichtbaren Bereich liegen.
 const PRELOAD_PAGES: f64 = 1.5;
+/// Mehr Abschnitte hält die Ansicht nicht im Puffer; weiter entfernte
+/// werden entladen (und bei Bedarf wieder nachgeladen), damit der Speicher
+/// beim Durchscrollen eines ganzen Gesetzes nicht wächst.
+const MAX_SECTIONS: usize = 8;
+/// Abstand in Seiten, ab dem ein Abschnitt außerhalb des Sichtbereichs
+/// entladen werden darf.
+const UNLOAD_DISTANCE_PAGES: f64 = 1.5;
 /// Ab so vielen Zeilen wird eine Tabelle nicht mehr als Raster gebaut.
 const MAX_GRID_ROWS: usize = 150;
 /// Tiefste Listenebene, für die eigene Tags angelegt werden.
@@ -112,6 +121,8 @@ const STALE_HOVER: (i32, i32) = (-1, -1);
 /// So lange hält die Ansicht nach einem Sprung den Anfang der Zielnorm
 /// oben, sofern der Leser nicht vorher selbst scrollt, klickt oder tippt.
 const JUMP_PIN_MS: u64 = 800;
+/// So lange leuchtet die Zielstelle eines Verweises (Absatz, Satz, Nr.) auf.
+const JUMP_FLASH_MS: u64 = 2500;
 
 /// Ein im Puffer dargestellter Normabschnitt.
 pub struct Section {
@@ -132,6 +143,8 @@ pub struct Section {
     block_lens: Vec<i32>,
     /// Ende des Normtexts (Linksgravitation, vor den Fußnoten).
     content_end: gtk::TextMark,
+    /// Benannte Fußnotenmarken (`footnote:<norm>:<id>`), beim Entladen zu löschen.
+    footnote_marks: Vec<gtk::TextMark>,
 }
 
 /// Worauf sich das Kontextmenü bezieht (Rechtsklickposition).
@@ -145,6 +158,8 @@ pub struct MenuContext {
     link: Option<LinkTarget>,
     /// Es gibt eine Textauswahl, die markiert werden kann.
     has_selection: bool,
+    /// Oben sichtbare Norm (für „in neuem Tab öffnen“).
+    norm_id: Option<i64>,
 }
 
 type AnnotationCallback = Box<dyn Fn(&LexNormView, AnnotationEvent)>;
@@ -287,6 +302,12 @@ impl LexNormView {
     /// Zeigt eine Norm an (oder leert die Ansicht) und beginnt damit einen
     /// neuen fortlaufenden Lesefluss.
     pub fn set_norm(&self, page: Option<NormPage>) {
+        self.set_norm_at(page, None);
+    }
+
+    /// Wie `set_norm`, springt aber zusätzlich zu Absatz, Satz oder Nummer
+    /// (`target`), sofern die Stelle im Text gefunden wird.
+    pub fn set_norm_at(&self, page: Option<NormPage>, target: Option<JumpTarget>) {
         let imp = self.imp();
         imp.generation.set(imp.generation.get().wrapping_add(1));
         imp.loading_next.set(false);
@@ -296,10 +317,16 @@ impl LexNormView {
         self.reset_buffer();
         match page {
             Some(page) => {
-                imp.visible_norm.set(page.norm.info.id);
+                let norm_id = page.norm.info.id;
+                imp.visible_norm.set(norm_id);
                 self.render_section(page, false);
                 self.scroll_to_top();
-                self.pin_to_top();
+                let jumped = target
+                    .filter(|t| !t.is_empty())
+                    .is_some_and(|t| self.jump_within(norm_id, &t));
+                if !jumped {
+                    self.pin_to_top();
+                }
                 self.schedule_edge_check();
             }
             None => {
@@ -317,6 +344,7 @@ impl LexNormView {
         }
         imp.loading_next.set(false);
         self.render_section(page, false);
+        self.trim_sections(true);
         self.schedule_edge_check();
     }
 
@@ -343,7 +371,121 @@ impl LexNormView {
         if let Some(anchor) = anchor.filter(|_| pin) {
             imp.text_view.scroll_to_mark(&anchor, 0.0, true, 0.0, 0.0);
         }
+        self.trim_sections(false);
         self.schedule_edge_check();
+    }
+
+    /// Entlädt Abschnitte jenseits von `MAX_SECTIONS`, die weit genug
+    /// außerhalb des Sichtbereichs liegen: nach dem Anhängen (`from_front`)
+    /// die obersten, nach dem Voranstellen die untersten. Die entladene
+    /// Richtung wird wieder als „nachladbar“ markiert.
+    fn trim_sections(&self, from_front: bool) {
+        let imp = self.imp();
+        let adjustment = imp.scrolled.vadjustment();
+        let page = adjustment.page_size();
+        if page <= 0.0 {
+            return;
+        }
+        let buffer = imp.text_view.buffer();
+        loop {
+            let count = imp.sections.borrow().len();
+            if count <= MAX_SECTIONS {
+                break;
+            }
+            let far_enough = {
+                let sections = imp.sections.borrow();
+                if from_front {
+                    // Der erste Abschnitt endet, wo der zweite beginnt.
+                    let next = buffer.iter_at_mark(&sections[1].start);
+                    let bottom = imp.text_view.iter_location(&next).y() as f64;
+                    bottom < adjustment.value() - page * UNLOAD_DISTANCE_PAGES
+                } else {
+                    let last = buffer.iter_at_mark(&sections[count - 1].start);
+                    let top = imp.text_view.iter_location(&last).y() as f64;
+                    top > adjustment.value() + page * (1.0 + UNLOAD_DISTANCE_PAGES)
+                }
+            };
+            if !far_enough {
+                log::debug!(
+                    "trim: {count} Abschnitte, Rand nicht fern genug (value {:.0}, page {page:.0})",
+                    adjustment.value()
+                );
+                break;
+            }
+            self.remove_section(if from_front { 0 } else { count - 1 });
+        }
+    }
+
+    /// Entfernt den Abschnitt `index` samt Text, Marken, Verweisen und
+    /// verankerten Annotationen aus dem Puffer.
+    fn remove_section(&self, index: usize) {
+        let imp = self.imp();
+        let buffer = imp.text_view.buffer();
+        let section = imp.sections.borrow_mut().remove(index);
+        let from = buffer.iter_at_mark(&section.start).offset();
+        let to = match imp.sections.borrow().get(index) {
+            Some(next) => buffer.iter_at_mark(&next.start).offset(),
+            None => buffer.end_iter().offset(),
+        };
+        let removed = to - from;
+        for mark in [
+            &section.start,
+            &section.note_start,
+            &section.note_end,
+            &section.content_end,
+        ]
+        .into_iter()
+        .chain(section.block_marks.iter())
+        .chain(section.footnote_marks.iter())
+        {
+            buffer.delete_mark(mark);
+        }
+        // Annotationen, deren Wortlaut im Bereich liegt.
+        let mut anchored = imp.anchored.borrow_mut();
+        let (inside, outside): (Vec<Anchored>, Vec<Anchored>) = anchored.drain(..).partition(|a| {
+            let at = buffer.iter_at_mark(&a.start).offset();
+            from <= at && at < to
+        });
+        *anchored = outside;
+        drop(anchored);
+        for item in inside {
+            for mark in [
+                Some(item.start),
+                Some(item.end),
+                item.block_start,
+                item.block_end,
+            ]
+            .into_iter()
+            .flatten()
+            {
+                buffer.delete_mark(&mark);
+            }
+        }
+        {
+            let mut links = imp.links.borrow_mut();
+            links.retain(|l| l.start < from || l.start >= to);
+            for link in links.iter_mut().filter(|l| l.start >= to) {
+                link.start -= removed;
+                link.end -= removed;
+            }
+        }
+        self.invalidate_hover();
+        let was_rendering = imp.rendering.replace(true);
+        buffer.delete(
+            &mut buffer.iter_at_offset(from),
+            &mut buffer.iter_at_offset(to),
+        );
+        imp.rendering.set(was_rendering);
+        // Tabellen-Labels an gelöschten Ankern sind mit dem Text verschwunden.
+        imp.table_labels
+            .borrow_mut()
+            .retain(|label| label.parent().is_some());
+        if index == 0 {
+            imp.end_prev.set(false);
+        } else {
+            imp.end_next.set(false);
+        }
+        log::debug!("Abschnitt {} entladen ({removed} Zeichen)", section.norm.id);
     }
 
     /// In Richtung `direction` (-1/+1) gibt es keine weitere Norm.
@@ -359,6 +501,181 @@ impl LexNormView {
             imp.loading_next.set(false);
             imp.end_next.set(true);
         }
+    }
+
+    /// Scrollt innerhalb des dargestellten Abschnitts der Norm `norm_id` zu
+    /// Absatz, Satz oder Nummer und lässt die Stelle kurz aufleuchten.
+    /// Liefert `false`, wenn die Norm nicht dargestellt oder die Stelle
+    /// nicht gefunden wird.
+    pub fn jump_within(&self, norm_id: i64, target: &JumpTarget) -> bool {
+        let imp = self.imp();
+        let buffer = imp.text_view.buffer();
+        let range = {
+            let sections = imp.sections.borrow();
+            let Some(section) = sections.iter().find(|s| s.norm.id == norm_id) else {
+                return false;
+            };
+            self.locate_in_section(&buffer, section, target)
+        };
+        let Some((from, to)) = range else {
+            return false;
+        };
+        self.release_pin();
+        let start = buffer.create_mark(None, &buffer.iter_at_offset(from), true);
+        let end = buffer.create_mark(None, &buffer.iter_at_offset(to), true);
+        imp.text_view.scroll_to_mark(&start, 0.0, true, 0.0, 0.08);
+        if let Some(tag) = self.tag("jump-flash") {
+            buffer.apply_tag(
+                &tag,
+                &buffer.iter_at_mark(&start),
+                &buffer.iter_at_mark(&end),
+            );
+            glib::timeout_add_local_once(
+                std::time::Duration::from_millis(JUMP_FLASH_MS),
+                glib::clone!(
+                    #[weak(rename_to = view)]
+                    self,
+                    move || {
+                        let current = view.imp().text_view.buffer();
+                        // Nach einem Normwechsel gehört die Marke zu einem alten Puffer.
+                        if start.buffer().is_some_and(|b| b == current) && !start.is_deleted() {
+                            current.remove_tag(
+                                &tag,
+                                &current.iter_at_mark(&start),
+                                &current.iter_at_mark(&end),
+                            );
+                            current.delete_mark(&start);
+                            current.delete_mark(&end);
+                        }
+                    }
+                ),
+            );
+        }
+        true
+    }
+
+    /// Pufferbereich von Absatz, Satz oder Nummer innerhalb eines Abschnitts.
+    /// Absätze werden an ihrer Nummer „(n)“ am Blockanfang erkannt, Nummern
+    /// an den Listenbezeichnern („3.“) innerhalb des Absatzes, Sätze über
+    /// `sentence_range` im Absatztext. Ohne Absatz gilt die ganze Norm.
+    fn locate_in_section(
+        &self,
+        buffer: &gtk::TextBuffer,
+        section: &Section,
+        target: &JumpTarget,
+    ) -> Option<(i32, i32)> {
+        let blocks: Vec<(i32, i32, String)> = section
+            .block_marks
+            .iter()
+            .zip(&section.block_lens)
+            .map(|(mark, len)| {
+                let start = buffer.iter_at_mark(mark).offset();
+                let end = start + len;
+                let text = buffer
+                    .text(
+                        &buffer.iter_at_offset(start),
+                        &buffer.iter_at_offset(end),
+                        false,
+                    )
+                    .to_string();
+                (start, end, text)
+            })
+            .collect();
+        if blocks.is_empty() {
+            return None;
+        }
+        let (first, last) = match &target.paragraph {
+            Some(p) => {
+                let want = format!("({p})");
+                let i = blocks
+                    .iter()
+                    .position(|b| paragraph_label(&b.2).as_deref() == Some(want.as_str()))?;
+                let j = blocks[i + 1..]
+                    .iter()
+                    .position(|b| paragraph_label(&b.2).is_some())
+                    .map(|k| i + 1 + k)
+                    .unwrap_or(blocks.len());
+                (i, j)
+            }
+            None => (0, blocks.len()),
+        };
+        let range = (blocks[first].0, blocks[last - 1].1);
+        if let Some(n) = &target.number {
+            if let Some(found) = self.number_range(buffer, range, n) {
+                return Some(found);
+            }
+        }
+        if let Some(n) = target
+            .sentence
+            .as_deref()
+            .and_then(|n| n.parse::<usize>().ok())
+        {
+            let (start, _, text) = &blocks[first];
+            // Satzzählung hinter der Absatznummer „(1) “.
+            let label_len = paragraph_label(text)
+                .map(|l| l.chars().count())
+                .unwrap_or(0);
+            let skip = text.chars().take_while(|c| c.is_whitespace()).count() + label_len;
+            let skip = skip
+                + text
+                    .chars()
+                    .skip(skip)
+                    .take_while(|c| c.is_whitespace())
+                    .count();
+            let body: String = text.chars().skip(skip).collect();
+            if let Some((a, b)) = sentence_range(&body, n) {
+                let base = start + skip as i32;
+                return Some((base + a as i32, base + b as i32));
+            }
+        }
+        target.paragraph.is_some().then_some(range)
+    }
+
+    /// Bereich des Listeneintrags mit dem Bezeichner `n` („3“ → „3.“) im
+    /// Pufferbereich `range`: vom Bezeichner bis zum nächsten nummerierten
+    /// Bezeichner bzw. zum Ende des Bereichs.
+    fn number_range(
+        &self,
+        buffer: &gtk::TextBuffer,
+        range: (i32, i32),
+        n: &str,
+    ) -> Option<(i32, i32)> {
+        let tag = self.tag("list-label")?;
+        let mut labels: Vec<(i32, i32, String)> = Vec::new();
+        let mut iter = buffer.iter_at_offset(range.0);
+        let end = buffer.iter_at_offset(range.1);
+        if !iter.starts_tag(Some(&tag)) && !iter.forward_to_tag_toggle(Some(&tag)) {
+            return None;
+        }
+        while iter.offset() < end.offset() {
+            if iter.starts_tag(Some(&tag)) {
+                let start = iter.offset();
+                let mut stop = iter;
+                stop.forward_to_tag_toggle(Some(&tag));
+                let text = buffer.text(&iter, &stop, false).to_string();
+                labels.push((start, stop.offset(), text));
+                iter = stop;
+            }
+            if !iter.forward_to_tag_toggle(Some(&tag)) {
+                break;
+            }
+        }
+        let is_numbered = |label: &str| {
+            let core = label.trim().trim_end_matches('.');
+            !core.is_empty()
+                && core.chars().next().is_some_and(|c| c.is_ascii_digit())
+                && core.chars().all(|c| c.is_ascii_alphanumeric())
+        };
+        let want = n.trim().to_lowercase();
+        let index = labels
+            .iter()
+            .position(|(_, _, text)| text.trim().trim_end_matches('.').to_lowercase() == want)?;
+        let stop = labels[index + 1..]
+            .iter()
+            .find(|(_, _, text)| is_numbered(text))
+            .map(|(start, _, _)| *start)
+            .unwrap_or(range.1);
+        Some((labels[index].0, stop))
     }
 
     /// Wird gerufen, wenn weitere Normen gebraucht werden:
@@ -826,6 +1143,20 @@ impl LexNormView {
             .underline(pango::Underline::Single)
             .build());
         add(note_background);
+        // Kurzes Aufleuchten der Zielstelle nach einem Sprung zu Absatz/Satz/Nr.
+        let flash = gtk::TextTag::builder().name("jump-flash").build();
+        let apply_flash = |sm: &adw::StyleManager, flash: &gtk::TextTag| {
+            let mut tint = sm.accent_color_rgba();
+            tint.set_alpha(0.28);
+            flash.set_background_rgba(Some(&tint));
+        };
+        apply_flash(&style_manager, &flash);
+        style_manager.connect_accent_color_rgba_notify(glib::clone!(
+            #[weak]
+            flash,
+            move |sm| apply_flash(sm, &flash)
+        ));
+        add(flash);
 
         // Markierungsfarben (hell/dunkel) und Unterstreichung angehefteter Notizen.
         for (name, _, light, dark) in HIGHLIGHT_COLORS {
@@ -1045,6 +1376,7 @@ impl LexNormView {
         let content_end = buffer.create_mark(None, &buffer.iter_at_mark(&at), true);
 
         // Fußnoten (aus dem Text referenziert) und amtliche Hinweise
+        let mut footnote_marks = Vec::new();
         if !norm.footnotes.is_empty() || !norm.fussnoten.is_empty() {
             let heading = self.tags_for(&[], &["section-heading"]);
             self.insert_text(
@@ -1055,11 +1387,11 @@ impl LexNormView {
             );
             for footnote in &norm.footnotes {
                 let iter = buffer.iter_at_mark(&at);
-                buffer.create_mark(
+                footnote_marks.push(buffer.create_mark(
                     Some(footnote_mark_name(norm_id, &footnote.id).as_str()),
                     &iter,
                     true,
-                );
+                ));
                 let tags = self.tags_for(&[], &["footnote", "bold"]);
                 self.insert_text(&buffer, &at, &format!("{} ", footnote.mark), &tags);
                 let flat = flatten_blocks(&footnote.blocks);
@@ -1147,6 +1479,7 @@ impl LexNormView {
             block_marks,
             block_lens,
             content_end,
+            footnote_marks,
         };
         let index = {
             let mut sections = imp.sections.borrow_mut();
@@ -1620,6 +1953,23 @@ impl LexNormView {
                 self.on_color_chosen(AnnotationKind::Highlight, color);
             }
             ["note"] => self.on_color_chosen(AnnotationKind::Note, "yellow"),
+            // Sprung in der sichtbaren Norm: „jump <abs|-> <satz|-> <nr|->“.
+            ["jump", abs, satz, nr] => {
+                let opt = |v: &str| (v != "-").then(|| v.to_owned());
+                let target = JumpTarget {
+                    paragraph: opt(abs),
+                    sentence: opt(satz),
+                    number: opt(nr),
+                };
+                let id = self.imp().visible_norm.get();
+                log::info!("Sprung zu {target:?}: {}", self.jump_within(id, &target));
+            }
+            // Zahl der geladenen Abschnitte (Entladen prüfen).
+            ["sections"] => log::info!(
+                "Abschnitte: {} ({} Zeichen)",
+                self.imp().sections.borrow().len(),
+                buffer.char_count()
+            ),
             ["action", name, rest @ ..] => {
                 let param = (!rest.is_empty()).then(|| rest.join(" ").to_variant());
                 if let Err(err) = self.imp().text_view.activate_action(name, param.as_ref()) {
@@ -1682,7 +2032,12 @@ impl LexNormView {
             glib::clone!(
                 #[weak(rename_to = view)]
                 self,
-                move || view.update_visible_norm()
+                move || {
+                    view.update_visible_norm();
+                    // Nach dem Layout stimmen die Positionen: jetzt entladen.
+                    view.trim_sections(true);
+                    view.trim_sections(false);
+                }
             ),
         );
     }
@@ -2064,6 +2419,7 @@ impl LexNormView {
         let offset = iter.as_ref().map(|i| i.offset());
         let mut ctx = MenuContext {
             link: self.link_at(x, y),
+            norm_id: Some(imp.visible_norm.get()).filter(|id| *id > 0),
             ..Default::default()
         };
         if let Some(offset) = offset {
@@ -2120,7 +2476,7 @@ impl LexNormView {
             .build();
         grid.attach(&highlight_label, 0, 0, 1, 1);
         grid.attach(&note_label, 0, 1, 1, 1);
-        for (column, (name, label, _, _)) in HIGHLIGHT_COLORS.iter().enumerate() {
+        for (column, (name, _, _, _)) in HIGHLIGHT_COLORS.iter().enumerate() {
             for (row, kind) in [(0, AnnotationKind::Highlight), (1, AnnotationKind::Note)] {
                 let swatch = gtk::Box::builder()
                     .css_classes(["highlight-swatch", name])
@@ -2129,7 +2485,7 @@ impl LexNormView {
                     AnnotationKind::Note => gettext("Notiz in {farbe} anheften"),
                     _ => gettext("{farbe} markieren"),
                 }
-                .replace("{farbe}", &gettext(*label));
+                .replace("{farbe}", &highlight_color_label(name));
                 let button = gtk::Button::builder()
                     .child(&swatch)
                     .tooltip_text(tooltip)
@@ -2598,8 +2954,8 @@ fn heading_tag_name(level: u8) -> &'static str {
 fn build_context_menu(ctx: &MenuContext) -> gio::Menu {
     let colors = |action: &str| {
         let sub = gio::Menu::new();
-        for (name, label, _, _) in HIGHLIGHT_COLORS {
-            let item = gio::MenuItem::new(Some(label), None);
+        for (name, _, _, _) in HIGHLIGHT_COLORS {
+            let item = gio::MenuItem::new(Some(&highlight_color_label(name)), None);
             item.set_action_and_target_value(Some(action), Some(&name.to_variant()));
             sub.append_item(&item);
         }
@@ -2646,6 +3002,11 @@ fn build_context_menu(ctx: &MenuContext) -> gio::Menu {
         menu.append_section(None, &section);
     }
     let section = gio::Menu::new();
+    if let Some(norm_id) = ctx.norm_id {
+        let item = gio::MenuItem::new(Some(&gettext("Norm in neuem Tab öffnen")), None);
+        item.set_action_and_target_value(Some("win.open-in-new-tab"), Some(&norm_id.to_variant()));
+        section.append_item(&item);
+    }
     section.append(
         Some(&gettext("Norm als Favorit")),
         Some("win.toggle-favorite"),

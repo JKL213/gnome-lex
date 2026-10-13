@@ -15,7 +15,7 @@ use gtk::{gio, glib, CompositeTemplate};
 
 use crate::db::Database;
 use crate::model::{Annotation, AnnotationKind, LawInfo, NormInfo};
-use crate::refs::{LawRef, NormRef};
+use crate::refs::{JumpTarget, LawRef, NormRef};
 use crate::widgets::norm_view::{AnnotationEvent, NormPage, RefChip};
 use crate::widgets::LexNormView;
 
@@ -37,11 +37,22 @@ pub struct ReaderState {
 }
 
 /// Verweis auf eine Norm über Gesetz und Bezeichnung (stabil über Updates).
+/// Zustand aller Tabs für die Wiederherstellung beim nächsten Start.
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct TabsState {
+    pub tabs: Vec<ReaderState>,
+    #[serde(default)]
+    pub active: usize,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PaneRef {
     pub law: String,
     pub norm: String,
 }
+
+/// Nach so vielen Sekunden im Hintergrund gibt ein Tab seine Puffer frei.
+const UNLOAD_AFTER_SECS: u64 = 120;
 
 type NormChangedCallback = Box<dyn Fn(&LexReader, u32)>;
 type NavigateCallback = Box<dyn Fn(&LexReader, u32, NormRef, bool)>;
@@ -154,6 +165,9 @@ mod imp {
         pub panes: [RefCell<Option<PaneInfo>>; 2],
         /// Laufende Nummern der letzten Normanfragen je Ansicht.
         pub serial: [Cell<u64>; 2],
+        /// Inhalt entladen (Tab lange im Hintergrund); `panes` bleibt erhalten.
+        pub unloaded: Cell<bool>,
+        pub unload_timer: RefCell<Option<glib::SourceId>>,
         pub on_norm_changed: RefCell<Option<NormChangedCallback>>,
         pub on_navigate: RefCell<Option<NavigateCallback>>,
         pub on_annotation: RefCell<Option<AnnotationCallback>>,
@@ -235,6 +249,50 @@ impl LexReader {
         let imp = self.imp();
         imp.view0.remove_annotation(id);
         imp.view1.remove_annotation(id);
+    }
+
+    /// Tab in den Hintergrund (true) oder Vordergrund (false): im
+    /// Hintergrund wird der Inhalt nach `UNLOAD_AFTER_SECS` entladen, im
+    /// Vordergrund bei Bedarf wieder geladen.
+    pub fn set_background(&self, background: bool) {
+        let imp = self.imp();
+        if let Some(id) = imp.unload_timer.borrow_mut().take() {
+            id.remove();
+        }
+        if background {
+            let id = glib::timeout_add_local_once(
+                std::time::Duration::from_secs(UNLOAD_AFTER_SECS),
+                glib::clone!(
+                    #[weak(rename_to = reader)]
+                    self,
+                    move || {
+                        reader.imp().unload_timer.borrow_mut().take();
+                        reader.unload();
+                    }
+                ),
+            );
+            *imp.unload_timer.borrow_mut() = Some(id);
+        } else if imp.unloaded.replace(false) {
+            for pane in 0..=1u32 {
+                if let Some(id) = self.pane_info(pane).map(|p| p.norm.id) {
+                    self.show_norm_in_pane(id, pane);
+                }
+            }
+        }
+    }
+
+    /// Gibt die Textpuffer beider Ansichten frei; Titel und Ansichtsinfos
+    /// bleiben, damit der Tab weiter beschriftet ist.
+    fn unload(&self) {
+        let imp = self.imp();
+        if imp.unloaded.get() || self.active_norm_id().is_none() {
+            return;
+        }
+        self.flush_note_edits();
+        imp.view0.set_norm(None);
+        imp.view1.set_norm(None);
+        imp.unloaded.set(true);
+        log::debug!("Tab „{}“ entladen", self.title());
     }
 
     /// Noch nicht gemeldete Änderungen an Inline-Notizen sofort melden.
@@ -480,11 +538,15 @@ impl LexReader {
     /// Zeigt eine Norm in der jeweils anderen Ansicht (schaltet die Teilung
     /// bei Bedarf ein) und macht diese aktiv – Ersatz für „in neuem Tab“.
     pub fn show_in_other_pane(&self, norm_id: i64) {
+        self.show_in_other_pane_at(norm_id, None);
+    }
+
+    pub fn show_in_other_pane_at(&self, norm_id: i64, target: Option<JumpTarget>) {
         if !self.split() {
             self.set_split(true);
         }
         let other = 1 - self.active_pane().min(1);
-        self.show_norm_in_pane(norm_id, other);
+        self.show_norm_in_pane_at(norm_id, other, target);
         self.set_active_pane(other);
     }
 
@@ -496,6 +558,24 @@ impl LexReader {
     /// Lädt eine Norm samt Gesetz aus der Datenbank und zeigt sie in der
     /// Ansicht `pane`.
     pub fn show_norm_in_pane(&self, norm_id: i64, pane: u32) {
+        self.show_norm_in_pane_at(norm_id, pane, None);
+    }
+
+    /// Springt in der Ansicht `pane` zu Absatz/Satz/Nr. der bereits
+    /// dargestellten Norm `norm_id`; `false`, wenn sie dort nicht steht.
+    pub fn jump_within(&self, pane: u32, norm_id: i64, target: &JumpTarget) -> bool {
+        let imp = self.imp();
+        let view = if pane.min(1) == 0 {
+            &imp.view0
+        } else {
+            &imp.view1
+        };
+        view.jump_within(norm_id, target)
+    }
+
+    /// Wie `show_norm_in_pane`, springt nach dem Laden zusätzlich zu
+    /// Absatz, Satz oder Nummer.
+    pub fn show_norm_in_pane_at(&self, norm_id: i64, pane: u32, target: Option<JumpTarget>) {
         let imp = self.imp();
         let pane = pane.min(1);
         let serial = imp.serial[pane as usize].get().wrapping_add(1);
@@ -514,7 +594,7 @@ impl LexReader {
                     return;
                 }
                 match result {
-                    Ok(Ok(Some((page, law)))) => tab.present_in_pane(pane, page, law),
+                    Ok(Ok(Some((page, law)))) => tab.present_in_pane(pane, page, law, target),
                     Ok(Ok(None)) => log::warn!("Norm {norm_id} nicht gefunden"),
                     Ok(Err(err)) => log::warn!("Norm {norm_id} konnte nicht geladen werden: {err}"),
                     Err(_) => log::warn!("Laden der Norm {norm_id} abgebrochen"),
@@ -523,7 +603,7 @@ impl LexReader {
         ));
     }
 
-    fn present_in_pane(&self, pane: u32, page: NormPage, law: LawInfo) {
+    fn present_in_pane(&self, pane: u32, page: NormPage, law: LawInfo, target: Option<JumpTarget>) {
         let imp = self.imp();
         let info = PaneInfo {
             norm: page.norm.info.clone(),
@@ -532,7 +612,7 @@ impl LexReader {
         };
         *imp.panes[pane as usize].borrow_mut() = Some(info);
         let view = if pane == 0 { &imp.view0 } else { &imp.view1 };
-        view.set_norm(Some(page));
+        view.set_norm_at(Some(page), target);
         self.update_captions();
         if pane == self.active_pane() {
             self.update_title();
@@ -544,11 +624,12 @@ impl LexReader {
         let imp = self.imp();
         let active = imp.active_pane.get();
         for (index, caption) in [(0u32, &*imp.caption0), (1u32, &*imp.caption1)] {
-            let text = self
+            let (markup, text) = self
                 .pane_info(index)
-                .map(|p| pane_caption(&p))
+                .map(|p| (pane_caption_markup(&p), pane_caption(&p)))
                 .unwrap_or_default();
-            caption.set_label(&text);
+            caption.set_markup(&markup);
+            caption.set_tooltip_text(Some(&text).filter(|t| !t.is_empty()).map(String::as_str));
             if index == active {
                 caption.add_css_class("active");
             } else {
@@ -626,6 +707,25 @@ fn pane_title(info: &PaneInfo) -> (String, String) {
     (title, subtitle)
 }
 
+/// Beschriftung als Markup: Gesetz als Kapsel, Norm fett, Titel abgesetzt.
+fn pane_caption_markup(info: &PaneInfo) -> String {
+    let (title, subtitle) = pane_title(info);
+    let esc = glib::markup_escape_text;
+    let head = match &info.norm.enbez {
+        Some(enbez) => format!(
+            "<span weight=\"bold\">{}</span>  <b>{}</b>",
+            esc(&info.law_abbrev),
+            esc(enbez)
+        ),
+        None => format!("<b>{}</b>", esc(&title)),
+    };
+    if subtitle.is_empty() || info.norm.enbez.is_none() {
+        head
+    } else {
+        format!("{head}  <span alpha=\"70%\">{}</span>", esc(&subtitle))
+    }
+}
+
 /// Beschriftung über einer Ansicht in der geteilten Darstellung.
 fn pane_caption(info: &PaneInfo) -> String {
     let (title, subtitle) = pane_title(info);
@@ -658,6 +758,7 @@ mod tests {
         let i = info(Some("§ 433"), Some("Pflichten"));
         assert_eq!(pane_title(&i), ("§ 433 BGB".into(), "Pflichten".into()));
         assert_eq!(pane_caption(&i), "§ 433 BGB – Pflichten");
+        assert!(pane_caption_markup(&i).contains("<b>§ 433</b>"));
         let i = info(None, Some("Inhaltsübersicht"));
         assert_eq!(pane_title(&i), ("Inhaltsübersicht".into(), "BGB".into()));
         let i = info(None, None);

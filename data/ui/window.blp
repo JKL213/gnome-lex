@@ -8,6 +8,18 @@ template $LexWindow : Adw.ApplicationWindow {
   width-request: 360;
   height-request: 294;
 
+  // Mittlere Breite: Verlauf und Neuer-Tab-Schaltfläche weichen, damit die
+  // Sprungleiste lesbar bleibt. Bei mehreren passenden Breakpoints gilt der
+  // letzte, deshalb wiederholt der schmale alle Setter.
+  Adw.Breakpoint {
+    condition ("max-width: 900sp")
+
+    setters {
+      history_button.visible: false;
+      new_tab_button.visible: false;
+    }
+  }
+
   Adw.Breakpoint breakpoint {
     condition ("max-width: 640sp")
 
@@ -17,6 +29,7 @@ template $LexWindow : Adw.ApplicationWindow {
       jump_bar.compact: true;
       split_button.visible: false;
       history_button.visible: false;
+      new_tab_button.visible: false;
     }
   }
 
@@ -206,7 +219,13 @@ template $LexWindow : Adw.ApplicationWindow {
                 }
               };
 
-              content: Adw.ToolbarView {
+              // Tabs: Übersicht um die Werkzeugleiste, Tab-Leiste unter der
+              // Kopfleiste (nur bei mehreren Tabs sichtbar), je Tab eine Leseansicht.
+              content: Adw.TabOverview tab_overview {
+                view: tab_view;
+                enable-new-tab: true;
+
+                child: Adw.ToolbarView {
                 [top]
                 Adw.HeaderBar {
                   [start]
@@ -296,9 +315,29 @@ template $LexWindow : Adw.ApplicationWindow {
                     action-name: "win.split";
                   }
 
+                  [end]
+                  Adw.TabButton tab_button {
+                    view: tab_view;
+                    tooltip-text: _("Tab-Übersicht (Strg+Umschalt+O)");
+                    action-name: "win.tab-overview";
+                  }
+
+                  [end]
+                  Button new_tab_button {
+                    icon-name: "tab-new-symbolic";
+                    tooltip-text: _("Neuer Tab (Strg+T)");
+                    action-name: "win.new-tab";
+                  }
                 }
 
-                content: $LexReader reader {};
+                [top]
+                Adw.TabBar tab_bar {
+                  view: tab_view;
+                  autohide: true;
+                }
+
+                content: Adw.TabView tab_view {};
+                };
               };
             };
           };
@@ -313,6 +352,10 @@ menu primary_menu {
     item {
       label: _("_Springen …");
       action: "win.quick-search";
+    }
+    item {
+      label: _("Neuer _Tab");
+      action: "win.new-tab";
     }
     item {
       label: _("_Geteilte Ansicht");

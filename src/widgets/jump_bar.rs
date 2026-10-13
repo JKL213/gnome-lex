@@ -26,6 +26,8 @@ const PREVIEW_CHARS: usize = 700;
 /// Breite der Trefferliste und der Vorschau.
 const LIST_WIDTH: i32 = 340;
 const PREVIEW_WIDTH: i32 = 360;
+/// Unterhalb dieser Breite (px) entfällt der Normhinweis im Feld.
+const CONTEXT_MIN_WIDTH: i32 = 400;
 
 /// Aufruf beim Sprung: Norm-ID und ob die zweite Ansicht gewünscht ist.
 type JumpCallback = Box<dyn Fn(i64, bool)>;
@@ -46,6 +48,8 @@ mod imp {
         /// Schmale Darstellung: Treffer ohne Vorschau, kein Normhinweis.
         #[property(get, set = Self::set_compact)]
         pub compact: Cell<bool>,
+        /// Die Leiste ist breit genug für den Normhinweis (siehe `fit_context`).
+        pub context_fits: Cell<bool>,
         pub popover: OnceCell<gtk::Popover>,
         pub results: OnceCell<gtk::ListBox>,
         pub preview: OnceCell<gtk::Box>,
@@ -116,6 +120,9 @@ mod imp {
             if let Some(popover) = self.popover.get() {
                 popover.present();
             }
+            // Der Normhinweis liegt als Overlay im Feld; bei schmaler Leiste
+            // würde er mit Platzhalter bzw. Eingabe zusammenlaufen.
+            self.obj().fit_context(width);
         }
 
         fn unroot(&self) {
@@ -695,16 +702,35 @@ impl LexJumpBar {
     }
 
     /// Der Hinweis auf die aktuelle Norm erscheint nur im leeren, nicht
-    /// fokussierten Feld und nicht in schmaler Darstellung.
+    /// fokussierten Feld, nicht in schmaler Darstellung und nur, wenn neben
+    /// dem Platzhalter genug Platz bleibt (siehe `fit_context`).
     fn update_context_visibility(&self) {
         let imp = self.imp();
         let label = &imp.context_label;
         label.set_visible(
             !imp.compact.get()
+                && imp.context_fits.get()
                 && !self.entry_focused()
                 && imp.entry.text().is_empty()
                 && !label.text().is_empty(),
         );
+    }
+
+    /// Passt den Normhinweis an die Breite der Leiste an: unterhalb von
+    /// `CONTEXT_MIN_WIDTH` ganz ausblenden, sonst so kürzen, dass der
+    /// Platzhalter links frei bleibt.
+    fn fit_context(&self, width: i32) {
+        let imp = self.imp();
+        let fits = width >= CONTEXT_MIN_WIDTH;
+        // Platzhalter plus Symbol brauchen etwa 230 px; der Rest (ca. 7 px je
+        // Zeichen) steht dem Hinweis zu.
+        let chars = ((width - 230) / 7).clamp(8, 36);
+        if imp.context_label.max_width_chars() != chars {
+            imp.context_label.set_max_width_chars(chars);
+        }
+        if imp.context_fits.replace(fits) != fits {
+            self.update_context_visibility();
+        }
     }
 }
 

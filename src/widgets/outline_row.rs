@@ -91,13 +91,17 @@ impl LexOutlineRow {
                 let ctrl = gesture
                     .current_event_state()
                     .contains(gdk::ModifierType::CONTROL_MASK);
-                if button == 2 || (button == 1 && ctrl) {
-                    gesture.set_state(gtk::EventSequenceState::Claimed);
-                    if let Err(err) =
-                        row.activate_action("win.open-in-other-pane", Some(&id.to_variant()))
-                    {
-                        log::warn!("open-in-other-pane nicht erreichbar: {err}");
-                    }
+                // Mittelklick: neuer Tab; Strg+Klick: zweite Ansicht.
+                let action = if button == 2 {
+                    "win.open-in-new-tab"
+                } else if button == 1 && ctrl {
+                    "win.open-in-other-pane"
+                } else {
+                    return;
+                };
+                gesture.set_state(gtk::EventSequenceState::Claimed);
+                if let Err(err) = row.activate_action(action, Some(&id.to_variant())) {
+                    log::warn!("{action} nicht erreichbar: {err}");
                 }
             }
         ));

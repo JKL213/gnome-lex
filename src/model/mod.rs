@@ -156,6 +156,18 @@ impl Annotation {
 }
 
 /// Verfügbare Markierungsfarben (Name, Anzeigename, RGBA hell, RGBA dunkel).
+/// Übersetzter Anzeigename einer Markierungsfarbe (`HIGHLIGHT_COLORS`).
+pub fn highlight_color_label(name: &str) -> String {
+    match name {
+        "yellow" => gettextrs::gettext("Gelb"),
+        "green" => gettextrs::gettext("Grün"),
+        "blue" => gettextrs::gettext("Blau"),
+        "pink" => gettextrs::gettext("Rosa"),
+        "orange" => gettextrs::gettext("Orange"),
+        other => other.to_owned(),
+    }
+}
+
 pub const HIGHLIGHT_COLORS: &[(&str, &str, &str, &str)] = &[
     ("yellow", "Gelb", "#f6d32d80", "#e5a50a80"),
     ("green", "Grün", "#8ff0a480", "#26a26980"),
