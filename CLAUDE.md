@@ -753,11 +753,15 @@ Stufe 1 zusätzlich mit Meson-Tests und Flatpak-Build; Stufe 2 wurde über
     `ActionRow` („Portal öffnen“), jeweils mit Wappen als Präfix
     (`gtk::Image`, 24 px, CSS-Klasse `law-emblem`); Installiert-Zeilen
     tragen das Wappen ihres Gesetzgebers.
-  - **Wappen:** 17 stilisierte, eigene Zeichnungen (keine amtlichen
-    Wappen; Nutzung amtlicher Wappen ist wappenrechtlich beschränkt)
-    unter `data/icons/scalable/emblems/lex-wappen-{bund,bw,…,th}.svg`,
-    erzeugt mit einem Skript (heraldische Farben, vereinfachte Figuren),
-    in `gesetze.gresource.xml` eingetragen; GTK findet sie über den
+  - **Wappen:** amtliche Wappen von Wikimedia Commons (amtliche Werke,
+    § 5 Abs. 1 UrhG; Quellen in `data/icons/scalable/emblems/QUELLEN.md`)
+    unter `data/icons/scalable/emblems/lex-wappen-{bund,bw,…,th}.svg`, per
+    Skript auf 24×24 mit `viewBox` normalisiert; Brandenburg und Saarland
+    sind noch stilisierte Eigenzeichnungen (Commons drosselte die
+    Cloud-Adresse mit HTTP 429, Abruf später nachholen:
+    `Brandenburg_Wappen.svg`, `Coat_of_arms_of_Saarland.svg`, Pfad
+    `upload.wikimedia.org/wikipedia/commons/<md5[0]>/<md5[0:2]>/<Name>`).
+    Icons stehen in `gesetze.gresource.xml`; GTK findet sie über den
     Ressourcenpfad.
   - **Prüfumgebung ohne GTK:** Stub-`.pc`-Dateien (gtk4 4.22, glib 2.90,
     libadwaita 1.10, libsoup 3.8 …) in `PKG_CONFIG_PATH` genügen für
