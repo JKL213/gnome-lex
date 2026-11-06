@@ -39,5 +39,22 @@
     <file preprocess="xml-stripblanks">icons/scalable/actions/zoom-in-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/zoom-original-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/zoom-out-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/emblems/lex-wappen-bund.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/emblems/lex-wappen-bw.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/emblems/lex-wappen-by.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/emblems/lex-wappen-be.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/emblems/lex-wappen-bb.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/emblems/lex-wappen-hb.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/emblems/lex-wappen-hh.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/emblems/lex-wappen-he.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/emblems/lex-wappen-mv.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/emblems/lex-wappen-ni.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/emblems/lex-wappen-nw.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/emblems/lex-wappen-rp.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/emblems/lex-wappen-sl.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/emblems/lex-wappen-sn.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/emblems/lex-wappen-st.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/emblems/lex-wappen-sh.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/emblems/lex-wappen-th.svg</file>
   </gresource>
 </gresources>

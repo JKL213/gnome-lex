@@ -79,7 +79,7 @@ impl Element {
         for child in &self.children {
             match child {
                 Node::Text(t) => out.push_str(t),
-                Node::Element(e) if e.name == "BR" => out.push('\n'),
+                Node::Element(e) if e.name == "BR" || e.name == "br" => out.push('\n'),
                 Node::Element(e) => e.collect_text(out),
             }
         }
@@ -527,7 +527,7 @@ fn paragraph_blocks(p: &Element) -> Vec<Block> {
 }
 
 /// Schließt die bisher gesammelten Spans als eigenen Absatzblock ab.
-fn flush_spans(spans: &mut Vec<Span>, blocks: &mut Vec<Block>) {
+pub(super) fn flush_spans(spans: &mut Vec<Span>, blocks: &mut Vec<Block>) {
     trim_spans(spans);
     if !spans.is_empty() {
         blocks.push(Block::Paragraph {
@@ -641,7 +641,7 @@ fn collect_paragraph(e: &Element, style: Style, spans: &mut Vec<Span>, blocks: &
     }
 }
 
-fn push_span(spans: &mut Vec<Span>, text: &str, style: Style, footnote: Option<String>) {
+pub(super) fn push_span(spans: &mut Vec<Span>, text: &str, style: Style, footnote: Option<String>) {
     let text = collapse_ws(text);
     if text.is_empty() {
         return;
@@ -662,7 +662,7 @@ fn push_span(spans: &mut Vec<Span>, text: &str, style: Style, footnote: Option<S
 }
 
 /// Fasst Whitespace zusammen, behält aber Zeilenumbrüche aus `<BR/>`.
-fn collapse_ws(text: &str) -> String {
+pub(super) fn collapse_ws(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut prev_space = false;
     for c in text.chars() {
@@ -682,7 +682,7 @@ fn collapse_ws(text: &str) -> String {
     out
 }
 
-fn trim_spans(spans: &mut Vec<Span>) {
+pub(super) fn trim_spans(spans: &mut Vec<Span>) {
     if let Some(first) = spans.first_mut() {
         let t = first.text.trim_start().to_owned();
         first.text = t;

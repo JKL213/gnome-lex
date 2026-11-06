@@ -1,12 +1,12 @@
 using Gtk 4.0;
 using Adw 1;
 
-// Download-Center: alle bekannten Gesetze mit Stand und Schaltfläche zum
-// Herunterladen bzw. Aktualisieren.
+// Download-Center: Bundesrecht und Landesrecht (je Land mit stilisiertem
+// Wappen) mit Stand und Schaltfläche zum Herunterladen bzw. Aktualisieren.
 template $LexDownloadCenter : Adw.Dialog {
   title: _("Gesetze herunterladen");
-  content-width: 680;
-  content-height: 640;
+  content-width: 720;
+  content-height: 680;
 
   child: Adw.ToolbarView {
     [top]
@@ -24,9 +24,14 @@ template $LexDownloadCenter : Adw.Dialog {
         title: _("Installiert");
       }
 
-      Adw.PreferencesGroup available_group {
-        title: _("Verfügbar");
+      Adw.PreferencesGroup federal_group {
+        title: _("Bundesrecht");
         description: _("Quelle: gesetze-im-internet.de (Bundesministerium der Justiz). Die Texte werden lokal gespeichert.");
+      }
+
+      Adw.PreferencesGroup state_group {
+        title: _("Landesrecht");
+        description: _("Verwaltungsrecht der Länder. Bayern stellt seine Gesetze maschinenlesbar bereit (BAYERN.RECHT); die übrigen Länder bieten keinen Export an und werden über ihr Portal geöffnet.");
       }
     };
   };

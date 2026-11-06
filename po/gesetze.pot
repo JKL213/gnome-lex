@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gesetze\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-22 23:52+0200\n"
+"POT-Creation-Date: 2026-11-06 21:55+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,15 +17,15 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: data/org.gnomelex.Gesetze.desktop.in:2
+#: data/org.gnomelex.Gesetze.desktop.in:3
 msgid "Gesetze"
 msgstr ""
 
-#: data/org.gnomelex.Gesetze.desktop.in:3
+#: data/org.gnomelex.Gesetze.desktop.in:4
 msgid "Deutsche Bundesgesetze lesen und annotieren"
 msgstr ""
 
-#: data/org.gnomelex.Gesetze.desktop.in:9
+#: data/org.gnomelex.Gesetze.desktop.in:10
 msgid "Gesetz;BGB;Recht;Norm;Paragraph;"
 msgstr ""
 
@@ -58,13 +58,24 @@ msgid "Installiert"
 msgstr ""
 
 #: data/ui/download_center.blp:28
-msgid "Verfügbar"
+msgid "Bundesrecht"
 msgstr ""
 
 #: data/ui/download_center.blp:29
 msgid ""
 "Quelle: gesetze-im-internet.de (Bundesministerium der Justiz). Die Texte "
 "werden lokal gespeichert."
+msgstr ""
+
+#: data/ui/download_center.blp:33
+msgid "Landesrecht"
+msgstr ""
+
+#: data/ui/download_center.blp:34
+msgid ""
+"Verwaltungsrecht der Länder. Bayern stellt seine Gesetze maschinenlesbar "
+"bereit (BAYERN.RECHT); die übrigen Länder bieten keinen Export an und werden "
+"über ihr Portal geöffnet."
 msgstr ""
 
 #: data/ui/jump_bar.blp:18
@@ -143,143 +154,143 @@ msgstr ""
 msgid "Höchstens einmal täglich; lädt die Archive von gesetze-im-internet.de"
 msgstr ""
 
-#: data/ui/window.blp:37 data/ui/window.blp:67 data/ui/window.blp:102
-#: data/ui/window.blp:280
+#: data/ui/window.blp:49 data/ui/window.blp:79 data/ui/window.blp:114
+#: data/ui/window.blp:292
 msgid "Hauptmenü"
 msgstr ""
 
-#: data/ui/window.blp:45
+#: data/ui/window.blp:57
 msgid "Kein Gesetz geladen"
 msgstr ""
 
-#: data/ui/window.blp:46
+#: data/ui/window.blp:58
 msgid ""
-"Gesetze werden einmalig von gesetze-im-internet.de heruntergeladen und lokal "
-"gespeichert."
+"Gesetze werden einmalig von den amtlichen Portalen (gesetze-im-internet.de, "
+"BAYERN.RECHT) heruntergeladen und lokal gespeichert."
 msgstr ""
 
-#: data/ui/window.blp:73
+#: data/ui/window.blp:85
 msgid "Lade herunter …"
 msgstr ""
 
-#: data/ui/window.blp:88 data/ui/window.blp:111
+#: data/ui/window.blp:100 data/ui/window.blp:123
 msgid "Gliederung"
 msgstr ""
 
-#: data/ui/window.blp:96
+#: data/ui/window.blp:108
 msgid "Gesetz der Gliederung"
 msgstr ""
 
-#: data/ui/window.blp:127
+#: data/ui/window.blp:139
 msgid "Favoriten"
 msgstr ""
 
-#: data/ui/window.blp:151
+#: data/ui/window.blp:163
 msgid "Norm"
 msgstr ""
 
-#: data/ui/window.blp:169
+#: data/ui/window.blp:181
 msgid "Schema / Notiz"
 msgstr ""
 
-#: data/ui/window.blp:176
+#: data/ui/window.blp:188
 msgid "Panel schließen"
 msgstr ""
 
-#: data/ui/window.blp:199
+#: data/ui/window.blp:211
 msgid ""
 "Wird automatisch gespeichert und unter der Überschrift der Norm angezeigt."
 msgstr ""
 
-#: data/ui/window.blp:225
+#: data/ui/window.blp:237
 msgid "Vorherige Norm (Alt+Bild↑)"
 msgstr ""
 
-#: data/ui/window.blp:231
+#: data/ui/window.blp:243
 msgid "Nächste Norm (Alt+Bild↓)"
 msgstr ""
 
-#: data/ui/window.blp:239
+#: data/ui/window.blp:251
 msgid "Zuletzt gelesene Normen"
 msgstr ""
 
-#: data/ui/window.blp:260
+#: data/ui/window.blp:272
 msgid "Verlauf leeren"
 msgstr ""
 
-#: data/ui/window.blp:288
+#: data/ui/window.blp:300
 msgid "Favorit (Strg+D)"
 msgstr ""
 
-#: data/ui/window.blp:295
+#: data/ui/window.blp:307
 msgid "Schema / Notiz (Strg+Umschalt+N)"
 msgstr ""
 
-#: data/ui/window.blp:302
+#: data/ui/window.blp:314
 msgid "Geteilte Ansicht (Strg+Umschalt+D)"
 msgstr ""
 
-#: data/ui/window.blp:309
+#: data/ui/window.blp:321
 msgid "Tab-Übersicht (Strg+Umschalt+O)"
 msgstr ""
 
-#: data/ui/window.blp:316
+#: data/ui/window.blp:328
 msgid "Neuer Tab (Strg+T)"
 msgstr ""
 
-#: data/ui/window.blp:341
+#: data/ui/window.blp:353
 msgid "_Springen …"
 msgstr ""
 
-#: data/ui/window.blp:345
+#: data/ui/window.blp:357
 msgid "Neuer _Tab"
 msgstr ""
 
-#: data/ui/window.blp:349
+#: data/ui/window.blp:361
 msgid "_Geteilte Ansicht"
 msgstr ""
 
-#: data/ui/window.blp:353
+#: data/ui/window.blp:365
 msgid "_Favorit"
 msgstr ""
 
-#: data/ui/window.blp:357
+#: data/ui/window.blp:369
 msgid "Schema / _Notiz"
 msgstr ""
 
-#: data/ui/window.blp:363
+#: data/ui/window.blp:375
 msgid "Schrift ver_größern"
 msgstr ""
 
-#: data/ui/window.blp:367
+#: data/ui/window.blp:379
 msgid "Schrift ver_kleinern"
 msgstr ""
 
-#: data/ui/window.blp:371
+#: data/ui/window.blp:383
 msgid "Schriftgröße _zurücksetzen"
 msgstr ""
 
-#: data/ui/window.blp:377
+#: data/ui/window.blp:389
 msgid "Auf _Aktualisierung prüfen"
 msgstr ""
 
-#: data/ui/window.blp:381
+#: data/ui/window.blp:393
 msgid "Gesetze _herunterladen …"
 msgstr ""
 
-#: data/ui/window.blp:387
+#: data/ui/window.blp:399
 msgid "_Einstellungen"
 msgstr ""
 
-#: data/ui/window.blp:391
+#: data/ui/window.blp:403
 msgid "_Tastenkürzel"
 msgstr ""
 
-#: data/ui/window.blp:395
+#: data/ui/window.blp:407
 msgid "_Info zu Gesetze"
 msgstr ""
 
-#: data/ui/window.blp:399
+#: data/ui/window.blp:411
 msgid "_Beenden"
 msgstr ""
 
@@ -369,43 +380,61 @@ msgid ""
 "internet.de"
 msgstr ""
 
-#: src/model/mod.rs:162
+#: src/model/mod.rs:163
 msgid "Gelb"
 msgstr ""
 
-#: src/model/mod.rs:163
+#: src/model/mod.rs:164
 msgid "Grün"
 msgstr ""
 
-#: src/model/mod.rs:164
+#: src/model/mod.rs:165
 msgid "Blau"
 msgstr ""
 
-#: src/model/mod.rs:165
+#: src/model/mod.rs:166
 msgid "Rosa"
 msgstr ""
 
-#: src/model/mod.rs:166
+#: src/model/mod.rs:167
 msgid "Orange"
 msgstr ""
 
-#: src/widgets/download_center.rs:80 src/window.rs:809
+#: src/widgets/download_center.rs:156 src/window.rs:809
 msgid "Aktualisieren"
 msgstr ""
 
-#: src/widgets/download_center.rs:82
+#: src/widgets/download_center.rs:158
 msgid "{abbrev} · nicht installiert"
 msgstr ""
 
-#: src/widgets/download_center.rs:83 src/window.rs:1379
+#: src/widgets/download_center.rs:159 src/window.rs:1379
 msgid "Herunterladen"
 msgstr ""
 
-#: src/widgets/download_center.rs:91
-msgid "{abbrev} von gesetze-im-internet.de laden"
+#: src/widgets/download_center.rs:167
+msgid "{abbrev} von {site} laden"
 msgstr ""
 
-#: src/widgets/download_center.rs:127
+#: src/widgets/download_center.rs:190
+msgid "{portal} · kein Import möglich, öffnet das Portal im Browser"
+msgstr ""
+
+#: src/widgets/download_center.rs:197
+msgid "Portal öffnen"
+msgstr ""
+
+#: src/widgets/download_center.rs:221
+msgid "{n} Gesetz"
+msgid_plural "{n} Gesetze"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/widgets/download_center.rs:224
+msgid "{n} installiert"
+msgstr ""
+
+#: src/widgets/download_center.rs:237
 msgid "importiert am {date}"
 msgstr ""
 

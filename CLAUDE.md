@@ -710,6 +710,61 @@ Stufe 1 zusätzlich mit Meson-Tests und Flatpak-Build; Stufe 2 wurde über
   - Pfadfehler-Hinweis: `pkill -f` mit einem Muster aus der eigenen
     Befehlszeile (z. B. `remote-debugging-port`) beendet die eigene Shell;
     `pkill -x` verwenden.
+- **Landesrecht und Download-Center mit Wappen (06.11.2026, Auftrag):**
+  fmt, clippy `-D warnings` (Stub-pkg-config, `--all-targets`) grün;
+  Parser-Tests in einer GTK-freien Hilfskiste (`xml.rs`, `byrecht.rs`,
+  `text.rs`, `states.rs` per `#[path]`) grün; 15 echte BAYERN.RECHT-
+  Dokumente durchgeparst (Normen, Gliederung, Listen, Tabellen, Fußnoten).
+  Keine Sichtprüfung unter GTK (kein GTK im Container).
+  - **Quellenmodell:** `importer::Source` hat jetzt `jurisdiction`
+    (`model::states::Jurisdiction::{Bund, Land(State)}`), `format`
+    (`Format::{GiiXml, ByRecht}`) und `doc_id`; `Source::url()`,
+    `site_name()`, `Source::of(jurisdiction)`. `model/states.rs`: die 16
+    Länder mit Kürzel, Name, Icon-Name (`lex-wappen-<kürzel>`), Portalname
+    und Portal-URL.
+  - **BAYERN.RECHT (gesetze-bayern.de):** liefert unter
+    `/Content/Zip/<Dokument-ID>` ein ZIP mit `bayportalnorm/<ID>.xml` (DTD
+    `byrecht-norm`, C.H. Beck). `src/importer/byrecht.rs` übersetzt es in
+    `ParsedLaw`: `kopf` → Metadaten (Titel = erste Zeile der
+    `titelangaben`, Kürzel aus `amtlicheAbk` oder Quelle, Fundstelle
+    GVBl + BayRS, Stand = `normzitat` ab „zuletzt …“), verschachtelte
+    `gliederung` → Einheiten (Kennzahl aus dem Pfad, „Erster Teil ⏎ Titel“
+    getrennt), `einzelnorm` → Norm (`para.nr`, `para.titel`; `jurAbsatz`
+    mit `absatz.nr` als Präfix „(1) “ im ersten Block, `satz.nr` als
+    hochgestellte Satznummern, `ul/li/symbol` → Listen, `table` → Tabellen,
+    `fn.call` → Fußnoten `F<n>`), `annex` → Normen „Anlage n“; Rahmennorm
+    ohne Bezeichnung mit Einleitungssatz und Änderungsverlauf. Fehlende
+    `para.nr` (Präambel) nutzt den Titel. `(aufgehoben)` gilt wie
+    `(weggefallen)` (`is_repealed`). 14 Quellen `by_*` (BV, BayVwVfG,
+    VwZVG, AGVwGO, PAG, LStVG, BayBO, GO, LKrO, BezO, KommZG, KAG, BayDSG,
+    BayFwG; Dokument-IDs geprüft). `extract_xml` überspringt
+    `META-INF/manifest.xml` und nimmt die größte XML-Datei; `parse_any`/
+    `parse_meta_any` erkennen das Format am Wurzelelement. Aktualisierung:
+    `version_differs_for` vergleicht bei ByRecht nur den Stand (das
+    Build-Datum wechselt nächtlich).
+  - **Übrige Länder:** juris-Portale (BW, BE, HH, HE, MV, RP, SL, ST, SH,
+    TH) sind React-Anwendungen ohne Export, NRW/BB/HB/NI/SN eigene
+    Datenbanken; viele setzen Verbindungen aus Cloud-Netzen zurück. Sie
+    erscheinen im Download-Center nur als Portal-Verweis
+    (`gtk::UriLauncher`). Anbindung später je Portal prüfen (Rechner mit
+    normalem Netzzugang).
+  - **Download-Center:** Gruppen „Installiert“, „Bundesrecht“,
+    „Landesrecht“; je Land eine `Adw.ExpanderRow` (mit Quellen) bzw.
+    `ActionRow` („Portal öffnen“), jeweils mit Wappen als Präfix
+    (`gtk::Image`, 24 px, CSS-Klasse `law-emblem`); Installiert-Zeilen
+    tragen das Wappen ihres Gesetzgebers.
+  - **Wappen:** 17 stilisierte, eigene Zeichnungen (keine amtlichen
+    Wappen; Nutzung amtlicher Wappen ist wappenrechtlich beschränkt)
+    unter `data/icons/scalable/emblems/lex-wappen-{bund,bw,…,th}.svg`,
+    erzeugt mit einem Skript (heraldische Farben, vereinfachte Figuren),
+    in `gesetze.gresource.xml` eingetragen; GTK findet sie über den
+    Ressourcenpfad.
+  - **Prüfumgebung ohne GTK:** Stub-`.pc`-Dateien (gtk4 4.22, glib 2.90,
+    libadwaita 1.10, libsoup 3.8 …) in `PKG_CONFIG_PATH` genügen für
+    `cargo clippy`; `blueprint-compiler` aus Ubuntu 24.04 läuft nur mit
+    `python3.12` (`BLUEPRINT_COMPILER=<Wrapper>`), Typelib Adw 1.5 reicht
+    für die vorhandenen `.blp`. `cargo test` scheitert am Linken.
+  - Übersetzungen: `po/gesetze.pot` (154 Einträge), en/ru vollständig.
 - **Tooling:** `.vscode/` (settings, tasks, launch, extensions; Tasks
   `sdk: cargo build|run|qualität` für die SDK-Sandbox),
   `build-aux/sdk-cargo.sh` (führt Cargo in `org.gnome.Sdk//51` mit
@@ -799,6 +854,8 @@ als Sprungfunktion bestehen.
   programmatischem Wechsel nicht hervorgehoben.
 - Update-Prüfung per HEAD (ETag/Last-Modified) statt Vollarchiv.
 - Fehlender D-Bus-Export des Fensters (siehe Fallstricke).
+- Landesrecht der übrigen 15 Länder: Portale ohne Export (siehe oben);
+  Sichtprüfung des neuen Download-Centers unter GTK steht aus.
 - Annotationsliste in der Seitenleiste, JSON-Export/-Import in der
   Oberfläche. Einstellungsdialog und Popovers sind unter Broadway nicht
   sichtbar (Sprachwahl nur statisch und per Keyfile geprüft).

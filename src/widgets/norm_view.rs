@@ -3044,10 +3044,12 @@ fn set_highlight_colors(
 }
 
 /// Weggefallene Normen tragen als Titel nur „(weggefallen)“.
+/// Weggefallene Normen: „(weggefallen)“ bei gesetze-im-internet.de,
+/// „(aufgehoben)“ bei BAYERN.RECHT.
 fn is_repealed(title: Option<&str>) -> bool {
     title
-        .map(|t| t.trim().trim_matches(|c| c == '(' || c == ')') == "weggefallen")
-        .unwrap_or(false)
+        .map(|t| t.trim().trim_matches(|c| c == '(' || c == ')'))
+        .is_some_and(|t| t == "weggefallen" || t == "aufgehoben")
 }
 
 fn footnote_mark_name(norm_id: i64, id: &str) -> String {
@@ -3169,6 +3171,7 @@ mod tests {
     #[test]
     fn repealed_titles() {
         assert!(is_repealed(Some("(weggefallen)")));
+        assert!(is_repealed(Some(" (aufgehoben)")));
         assert!(!is_repealed(Some("Sachmangel")));
         assert!(!is_repealed(None));
     }

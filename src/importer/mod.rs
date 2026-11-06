@@ -1,15 +1,16 @@
 // SPDX-FileCopyrightText: 2026 Gnome Lex
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
-//! Import von Gesetzen: Download des XML-Archivs von gesetze-im-internet.de,
-//! Entpacken, Parsen und Schreiben in die Datenbank sowie die Prüfung auf
-//! neue Fassungen.
+//! Import von Gesetzen: Download des XML-Archivs (gesetze-im-internet.de für
+//! Bundesrecht, BAYERN.RECHT für bayerisches Landesrecht), Entpacken, Parsen
+//! und Schreiben in die Datenbank sowie die Prüfung auf neue Fassungen.
 //!
 //! Der Download läuft asynchron über `soup3` im Hauptkontext, die
 //! blockierenden Schritte (Entpacken, Parsen, Datenbank) laufen in
 //! [`gio::spawn_blocking`]. Die Oberfläche bekommt den Fortschritt über
 //! einen Callback ([`Progress`]).
 
+pub mod byrecht;
 pub mod xml;
 
 use std::io::Read;
@@ -20,19 +21,36 @@ use soup::prelude::*;
 
 use crate::config::VERSION;
 use crate::db::Database;
+use crate::model::states::{Jurisdiction, State};
 use crate::model::LawInfo;
-use xml::ParsedLawMeta;
+use xml::{ParsedLaw, ParsedLawMeta};
+
+/// Datenformat einer Quelle.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Format {
+    /// ZIP mit XML nach DTD `gii-norm` (gesetze-im-internet.de).
+    GiiXml,
+    /// ZIP mit XML nach DTD `byrecht-norm` (BAYERN.RECHT, gesetze-bayern.de).
+    ByRecht,
+}
 
 /// Eine bekannte Gesetzesquelle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Source {
-    /// Interner Schlüssel (z. B. `bgb`), zugleich `slug` in der Datenbank
-    /// und Pfadbestandteil auf gesetze-im-internet.de.
+    /// Interner Schlüssel (z. B. `bgb`), zugleich `slug` in der Datenbank.
+    /// Bei gesetze-im-internet.de auch Pfadbestandteil der Adresse.
     pub slug: &'static str,
     /// Übliches Kürzel.
     pub abbrev: &'static str,
     /// Anzeigename.
     pub name: &'static str,
+    /// Bund oder Land.
+    pub jurisdiction: Jurisdiction,
+    /// Datenformat (bestimmt Adresse und Parser).
+    pub format: Format,
+    /// Dokument-ID beim Portal (nur `ByRecht`; bei `GiiXml` leer, dort
+    /// genügt der Slug).
+    pub doc_id: &'static str,
 }
 
 impl Source {
@@ -43,15 +61,67 @@ impl Source {
 
     /// Adresse des XML-Archivs.
     pub fn url(&self) -> String {
-        format!("https://www.gesetze-im-internet.de/{}/xml.zip", self.slug)
+        match self.format {
+            Format::GiiXml => {
+                format!("https://www.gesetze-im-internet.de/{}/xml.zip", self.slug)
+            }
+            Format::ByRecht => {
+                format!("https://www.gesetze-bayern.de/Content/Zip/{}", self.doc_id)
+            }
+        }
+    }
+
+    /// Name der Datenquelle für Tooltips und Hinweise.
+    pub fn site_name(&self) -> &'static str {
+        match self.format {
+            Format::GiiXml => "gesetze-im-internet.de",
+            Format::ByRecht => "gesetze-bayern.de",
+        }
+    }
+
+    /// Alle Quellen eines Gesetzgebers in Listenreihenfolge.
+    pub fn of(jurisdiction: Jurisdiction) -> impl Iterator<Item = &'static Source> {
+        SOURCES
+            .iter()
+            .filter(move |s| s.jurisdiction == jurisdiction)
     }
 }
 
 const fn src(slug: &'static str, abbrev: &'static str, name: &'static str) -> Source {
-    Source { slug, abbrev, name }
+    Source {
+        slug,
+        abbrev,
+        name,
+        jurisdiction: Jurisdiction::Bund,
+        format: Format::GiiXml,
+        doc_id: "",
+    }
 }
 
-/// Bekannte Gesetzesquellen (Slugs wie auf gesetze-im-internet.de).
+/// Quelle bei BAYERN.RECHT; `doc_id` ist die Dokument-ID des Portals
+/// (`https://www.gesetze-bayern.de/Content/Document/<doc_id>`).
+const fn by(
+    slug: &'static str,
+    doc_id: &'static str,
+    abbrev: &'static str,
+    name: &'static str,
+) -> Source {
+    Source {
+        slug,
+        abbrev,
+        name,
+        jurisdiction: Jurisdiction::Land(State::Bayern),
+        format: Format::ByRecht,
+        doc_id,
+    }
+}
+
+/// Bekannte Gesetzesquellen: Bundesrecht (Slugs wie auf
+/// gesetze-im-internet.de) und bayerisches Landesrecht (Verwaltungsrecht).
+///
+/// Die übrigen Länder betreiben juris-Portale bzw. eigene Datenbanken ohne
+/// maschinenlesbaren Export; sie sind im Download-Center nur als Verweis
+/// auf das Portal aufgeführt (siehe [`State::portal_url`]).
 pub const SOURCES: &[Source] = &[
     src("bgb", "BGB", "Bürgerliches Gesetzbuch"),
     src("bgbeg", "EGBGB", "Einführungsgesetz zum Bürgerlichen Gesetzbuche"),
@@ -86,6 +156,21 @@ pub const SOURCES: &[Source] = &[
     src("gkg_2004", "GKG", "Gerichtskostengesetz"),
     src("beurkg", "BeurkG", "Beurkundungsgesetz"),
     src("wogg", "WoGG", "Wohngeldgesetz"),
+    // Bayern – Verwaltungsrecht (Dokument-IDs von gesetze-bayern.de, geprüft am 06.11.2026)
+    by("by_verf", "BayVerf", "BV", "Verfassung des Freistaates Bayern"),
+    by("by_vwvfg", "BayVwVfG", "BayVwVfG", "Bayerisches Verwaltungsverfahrensgesetz"),
+    by("by_vwzvg", "BayVwZVG", "VwZVG", "Bayerisches Verwaltungszustellungs- und Vollstreckungsgesetz"),
+    by("by_agvwgo", "BayAGVwGO", "AGVwGO", "Gesetz zur Ausführung der Verwaltungsgerichtsordnung"),
+    by("by_pag", "BayPAG", "PAG", "Polizeiaufgabengesetz"),
+    by("by_lstvg", "BayLStVG", "LStVG", "Landesstraf- und Verordnungsgesetz"),
+    by("by_bo", "BayBO", "BayBO", "Bayerische Bauordnung"),
+    by("by_go", "BayGO", "GO", "Gemeindeordnung für den Freistaat Bayern"),
+    by("by_lkro", "BayLKrO", "LKrO", "Landkreisordnung für den Freistaat Bayern"),
+    by("by_bezo", "BayBezO", "BezO", "Bezirksordnung für den Freistaat Bayern"),
+    by("by_kommzg", "BayKommZG", "KommZG", "Gesetz über die kommunale Zusammenarbeit"),
+    by("by_kag", "BayKAG", "KAG", "Kommunalabgabengesetz"),
+    by("by_dsg", "BayDSG", "BayDSG", "Bayerisches Datenschutzgesetz"),
+    by("by_fwg", "BayFwG", "BayFwG", "Bayerisches Feuerwehrgesetz"),
 ];
 
 /// Slug des Standardgesetzes (für Tests).
@@ -142,22 +227,35 @@ impl From<rusqlite::Error> for ImportError {
     }
 }
 
-/// Liest die erste XML-Datei aus einem ZIP-Archiv.
+/// Liest die XML-Datei des Gesetzes aus einem ZIP-Archiv. Begleitdateien
+/// wie `META-INF/manifest.xml` (BAYERN.RECHT) werden übergangen; bei
+/// mehreren Kandidaten gewinnt die größte Datei.
 pub fn extract_xml(zip_bytes: &[u8]) -> Result<String, ImportError> {
     let cursor = std::io::Cursor::new(zip_bytes);
     let mut archive = zip::ZipArchive::new(cursor).map_err(|e| ImportError::Zip(e.to_string()))?;
+    let mut best: Option<(usize, u64)> = None;
     for i in 0..archive.len() {
-        let mut file = archive
+        let file = archive
             .by_index(i)
             .map_err(|e| ImportError::Zip(e.to_string()))?;
-        if file.name().to_ascii_lowercase().ends_with(".xml") {
-            let mut buf = String::new();
-            file.read_to_string(&mut buf)
-                .map_err(|e| ImportError::Zip(e.to_string()))?;
-            return Ok(buf);
+        let name = file.name().to_ascii_lowercase();
+        if !name.ends_with(".xml") || name.starts_with("meta-inf/") {
+            continue;
+        }
+        if best.is_none_or(|(_, size)| file.size() > size) {
+            best = Some((i, file.size()));
         }
     }
-    Err(ImportError::Zip("keine XML-Datei im Archiv".into()))
+    let Some((index, _)) = best else {
+        return Err(ImportError::Zip("keine XML-Datei im Archiv".into()));
+    };
+    let mut file = archive
+        .by_index(index)
+        .map_err(|e| ImportError::Zip(e.to_string()))?;
+    let mut buf = String::new();
+    file.read_to_string(&mut buf)
+        .map_err(|e| ImportError::Zip(e.to_string()))?;
+    Ok(buf)
 }
 
 /// Ergebnis eines Imports.
@@ -172,10 +270,31 @@ pub struct ImportReport {
     pub reanchored: crate::db::ReanchorReport,
 }
 
+/// Parst ein XML-Dokument im Format der Quelle `slug` (gii-norm oder
+/// byrecht-norm, erkannt am Wurzelelement).
+pub fn parse_any(slug: &str, xml: &str) -> Result<ParsedLaw, ImportError> {
+    if byrecht::is_byrecht(xml) {
+        let abbrev = Source::by_slug(slug).map(|s| s.abbrev).unwrap_or(slug);
+        Ok(byrecht::parse_law(xml, abbrev)?)
+    } else {
+        Ok(xml::parse_law(xml)?)
+    }
+}
+
+/// Liest nur die Metadaten eines XML-Dokuments (beide Formate).
+pub fn parse_meta_any(slug: &str, xml: &str) -> Result<ParsedLawMeta, ImportError> {
+    if byrecht::is_byrecht(xml) {
+        let abbrev = Source::by_slug(slug).map(|s| s.abbrev).unwrap_or(slug);
+        Ok(byrecht::parse_meta(xml, abbrev)?)
+    } else {
+        Ok(xml::parse_meta(xml)?)
+    }
+}
+
 /// Parst das XML und schreibt das Gesetz in die Datenbank unter `db_path`.
 /// Blockierend; für den Aufruf aus der Oberfläche in `gio::spawn_blocking` kapseln.
 pub fn import_xml(db_path: &Path, slug: &str, xml: &str) -> Result<ImportReport, ImportError> {
-    let parsed = xml::parse_law(xml)?;
+    let parsed = parse_any(slug, xml)?;
     let mut db = Database::open(db_path)?;
     let law_id = db.replace_law(slug, &parsed)?;
     let reanchored = db.reanchor_law(slug)?;
@@ -303,18 +422,34 @@ pub async fn check_update(
     })
     .await?;
     progress(Progress::Importing);
+    let slug_owned = slug.to_owned();
     let remote = run_blocking(move || -> Result<ParsedLawMeta, ImportError> {
         let xml = extract_xml(&bytes)?;
-        Ok(xml::parse_meta(&xml)?)
+        parse_meta_any(&slug_owned, &xml)
     })
     .await?;
-    if version_differs(&installed, &remote) {
+    if version_differs_for(source.format, &installed, &remote) {
         Ok(UpdateCheck::Available {
             installed,
             remote: Box::new(remote),
         })
     } else {
         Ok(UpdateCheck::UpToDate(installed))
+    }
+}
+
+/// Ist die Fassung auf dem Server eine andere als die installierte?
+///
+/// BAYERN.RECHT erzeugt die Archive nächtlich neu, das Build-Datum ändert
+/// sich also ohne inhaltliche Änderung; dort zählt allein das Normzitat
+/// (Stand), das Build-Datum nur, wenn kein Stand vorliegt.
+pub fn version_differs_for(format: Format, installed: &LawInfo, remote: &ParsedLawMeta) -> bool {
+    match format {
+        Format::GiiXml => version_differs(installed, remote),
+        Format::ByRecht => match (&installed.stand, &remote.stand) {
+            (Some(a), Some(b)) => a != b,
+            _ => version_differs(installed, remote),
+        },
     }
 }
 
@@ -404,6 +539,21 @@ mod tests {
         let xml = extract_xml(buf.get_ref()).unwrap();
         assert!(xml.starts_with("<dokumente"));
         assert!(extract_xml(b"nicht zip").is_err());
+
+        // BAYERN.RECHT: Manifest zuerst im Archiv, das Dokument danach.
+        let mut buf = std::io::Cursor::new(Vec::new());
+        {
+            let mut w = zip::ZipWriter::new(&mut buf);
+            let opts = zip::write::SimpleFileOptions::default();
+            w.start_file("META-INF/manifest.xml", opts).unwrap();
+            w.write_all(b"<manifest/>").unwrap();
+            w.start_file("bayportalnorm/BayVwVfG.xml", opts).unwrap();
+            w.write_all(b"<byrecht-norm builddate=\"x\"/>").unwrap();
+            w.finish().unwrap();
+        }
+        let xml = extract_xml(buf.get_ref()).unwrap();
+        assert!(xml.starts_with("<byrecht-norm"));
+        assert!(byrecht::is_byrecht(&xml));
     }
 
     #[test]
@@ -414,6 +564,35 @@ mod tests {
         assert!(Source::by_slug("gibtsnicht").is_none());
         assert_eq!(Source::by_slug("hgb").map(|s| s.abbrev), Some("HGB"));
         assert!(Source::by_slug(DEFAULT_SLUG).is_some());
+        let by = Source::by_slug("by_vwvfg").unwrap();
+        assert_eq!(by.jurisdiction, Jurisdiction::Land(State::Bayern));
+        assert_eq!(
+            by.url(),
+            "https://www.gesetze-bayern.de/Content/Zip/BayVwVfG"
+        );
+        assert_eq!(Source::of(Jurisdiction::Land(State::Bayern)).count(), 14);
+        assert!(Source::of(Jurisdiction::Land(State::Berlin))
+            .next()
+            .is_none());
+    }
+
+    #[test]
+    fn slugs_are_unique() {
+        let mut slugs: Vec<&str> = SOURCES.iter().map(|s| s.slug).collect();
+        slugs.sort_unstable();
+        let before = slugs.len();
+        slugs.dedup();
+        assert_eq!(before, slugs.len());
+    }
+
+    #[test]
+    fn byrecht_version_ignores_builddate() {
+        let a = installed(Some("zuletzt durch G v. 1.1.2026"), "01.01.2026_02:00");
+        let same = remote(Some("zuletzt durch G v. 1.1.2026"), "02.01.2026_02:00");
+        let other = remote(Some("zuletzt durch G v. 2.2.2026"), "02.01.2026_02:00");
+        assert!(!version_differs_for(Format::ByRecht, &a, &same));
+        assert!(version_differs_for(Format::ByRecht, &a, &other));
+        assert!(version_differs_for(Format::GiiXml, &a, &same));
     }
 
     fn installed(stand: Option<&str>, builddate: &str) -> LawInfo {
