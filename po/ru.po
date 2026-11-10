@@ -410,10 +410,6 @@ msgstr "[Таблица]"
 msgid "Fußnoten"
 msgstr "Сноски"
 
-#: src/widgets/norm_view.rs:1539
-msgid "+{n} weitere"
-msgstr "+{n} ещё"
-
 #: src/widgets/norm_view.rs:1817
 msgid "Zur Fußnote springen"
 msgstr "Перейти к сноске"
@@ -612,13 +608,13 @@ msgid "Annotationen: {moved} verschoben, {orphaned} verwaist, {recovered} wieder
 msgstr "Аннотации: перемещено {moved}, без привязки {orphaned}, восстановлено {recovered}."
 
 #: src/widgets/norm_view.rs
-msgid "Grundlage: {target}"
-msgstr "Основание: {target}"
-
-#: src/widgets/norm_view.rs
-msgid "Anschlussnorm: {target}"
-msgstr "Последующая норма: {target}"
-
-#: src/widgets/norm_view.rs
 msgid "Klick öffnet, Strg+Klick in der zweiten Ansicht"
 msgstr "Щелчок открывает, Ctrl+щелчок — во второй панели"
+
+#: src/widgets/norm_view.rs
+msgid "Grundlage"
+msgstr "Основание"
+
+#: src/widgets/norm_view.rs
+msgid "Anschlussnorm"
+msgstr "Последующая норма"

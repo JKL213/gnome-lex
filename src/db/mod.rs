@@ -12,7 +12,6 @@ use rusqlite::{params, Connection, OptionalExtension, Transaction};
 use crate::importer::xml::ParsedLaw;
 use crate::model::text::{block_search_text, flatten_blocks, paragraph_label, Block, Footnote};
 use crate::model::{Annotation, AnnotationKind, LawInfo, LinkTarget, Norm, NormInfo, UnitInfo};
-use crate::refs::{find_references, LawRef};
 
 pub type Result<T> = std::result::Result<T, rusqlite::Error>;
 
@@ -88,13 +87,8 @@ CREATE TABLE IF NOT EXISTS annotations (
     orphaned INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS annotations_norm ON annotations(law, norm);
-CREATE TABLE IF NOT EXISTS norm_refs (
-    from_norm_id INTEGER NOT NULL REFERENCES norms(id) ON DELETE CASCADE,
-    law_abbrev TEXT NOT NULL,
-    enbez TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS norm_refs_target ON norm_refs(law_abbrev, enbez);
-CREATE INDEX IF NOT EXISTS norm_refs_from ON norm_refs(from_norm_id);
+-- Der frühere Verweisindex wird nicht mehr genutzt.
+DROP TABLE IF EXISTS norm_refs;
 "#;
 
 /// Treffer der Volltextsuche (Stufe 5, noch ohne Oberfläche).
@@ -285,9 +279,6 @@ impl Database {
             let mut fts_stmt = tx.prepare(
                 "INSERT INTO norms_fts (enbez, titel, body, norm_id, law_id) VALUES (?1, ?2, ?3, ?4, ?5)",
             )?;
-            let mut ref_stmt = tx.prepare(
-                "INSERT INTO norm_refs (from_norm_id, law_abbrev, enbez) VALUES (?1, ?2, ?3)",
-            )?;
             for (i, n) in parsed.norms.iter().enumerate() {
                 let blocks = serde_json::to_string(&n.blocks).unwrap_or_else(|_| "[]".into());
                 let footnotes = serde_json::to_string(&n.footnotes).unwrap_or_else(|_| "[]".into());
@@ -316,22 +307,6 @@ impl Database {
                     body.push_str(&block_search_text(block));
                 }
                 fts_stmt.execute(params![n.enbez, n.titel, body, norm_id, law_id])?;
-                // Verweisindex: welche Normen zitiert diese Norm?
-                let text = flatten_blocks(&n.blocks).text();
-                let mut seen = std::collections::HashSet::new();
-                for reference in find_references(&text, &parsed.meta.jurabk) {
-                    let abbrev = match &reference.target.law {
-                        LawRef::Same => parsed.meta.jurabk.clone(),
-                        LawRef::Abbrev(a) => a.clone(),
-                        LawRef::Unknown => continue,
-                    };
-                    let Some(enbez) = reference.target.enbez_candidates().into_iter().next() else {
-                        continue;
-                    };
-                    if seen.insert((abbrev.clone(), enbez.clone())) {
-                        ref_stmt.execute(params![norm_id, abbrev, enbez])?;
-                    }
-                }
             }
         }
         tx.commit()?;
@@ -404,6 +379,24 @@ impl Database {
             .optional()
     }
 
+    /// Amtliche Überschrift der Norm `enbez` im Gesetz mit dem Kürzel
+    /// `abbrev`; `None`, wenn Gesetz oder Norm fehlen oder die Norm keine
+    /// Überschrift trägt.
+    pub fn norm_title(&self, abbrev: &str, enbez: &str) -> Result<Option<String>> {
+        let title: Option<Option<String>> = self
+            .conn
+            .query_row(
+                "SELECT n.titel FROM norms n JOIN laws l ON l.id = n.law_id
+                 WHERE (l.jurabk = ?1 COLLATE NOCASE OR l.amtabk = ?1 COLLATE NOCASE)
+                   AND n.enbez = ?2 COLLATE NOCASE
+                 ORDER BY n.position LIMIT 1",
+                params![abbrev, enbez],
+                |r| r.get(0),
+            )
+            .optional()?;
+        Ok(title.flatten().filter(|t| !t.trim().is_empty()))
+    }
+
     /// Erste Norm eines Gesetzes mit „§“-Bezeichnung (Einstieg beim Öffnen).
     pub fn first_norm_id(&self, law_id: i64) -> Result<Option<i64>> {
         self.conn
@@ -430,37 +423,6 @@ impl Database {
              ORDER BY n2.position ASC LIMIT 1"
         };
         self.conn.query_row(sql, [id], |r| r.get(0)).optional()
-    }
-
-    /// Normen, auf die `norm_id` verweist: (Gesetzeskürzel, Bezeichnung) in
-    /// Textreihenfolge, ohne Dubletten.
-    pub fn outgoing_refs(&self, norm_id: i64) -> Result<Vec<(String, String)>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT law_abbrev, enbez FROM norm_refs WHERE from_norm_id = ?1 ORDER BY rowid",
-        )?;
-        let rows = stmt.query_map([norm_id], |r| Ok((r.get(0)?, r.get(1)?)))?;
-        rows.collect()
-    }
-
-    /// Normen, die auf (`law_abbrev`, `enbez`) verweisen, mit dem Kürzel
-    /// ihres Gesetzes; nur lesbare Normen, höchstens `limit`.
-    pub fn incoming_refs(
-        &self,
-        law_abbrev: &str,
-        enbez: &str,
-        limit: usize,
-    ) -> Result<Vec<(NormInfo, String)>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT DISTINCT n.id, n.law_id, n.unit_id, n.doknr, n.enbez, n.titel, n.position, l.jurabk
-             FROM norm_refs r JOIN norms n ON n.id = r.from_norm_id JOIN laws l ON l.id = n.law_id
-             WHERE r.law_abbrev = ?1 COLLATE NOCASE AND r.enbez = ?2
-               AND n.enbez IS NOT NULL AND n.enbez <> 'Inhaltsübersicht'
-             ORDER BY (l.jurabk = ?1 COLLATE NOCASE) DESC, l.jurabk, n.position LIMIT ?3",
-        )?;
-        let rows = stmt.query_map(params![law_abbrev, enbez, limit as i64], |r| {
-            Ok((row_to_norm_info(r)?, r.get(7)?))
-        })?;
-        rows.collect()
     }
 
     /// Gliederungspfad einer Einheit von der Wurzel bis zur Einheit selbst.
@@ -1280,32 +1242,6 @@ mod tests {
     }
 
     #[test]
-    fn reference_index() {
-        let mut db = Database::open_in_memory().unwrap();
-        let law_id = db
-            .replace_law(
-                "bgb",
-                &sample_law("(2) Siehe § 1 und § 433 Abs. 1 sowie § 253 ZPO."),
-            )
-            .unwrap();
-        let n433 = db.norm_by_enbez(law_id, "§ 433").unwrap().unwrap();
-        let out = db.outgoing_refs(n433.info.id).unwrap();
-        assert_eq!(
-            out,
-            vec![
-                ("BGB".to_string(), "§ 1".to_string()),
-                ("BGB".to_string(), "§ 433".to_string()),
-                ("ZPO".to_string(), "§ 253".to_string())
-            ]
-        );
-        let incoming = db.incoming_refs("BGB", "§ 1", 10).unwrap();
-        assert_eq!(incoming.len(), 1);
-        assert_eq!(incoming[0].0.enbez.as_deref(), Some("§ 433"));
-        assert_eq!(incoming[0].1, "BGB");
-        assert!(db.incoming_refs("ZPO", "§ 1", 10).unwrap().is_empty());
-    }
-
-    #[test]
     fn unit_path_and_norm_note() {
         let mut db = Database::open_in_memory().unwrap();
         let law_id = db.replace_law("bgb", &sample_law("(2) Egal.")).unwrap();
@@ -1314,6 +1250,13 @@ mod tests {
         let labels: Vec<&str> = path.iter().map(|u| u.bez.as_str()).collect();
         assert_eq!(labels, ["Buch 1", "Abschnitt 1"]);
         assert!(db.unit_path(None).unwrap().is_empty());
+
+        assert_eq!(
+            db.norm_title("bgb", "§ 433").unwrap().as_deref(),
+            Some("Vertragstypische Pflichten")
+        );
+        assert!(db.norm_title("BGB", "§ 999").unwrap().is_none());
+        assert!(db.norm_title("ZPO", "§ 433").unwrap().is_none());
 
         assert!(db.norm_note("bgb", "§ 1").unwrap().is_none());
         db.set_norm_note("bgb", "§ 1", "I. Anspruch entstanden\n")

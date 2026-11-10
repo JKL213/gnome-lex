@@ -422,10 +422,6 @@ msgstr ""
 msgid "Fußnoten"
 msgstr ""
 
-#: src/widgets/norm_view.rs:1539
-msgid "+{n} weitere"
-msgstr ""
-
 #: src/widgets/norm_view.rs:1817
 msgid "Zur Fußnote springen"
 msgstr ""
@@ -625,13 +621,13 @@ msgid ""
 msgstr ""
 
 #: src/widgets/norm_view.rs
-msgid "Grundlage: {target}"
-msgstr ""
-
-#: src/widgets/norm_view.rs
-msgid "Anschlussnorm: {target}"
-msgstr ""
-
-#: src/widgets/norm_view.rs
 msgid "Klick öffnet, Strg+Klick in der zweiten Ansicht"
+msgstr ""
+
+#: src/widgets/norm_view.rs
+msgid "Grundlage"
+msgstr ""
+
+#: src/widgets/norm_view.rs
+msgid "Anschlussnorm"
 msgstr ""
