@@ -133,3 +133,9 @@ entry.jump-entry > text > placeholder {
   font-size: 0.92em;
   line-height: 1.35;
 }
+
+/* Randspalte mit den Hinweispfeilen: kein eigener Hintergrund, damit sie
+   mit der Lesefläche verschmilzt (die Pfeilfelder zeichnet die Ansicht). */
+.norm-text > border {
+  background: transparent;
+}

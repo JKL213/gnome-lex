@@ -25,6 +25,7 @@ use gettextrs::gettext;
 use glib::translate::IntoGlib;
 use gtk::{gio, glib, pango, CompositeTemplate};
 
+use crate::hints::{hints_for, Direction, Hint};
 use crate::model::text::{
     flatten_blocks, paragraph_label, spans_text, Block, Flattened, Seg, SegTag, TableData,
 };
@@ -124,9 +125,28 @@ const JUMP_PIN_MS: u64 = 800;
 /// So lange leuchtet die Zielstelle eines Verweises (Absatz, Satz, Nr.) auf.
 const JUMP_FLASH_MS: u64 = 2500;
 
+/// Breite der Randspalte mit den Hinweispfeilen in Pixeln.
+const GUTTER_WIDTH: i32 = 30;
+/// Kantenlänge eines Pfeilfelds und Abstand von Feld zu Feld.
+const HINT_BADGE: f64 = 22.0;
+const HINT_PITCH: f64 = 26.0;
+
+/// Ein Pfeilfeld der Randspalte in deren Koordinaten.
+struct HintSlot {
+    /// Norm-ID und Index des Hinweises (für den Zustand „überfahren“).
+    key: (i64, usize),
+    /// Oberkante des Felds.
+    y: f64,
+    hint: Hint,
+}
+
 /// Ein im Puffer dargestellter Normabschnitt.
 pub struct Section {
     norm: NormInfo,
+    /// Marke am Anfang der Überschriftzeile; dort beginnen die Randpfeile.
+    title: gtk::TextMark,
+    /// Kuratierte Randhinweise auf Anschlussnormen.
+    hints: &'static [Hint],
     /// IDs des Gliederungspfads (für die Überschriften beim Nachladen).
     unit_ids: Vec<i64>,
     /// Marke am Abschnittsanfang (bleibt beim Einfügen davor stehen).
@@ -226,6 +246,10 @@ mod imp {
         /// Kontextmenü (Rechtsklick) und sein Zustand.
         pub context_menu: OnceCell<gtk::PopoverMenu>,
         pub context: RefCell<Option<MenuContext>>,
+        /// Randspalte links neben dem Text (Hinweispfeile).
+        pub gutter: OnceCell<gtk::DrawingArea>,
+        /// Überfahrenes Pfeilfeld (Norm-ID, Index).
+        pub hovered_hint: Cell<Option<(i64, usize)>>,
     }
 
     #[glib::object_subclass]
@@ -252,6 +276,7 @@ mod imp {
             obj.setup_controllers();
             obj.setup_selection_popover();
             obj.setup_context_menu();
+            obj.setup_gutter();
             obj.reset_buffer();
         }
 
@@ -430,6 +455,7 @@ impl LexNormView {
         let removed = to - from;
         for mark in [
             &section.start,
+            &section.title,
             &section.note_start,
             &section.note_end,
             &section.content_end,
@@ -485,6 +511,8 @@ impl LexNormView {
         } else {
             imp.end_next.set(false);
         }
+        imp.hovered_hint.set(None);
+        self.queue_gutter();
         log::debug!("Abschnitt {} entladen ({removed} Zeichen)", section.norm.id);
     }
 
@@ -885,6 +913,7 @@ impl LexNormView {
         for label in imp.table_labels.borrow().iter() {
             label.set_attributes(Some(&attrs));
         }
+        self.queue_gutter();
     }
 
     pub fn font_size(&self) -> i32 {
@@ -974,8 +1003,11 @@ impl LexNormView {
         add(gtk::TextTag::builder()
             .name("norm-title")
             .weight(pango::Weight::Bold.into_glib())
-            .scale(1.4)
-            .pixels_below_lines(14)
+            .scale(1.12)
+            .justification(gtk::Justification::Left)
+            .indent(0)
+            .pixels_above_lines(4)
+            .pixels_below_lines(5)
             .build());
         // Trennlinie zwischen zwei Normen: eine winzige Zeile mit
         // Absatzhintergrund, davor und danach je eine leere Abstandszeile
@@ -997,31 +1029,44 @@ impl LexNormView {
             .style(pango::Style::Italic)
             .foreground("#8c8c8c")
             .build());
-        // Gliederungsüberschriften (Buch, Abschnitt, Titel) über der Norm.
+        // Gliederungsüberschriften (Buch, Abschnitt, Titel) über der Norm:
+        // wie in den gedruckten Textsammlungen mittig und halbfett.
         add(gtk::TextTag::builder()
             .name("unit-heading")
             .weight(pango::Weight::Bold.into_glib())
-            .scale(0.8)
-            .foreground("#8c8c8c")
-            .pixels_below_lines(0)
+            .scale(0.95)
+            .justification(gtk::Justification::Center)
+            .indent(0)
+            .pixels_above_lines(3)
+            .pixels_below_lines(3)
             .build());
         // Verweis-Pfeile unter der Überschrift: klein, eng gesetzt.
         add(gtk::TextTag::builder()
             .name("ref-chip")
             .scale(0.85)
+            .justification(gtk::Justification::Left)
+            .indent(0)
             .pixels_above_lines(0)
             .pixels_below_lines(2)
+            .build());
+        add(gtk::TextTag::builder()
+            .name("chip-dim")
+            .foreground("#8c8c8c")
             .build());
         // Eigene Notiz (Schema) unter der Überschrift.
         add(gtk::TextTag::builder()
             .name("note-heading")
             .weight(pango::Weight::Bold.into_glib())
+            .justification(gtk::Justification::Left)
+            .indent(0)
             .scale(0.8)
             .letter_spacing(pango::SCALE / 2)
             .pixels_above_lines(4)
             .build());
         add(gtk::TextTag::builder()
             .name("user-note")
+            .justification(gtk::Justification::Left)
+            .indent(0)
             .left_margin(36)
             .right_margin(36)
             .pixels_above_lines(2)
@@ -1032,29 +1077,39 @@ impl LexNormView {
         add(gtk::TextTag::builder()
             .name("heading1")
             .weight(pango::Weight::Bold.into_glib())
+            .justification(gtk::Justification::Center)
+            .indent(0)
             .scale(1.15)
             .pixels_above_lines(10)
             .build());
         add(gtk::TextTag::builder()
             .name("heading2")
             .weight(pango::Weight::Bold.into_glib())
+            .justification(gtk::Justification::Center)
+            .indent(0)
             .scale(1.05)
             .pixels_above_lines(8)
             .build());
         add(gtk::TextTag::builder()
             .name("heading3")
             .weight(pango::Weight::Bold.into_glib())
+            .justification(gtk::Justification::Center)
+            .indent(0)
             .pixels_above_lines(6)
             .build());
         add(gtk::TextTag::builder()
             .name("section-heading")
             .weight(pango::Weight::Bold.into_glib())
+            .justification(gtk::Justification::Left)
+            .indent(0)
             .pixels_above_lines(24)
             .pixels_below_lines(6)
             .build());
+        // Absatznummern „(1)“ stehen wie im Druck in der Grundschrift; der
+        // Erstzeileneinzug des Absatzes setzt sie ab.
         add(gtk::TextTag::builder()
             .name("para-number")
-            .weight(pango::Weight::Bold.into_glib())
+            .weight(pango::Weight::Medium.into_glib())
             .build());
         add(gtk::TextTag::builder()
             .name("bold")
@@ -1081,6 +1136,8 @@ impl LexNormView {
         add(gtk::TextTag::builder().name("small").scale(0.85).build());
         add(gtk::TextTag::builder()
             .name("pre")
+            .justification(gtk::Justification::Left)
+            .indent(0)
             .family("monospace")
             .wrap_mode(gtk::WrapMode::None)
             .build());
@@ -1090,6 +1147,7 @@ impl LexNormView {
             .build());
         add(gtk::TextTag::builder()
             .name("footnote")
+            .indent(0)
             .scale(0.9)
             .pixels_below_lines(2)
             .build());
@@ -1171,6 +1229,8 @@ impl LexNormView {
             let block = gtk::TextTag::builder()
                 .name(format!("inline-note-{name}").as_str())
                 .editable(true)
+                .justification(gtk::Justification::Left)
+                .indent(0)
                 .left_margin(36)
                 .right_margin(36)
                 .pixels_above_lines(3)
@@ -1275,6 +1335,8 @@ impl LexNormView {
         }
         imp.text_view
             .set_buffer(Some(&gtk::TextBuffer::new(Some(table))));
+        imp.hovered_hint.set(None);
+        self.queue_gutter();
     }
 
     /// Rendert eine Norm als Abschnitt am Ende (oder am Anfang) des Puffers.
@@ -1340,7 +1402,14 @@ impl LexNormView {
             self.insert_text(&buffer, &at, &line, &tags);
         }
 
-        // Überschrift
+        // Überschrift; die Marke davor (Linksgravitation) trägt die Randpfeile.
+        let title_mark = buffer.create_mark(None, &buffer.iter_at_mark(&at), true);
+        let hints = norm
+            .info
+            .enbez
+            .as_deref()
+            .map(|enbez| hints_for(&law_abbrev, enbez))
+            .unwrap_or(&[]);
         let title = norm.info.display_name();
         let title_tags = self.tags_for(&[], &["norm-title"]);
         self.insert_text(&buffer, &at, &format!("{title}\n"), &title_tags);
@@ -1454,7 +1523,13 @@ impl LexNormView {
         // ist bei Offset 0 geblieben – hinter den neuen Text verschieben.
         if at_start {
             if let Some(first) = imp.sections.borrow().first() {
-                buffer.move_mark(&first.start, &buffer.iter_at_mark(&at));
+                let moved = buffer.iter_at_mark(&at);
+                buffer.move_mark(&first.start, &moved);
+                // Ohne Gliederungszeilen stand die Überschriftmarke ebenfalls
+                // am Pufferanfang und ist dort hängen geblieben.
+                if buffer.iter_at_mark(&first.title).offset() < moved.offset() {
+                    buffer.move_mark(&first.title, &moved);
+                }
             }
         }
         buffer.delete_mark(&at);
@@ -1471,6 +1546,8 @@ impl LexNormView {
 
         let section = Section {
             norm: norm.info,
+            title: title_mark,
+            hints,
             unit_ids: units.iter().map(|u| u.id).collect(),
             start,
             note_start,
@@ -1496,6 +1573,7 @@ impl LexNormView {
             self.place_annotation(index, annotation);
         }
         imp.rendering.set(was_rendering);
+        self.queue_gutter();
     }
 
     /// Fügt eine Trennlinie (eigene Zeile mit Absatzhintergrund) ein.
@@ -1519,7 +1597,7 @@ impl LexNormView {
             return;
         }
         let imp = self.imp();
-        let dim = self.tags_for(&[], &["ref-chip", "unit-heading"]);
+        let dim = self.tags_for(&[], &["ref-chip", "chip-dim"]);
         let link = self.tags_for(&[], &["ref-chip", "reference"]);
         self.insert_text(buffer, at, &format!("{arrow} "), &dim);
         for (i, chip) in chips.iter().take(MAX_REF_CHIPS).enumerate() {
@@ -1840,6 +1918,7 @@ impl LexNormView {
                 view.hold_pin();
                 view.update_visible_norm();
                 view.check_edges();
+                view.queue_gutter();
             }
         ));
         // Bei `changed` (Höhe ändert sich während GTK Zeilen validiert) nur
@@ -1850,6 +1929,7 @@ impl LexNormView {
             move |_| {
                 view.hold_pin();
                 view.check_edges();
+                view.queue_gutter();
             }
         ));
         // Am oberen Rand gibt es kein `value-changed` mehr; ein Scrollrad
@@ -1897,12 +1977,253 @@ impl LexNormView {
         self.add_controller(keys);
     }
 
+    // ------------------------------------------------------------------
+    // Randspalte mit Hinweispfeilen
+    // ------------------------------------------------------------------
+
+    /// Richtet die Randspalte links neben dem Text ein. Sie ist ein
+    /// Gutter-Kind des `GtkTextView` und zeichnet die Pfeile selbst: Die
+    /// Positionen werden bei jedem Zeichnen aus den Textmarken berechnet,
+    /// es gibt also keine gemerkten Koordinaten, die nach Scrollen,
+    /// Nachladen oder Neuumbruch veralten könnten. Die Pfeile sind
+    /// Cairo-Pfade, keine Schriftzeichen – ihr Aussehen hängt nicht davon
+    /// ab, ob die Leseschrift Pfeilglyphen enthält.
+    fn setup_gutter(&self) {
+        let imp = self.imp();
+        let area = gtk::DrawingArea::builder()
+            .content_width(GUTTER_WIDTH)
+            .has_tooltip(true)
+            .build();
+        area.add_css_class("hint-gutter");
+        area.set_draw_func(glib::clone!(
+            #[weak(rename_to = view)]
+            self,
+            move |_, cr, width, _| view.draw_gutter(cr, width)
+        ));
+        area.connect_query_tooltip(glib::clone!(
+            #[weak(rename_to = view)]
+            self,
+            #[upgrade_or]
+            false,
+            move |area, x, y, keyboard, tooltip| {
+                if keyboard {
+                    return false;
+                }
+                let Some(slot) = view.hint_slot_at(x as f64, y as f64) else {
+                    return false;
+                };
+                let head = match slot.hint.direction {
+                    Direction::Up => gettext("Grundlage: {target}"),
+                    Direction::Down => gettext("Anschlussnorm: {target}"),
+                }
+                .replace("{target}", &slot.hint.label());
+                let text = format!(
+                    "{head}\n{}\n\n{}",
+                    slot.hint.reason,
+                    gettext("Klick öffnet, Strg+Klick in der zweiten Ansicht")
+                );
+                tooltip.set_text(Some(&text));
+                tooltip.set_tip_area(&gtk::gdk::Rectangle::new(
+                    0,
+                    slot.y as i32,
+                    area.width(),
+                    HINT_BADGE as i32,
+                ));
+                true
+            }
+        ));
+        let motion = gtk::EventControllerMotion::new();
+        motion.connect_motion(glib::clone!(
+            #[weak(rename_to = view)]
+            self,
+            move |_, x, y| view.set_hovered_hint(view.hint_slot_at(x, y).map(|s| s.key))
+        ));
+        motion.connect_leave(glib::clone!(
+            #[weak(rename_to = view)]
+            self,
+            move |_| view.set_hovered_hint(None)
+        ));
+        area.add_controller(motion);
+        let click = gtk::GestureClick::builder().button(1).build();
+        click.connect_released(glib::clone!(
+            #[weak(rename_to = view)]
+            self,
+            move |gesture, _, x, y| {
+                let Some(slot) = view.hint_slot_at(x, y) else {
+                    return;
+                };
+                gesture.set_state(gtk::EventSequenceState::Claimed);
+                let other_pane = gesture
+                    .current_event_state()
+                    .contains(gtk::gdk::ModifierType::CONTROL_MASK);
+                view.follow_link(&LinkTarget::Reference(slot.hint.target()), other_pane);
+            }
+        ));
+        area.add_controller(click);
+        // Farben folgen Akzentfarbe und Farbschema.
+        let style_manager = adw::StyleManager::default();
+        style_manager.connect_accent_color_rgba_notify(glib::clone!(
+            #[weak]
+            area,
+            move |_| area.queue_draw()
+        ));
+        style_manager.connect_dark_notify(glib::clone!(
+            #[weak]
+            area,
+            move |_| area.queue_draw()
+        ));
+        imp.text_view
+            .set_gutter(gtk::TextWindowType::Left, Some(&area));
+        imp.gutter.set(area).ok();
+    }
+
+    /// Fordert ein Neuzeichnen der Randspalte an (billig, löst kein Layout aus).
+    fn queue_gutter(&self) {
+        if let Some(area) = self.imp().gutter.get() {
+            area.queue_draw();
+        }
+    }
+
+    /// Pfeilfelder der Randspalte in deren Koordinaten, von oben nach unten.
+    /// Die Pfeile einer Norm stehen untereinander ab der Überschriftzeile;
+    /// reicht der Platz neben einer kurzen Norm nicht, rücken die Pfeile der
+    /// folgenden Norm nach unten, statt sich zu überdecken.
+    fn hint_slots(&self) -> Vec<HintSlot> {
+        let imp = self.imp();
+        let Some(area) = imp.gutter.get() else {
+            return Vec::new();
+        };
+        let text_view = &*imp.text_view;
+        let buffer = text_view.buffer();
+        let height = area.height() as f64;
+        let mut slots = Vec::new();
+        let mut next_free = f64::MIN;
+        for section in imp.sections.borrow().iter() {
+            if section.hints.is_empty() {
+                continue;
+            }
+            let line = text_view.iter_location(&buffer.iter_at_mark(&section.title));
+            let (_, widget_y) =
+                text_view.buffer_to_window_coords(gtk::TextWindowType::Widget, 0, line.y());
+            let top = text_view
+                .compute_point(area, &gtk::graphene::Point::new(0.0, widget_y as f32))
+                .map(|p| p.y() as f64)
+                .unwrap_or(widget_y as f64);
+            let centered = top + ((line.height() as f64 - HINT_BADGE) / 2.0).max(0.0);
+            let mut y = centered.max(next_free);
+            if y > height {
+                break;
+            }
+            for (index, hint) in section.hints.iter().enumerate() {
+                if y + HINT_BADGE >= 0.0 && y <= height {
+                    slots.push(HintSlot {
+                        key: (section.norm.id, index),
+                        y,
+                        hint: *hint,
+                    });
+                }
+                y += HINT_PITCH;
+            }
+            // Etwas Luft zur nächsten Gruppe.
+            next_free = y + HINT_PITCH / 2.0;
+        }
+        slots
+    }
+
+    fn hint_slot_at(&self, x: f64, y: f64) -> Option<HintSlot> {
+        if x < 0.0 || x > GUTTER_WIDTH as f64 {
+            return None;
+        }
+        self.hint_slots()
+            .into_iter()
+            .find(|slot| slot.y <= y && y < slot.y + HINT_BADGE)
+    }
+
+    fn set_hovered_hint(&self, key: Option<(i64, usize)>) {
+        let imp = self.imp();
+        if imp.hovered_hint.replace(key) == key {
+            return;
+        }
+        if let Some(area) = imp.gutter.get() {
+            area.set_cursor_from_name(key.map(|_| "pointer"));
+            area.queue_draw();
+        }
+    }
+
+    /// Zeichnet die Pfeilfelder: getöntes, umrandetes Feld in Akzentfarbe
+    /// mit kräftigem Pfeil (↗ Grundlage, ↘ Anschlussnorm).
+    fn draw_gutter(&self, cr: &gtk::cairo::Context, width: i32) {
+        let style_manager = adw::StyleManager::default();
+        let dark = style_manager.is_dark();
+        let accent = style_manager.accent_color_rgba();
+        // Pfeil und Rand deckend und je nach Farbschema aufgehellt bzw.
+        // abgedunkelt, damit sie sich klar vom Hintergrund abheben.
+        let mix = |channel: f32| -> f64 {
+            let channel = channel as f64;
+            if dark {
+                channel + (1.0 - channel) * 0.45
+            } else {
+                channel * 0.8
+            }
+        };
+        let (r, g, b) = (mix(accent.red()), mix(accent.green()), mix(accent.blue()));
+        let hovered = self.imp().hovered_hint.get();
+        let x = ((width as f64 - HINT_BADGE) / 2.0).floor();
+        cr.set_line_cap(gtk::cairo::LineCap::Round);
+        cr.set_line_join(gtk::cairo::LineJoin::Round);
+        for slot in self.hint_slots() {
+            let y = slot.y.round();
+            let active = hovered == Some(slot.key);
+            rounded_rect(
+                cr,
+                x + 0.5,
+                y + 0.5,
+                HINT_BADGE - 1.0,
+                HINT_BADGE - 1.0,
+                6.0,
+            );
+            cr.set_source_rgba(r, g, b, if active { 0.42 } else { 0.16 });
+            let _ = cr.fill_preserve();
+            cr.set_source_rgba(r, g, b, if active { 1.0 } else { 0.7 });
+            cr.set_line_width(1.0);
+            let _ = cr.stroke();
+
+            // Diagonale mit Pfeilspitze, innerhalb des Felds mit Rand.
+            let pad = 6.5;
+            let (left, right) = (x + pad, x + HINT_BADGE - pad);
+            let (top, bottom) = (y + pad, y + HINT_BADGE - pad);
+            let head = 5.5;
+            cr.set_source_rgba(r, g, b, 1.0);
+            cr.set_line_width(2.0);
+            match slot.hint.direction {
+                Direction::Up => {
+                    cr.move_to(left, bottom);
+                    cr.line_to(right, top);
+                    cr.move_to(right - head, top);
+                    cr.line_to(right, top);
+                    cr.line_to(right, top + head);
+                }
+                Direction::Down => {
+                    cr.move_to(left, top);
+                    cr.line_to(right, bottom);
+                    cr.move_to(right - head, bottom);
+                    cr.line_to(right, bottom);
+                    cr.line_to(right, bottom - head);
+                }
+            }
+            let _ = cr.stroke();
+        }
+    }
+
     /// Verbindet die Signale eines (neuen) Puffers.
     fn watch_buffer(&self, buffer: &gtk::TextBuffer) {
         buffer.connect_changed(glib::clone!(
             #[weak(rename_to = view)]
             self,
-            move |_| view.on_buffer_changed()
+            move |_| {
+                view.on_buffer_changed();
+                view.queue_gutter();
+            }
         ));
         buffer.connect_insert_text(glib::clone!(
             #[weak(rename_to = view)]
@@ -2937,6 +3258,17 @@ impl LexNormView {
 // ----------------------------------------------------------------------
 // Hilfsfunktionen (ohne Widgets, testbar)
 // ----------------------------------------------------------------------
+
+/// Pfad eines Rechtecks mit abgerundeten Ecken.
+fn rounded_rect(cr: &gtk::cairo::Context, x: f64, y: f64, w: f64, h: f64, radius: f64) {
+    use std::f64::consts::{FRAC_PI_2, PI};
+    cr.new_sub_path();
+    cr.arc(x + w - radius, y + radius, radius, -FRAC_PI_2, 0.0);
+    cr.arc(x + w - radius, y + h - radius, radius, 0.0, FRAC_PI_2);
+    cr.arc(x + radius, y + h - radius, radius, FRAC_PI_2, PI);
+    cr.arc(x + radius, y + radius, radius, PI, PI + FRAC_PI_2);
+    cr.close_path();
+}
 
 fn list_tag_name(depth: u8) -> String {
     format!("list{}", depth.min(MAX_LIST_DEPTH))

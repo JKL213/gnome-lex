@@ -23,6 +23,7 @@ rust_sources = files(
   'config.rs',
   'window.rs',
   'db/mod.rs',
+  'hints.rs',
   'importer/mod.rs',
   'model/mod.rs',
   'refs/mod.rs',

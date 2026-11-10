@@ -60,6 +60,7 @@ pub const SOURCES: &[Source] = &[
     src("gvg", "GVG", "Gerichtsverfassungsgesetz"),
     src("zvg", "ZVG", "Gesetz über die Zwangsversteigerung und die Zwangsverwaltung"),
     src("inso", "InsO", "Insolvenzordnung"),
+    src("anfg_1999", "AnfG", "Anfechtungsgesetz"),
     src("hgb", "HGB", "Handelsgesetzbuch"),
     src("gmbhg", "GmbHG", "Gesetz betreffend die Gesellschaften mit beschränkter Haftung"),
     src("aktg", "AktG", "Aktiengesetz"),

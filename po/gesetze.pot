@@ -623,3 +623,15 @@ msgid ""
 "Annotationen: {moved} verschoben, {orphaned} verwaist, {recovered} "
 "wiedergefunden."
 msgstr ""
+
+#: src/widgets/norm_view.rs
+msgid "Grundlage: {target}"
+msgstr ""
+
+#: src/widgets/norm_view.rs
+msgid "Anschlussnorm: {target}"
+msgstr ""
+
+#: src/widgets/norm_view.rs
+msgid "Klick öffnet, Strg+Klick in der zweiten Ansicht"
+msgstr ""
