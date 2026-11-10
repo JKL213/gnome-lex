@@ -14,7 +14,7 @@ use crate::settings;
 /// Schriftfamilien, die der Reihe nach versucht werden, wenn keine
 /// eigene eingestellt ist.
 pub const DEFAULT_READING_FONTS: &str =
-    "\"Public Sans\", \"Source Sans 3\", \"Inter\", \"Inter Variable\", \"Adwaita Sans\", sans-serif";
+    "\"Source Serif 4\", \"Source Serif Pro\", \"Libertinus Serif\", \"Noto Serif\", \"Liberation Serif\", \"DejaVu Serif\", serif";
 
 /// Werte des GSettings-Schlüssels `color-scheme` in Reihenfolge des Auswahlfelds.
 /// Sprachcodes in der Reihenfolge der Auswahlzeile (Index 0 = System).

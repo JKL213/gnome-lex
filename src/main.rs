@@ -6,6 +6,7 @@
 mod application;
 mod config;
 mod db;
+mod hints;
 mod importer;
 mod model;
 mod refs;

@@ -609,3 +609,15 @@ msgstr[1] "imported: {} provisions."
 #: src/window.rs:2251
 msgid "Annotationen: {moved} verschoben, {orphaned} verwaist, {recovered} wiedergefunden."
 msgstr "Annotations: {moved} moved, {orphaned} orphaned, {recovered} recovered."
+
+#: src/widgets/norm_view.rs
+msgid "Grundlage: {target}"
+msgstr "Basis: {target}"
+
+#: src/widgets/norm_view.rs
+msgid "Anschlussnorm: {target}"
+msgstr "Follow-up provision: {target}"
+
+#: src/widgets/norm_view.rs
+msgid "Klick öffnet, Strg+Klick in der zweiten Ansicht"
+msgstr "Click opens, Ctrl+click opens in the second pane"

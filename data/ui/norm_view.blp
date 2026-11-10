@@ -17,13 +17,18 @@ template $LexNormView : Adw.Bin {
         editable: true;
         cursor-visible: false;
         wrap-mode: word_char;
-        left-margin: 32;
+        // Satzbild wie in den gedruckten Textsammlungen: Blocksatz mit
+        // Erstzeileneinzug, enger Zeilenfall. Links steht die Randspalte
+        // mit den Hinweispfeilen (Gutter), daher der kleinere Rand.
+        justification: fill;
+        indent: 18;
+        left-margin: 12;
         right-margin: 32;
         top-margin: 24;
         bottom-margin: 64;
-        pixels-above-lines: 2;
-        pixels-below-lines: 8;
-        pixels-inside-wrap: 3;
+        pixels-above-lines: 1;
+        pixels-below-lines: 5;
+        pixels-inside-wrap: 2;
 
         styles ["norm-text"]
       };

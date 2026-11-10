@@ -710,6 +710,38 @@ Stufe 1 zusätzlich mit Meson-Tests und Flatpak-Build; Stufe 2 wurde über
   - Pfadfehler-Hinweis: `pkill -f` mit einem Muster aus der eigenen
     Befehlszeile (z. B. `remote-debugging-port`) beendet die eigene Shell;
     `pkill -x` verwenden.
+- **Randpfeile, Satzbild, AnfG (10.11.2026, Auftrag):** Nur statisch geprüft
+  (fmt, clippy `-D warnings` mit Stub-pkg-config; Tests von `hints` und
+  `refs` in einem Hilfscrate grün); **Sichtprüfung unter GTK steht aus.**
+  - **Randpfeile:** `src/hints.rs` enthält eine kuratierte Tabelle
+    (`hints_for(kürzel, bezeichnung)`) für 233 BGB- und 166 ZPO-Normen:
+    je Norm bis zu sechs `Hint {direction, law, norm, reason}`; `Up` (↗) =
+    Grundlage (Voraussetzung, Definition, Ausgangsnorm), `Down` (↘) =
+    Anschlussnorm (Rechtsfolge, nächster Schritt, Ausnahme, Rechtsbehelf);
+    ↗ steht stets vor ↘ (Test `up_before_down`). Begründungen sind
+    juristischer Inhalt und bleiben unübersetzt. Darstellung in
+    `LexNormView`: `GtkDrawingArea` als linkes Gutter des TextView
+    (`setup_gutter`, Breite `GUTTER_WIDTH`), Pfeile als Cairo-Pfade in
+    getönten, umrandeten Feldern (`draw_gutter`), keine Schriftglyphen.
+    Positionen werden bei jedem Zeichnen aus `Section::title` (Marke vor der
+    Überschriftzeile) berechnet (`hint_slots`), es gibt keine gemerkten
+    Koordinaten; Neuzeichnen per `queue_gutter` bei Scrollen, Layout- und
+    Pufferänderung (kein Neulayout). Gruppen kurzer Normen rücken nach unten,
+    statt sich zu überdecken. Tooltip (Richtung, Ziel, Begründung), Klick
+    öffnet, Strg+Klick zweite Ansicht (`follow_link`).
+  - **Satzbild nach Art der gedruckten Textsammlungen:** Blocksatz
+    (`justification: fill`) mit Erstzeileneinzug 18 px, engerer Zeilenfall,
+    Normüberschrift halbfett in Textnähe (Skala 1,12), Gliederungszeilen
+    mittig und halbfett, Absatznummern in Grundschrift; Standardschrift
+    jetzt Serifen (`DEFAULT_READING_FONTS`: Source Serif 4 → Libertinus
+    Serif → Noto Serif → Liberation Serif → DejaVu Serif). Notizen,
+    Verweis-Chips, `pre` und Fußnotenüberschrift bleiben linksbündig ohne
+    Einzug (Tags setzen `justification`/`indent` selbst). Hochgestellte
+    Satznummern fehlen bewusst: zusätzliche Zeichen im Puffer würden die
+    Annotations-Offsets (`flatten_blocks`) verschieben.
+  - **Quellen:** AnfG (`anfg_1999`) ergänzt; ZVG war bereits enthalten.
+    Der Slug konnte mangels Netzzugriff nicht abgerufen werden – beim
+    ersten Download prüfen.
 - **Tooling:** `.vscode/` (settings, tasks, launch, extensions; Tasks
   `sdk: cargo build|run|qualität` für die SDK-Sandbox),
   `build-aux/sdk-cargo.sh` (führt Cargo in `org.gnome.Sdk//51` mit
