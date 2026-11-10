@@ -94,12 +94,25 @@ const fn dx(law: &'static str, norm: &'static str, reason: &'static str) -> Hint
 
 type Table = &'static [(&'static str, &'static [Hint])];
 
+/// Tabelle eines Gesetzes, falls für sein Kürzel Hinweise hinterlegt sind.
+fn table_for(law_abbrev: &str) -> Option<Table> {
+    match law_abbrev {
+        "BGB" => Some(BGB),
+        "ZPO" => Some(ZPO),
+        _ => None,
+    }
+}
+
+/// Gibt es für das Gesetz überhaupt Randhinweise? Danach richtet sich, ob
+/// die Leseansicht die Randspalte einblendet.
+pub fn has_hints(law_abbrev: &str) -> bool {
+    table_for(law_abbrev).is_some()
+}
+
 /// Liefert die Randhinweise einer Norm (leer, wenn keine hinterlegt sind).
 pub fn hints_for(law_abbrev: &str, enbez: &str) -> &'static [Hint] {
-    let table: Table = match law_abbrev {
-        "BGB" => BGB,
-        "ZPO" => ZPO,
-        _ => return &[],
+    let Some(table) = table_for(law_abbrev) else {
+        return &[];
     };
     table
         .iter()
@@ -1907,6 +1920,7 @@ mod tests {
         assert!(hints.iter().any(|h| h.norm == "§ 439"));
         assert!(hints_for("ZPO", "§ 437").is_empty());
         assert!(hints_for("StGB", "§ 242").is_empty());
+        assert!(has_hints("BGB") && has_hints("ZPO") && !has_hints("StGB"));
         let cross = hints_for("BGB", "§ 204");
         let zpo = cross.iter().find(|h| h.law == "ZPO").expect("ZPO-Hinweis");
         assert_eq!(zpo.label(), "§ 253 ZPO");

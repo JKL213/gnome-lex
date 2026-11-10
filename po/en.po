@@ -410,10 +410,6 @@ msgstr "[Table]"
 msgid "Fußnoten"
 msgstr "Footnotes"
 
-#: src/widgets/norm_view.rs:1539
-msgid "+{n} weitere"
-msgstr "+{n} more"
-
 #: src/widgets/norm_view.rs:1817
 msgid "Zur Fußnote springen"
 msgstr "Jump to footnote"
@@ -611,13 +607,13 @@ msgid "Annotationen: {moved} verschoben, {orphaned} verwaist, {recovered} wieder
 msgstr "Annotations: {moved} moved, {orphaned} orphaned, {recovered} recovered."
 
 #: src/widgets/norm_view.rs
-msgid "Grundlage: {target}"
-msgstr "Basis: {target}"
-
-#: src/widgets/norm_view.rs
-msgid "Anschlussnorm: {target}"
-msgstr "Follow-up provision: {target}"
-
-#: src/widgets/norm_view.rs
 msgid "Klick öffnet, Strg+Klick in der zweiten Ansicht"
 msgstr "Click opens, Ctrl+click opens in the second pane"
+
+#: src/widgets/norm_view.rs
+msgid "Grundlage"
+msgstr "Basis"
+
+#: src/widgets/norm_view.rs
+msgid "Anschlussnorm"
+msgstr "Follow-up provision"

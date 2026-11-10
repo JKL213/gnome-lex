@@ -4,6 +4,7 @@
 //! Eigene Widgets: Gliederungsbaum, Normansicht, Leseansicht und Sprungleiste.
 
 pub mod download_center;
+pub mod hint_gutter;
 pub mod jump_bar;
 pub mod norm_view;
 pub mod outline;

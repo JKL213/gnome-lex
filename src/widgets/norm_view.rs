@@ -25,7 +25,7 @@ use gettextrs::gettext;
 use glib::translate::IntoGlib;
 use gtk::{gio, glib, pango, CompositeTemplate};
 
-use crate::hints::{hints_for, Direction, Hint};
+use crate::hints::{has_hints, Direction, Hint};
 use crate::model::text::{
     flatten_blocks, paragraph_label, spans_text, Block, Flattened, Seg, SegTag, TableData,
 };
@@ -33,6 +33,7 @@ use crate::model::{
     highlight_color_label, Annotation, AnnotationKind, Norm, NormInfo, UnitInfo, HIGHLIGHT_COLORS,
 };
 use crate::refs::{find_references, sentence_range, JumpTarget, NormRef};
+use crate::widgets::hint_gutter::LexHintGutter;
 
 /// Einzug je Listenebene in Pixeln.
 const LIST_INDENT: i32 = 36;
@@ -74,21 +75,17 @@ pub struct NormPage {
     pub note: Option<String>,
     /// Im Text verankerte Markierungen und Notizen.
     pub annotations: Vec<Annotation>,
-    /// Normen, auf die diese Norm verweist (→).
-    pub outgoing: Vec<RefChip>,
-    /// Normen, die auf diese Norm verweisen (←).
-    pub incoming: Vec<RefChip>,
+    /// Randhinweise auf Anschlussnormen (kuratiert, siehe `crate::hints`).
+    pub hints: Vec<MarginHint>,
 }
 
-/// Ein kleiner, klickbarer Verweis unter der Überschrift („§ 434“, „§ 253 ZPO“).
+/// Ein Randhinweis samt amtlicher Überschrift der Zielnorm (für den Tooltip;
+/// `None`, wenn das Zielgesetz nicht installiert ist).
 #[derive(Debug, Clone)]
-pub struct RefChip {
-    pub label: String,
-    pub target: NormRef,
+pub struct MarginHint {
+    pub hint: Hint,
+    pub title: Option<String>,
 }
-
-/// Höchstzahl der Verweis-Pfeile je Richtung.
-const MAX_REF_CHIPS: usize = 12;
 
 /// Änderungswunsch an Annotationen, den die Ansicht nach außen meldet.
 /// Bei `Create` ist `law` noch leer; die Leseansicht ergänzt den Slug.
@@ -125,19 +122,34 @@ const JUMP_PIN_MS: u64 = 800;
 /// So lange leuchtet die Zielstelle eines Verweises (Absatz, Satz, Nr.) auf.
 const JUMP_FLASH_MS: u64 = 2500;
 
-/// Breite der Randspalte mit den Hinweispfeilen in Pixeln.
-const GUTTER_WIDTH: i32 = 30;
-/// Kantenlänge eines Pfeilfelds und Abstand von Feld zu Feld.
-const HINT_BADGE: f64 = 22.0;
-const HINT_PITCH: f64 = 26.0;
+/// Randspalte: Schriftgrad der Normnummern relativ zum Lesetext.
+const HINT_FONT_SCALE: f64 = 0.82;
+/// Kantenlänge des Pfeils, Länge der Pfeilspitze und Strichstärke.
+const HINT_ARROW: f32 = 9.0;
+const HINT_ARROW_HEAD: f32 = 4.0;
+const HINT_STROKE: f32 = 1.2;
+/// Innenabstand der Spalte, Abstand Pfeil–Nummer und Luft je Zeile.
+const HINT_PAD: f32 = 6.0;
+const HINT_GAP: f32 = 5.0;
+const HINT_ROW_PAD: f64 = 2.0;
+/// Breiteste erwartete Beschriftung; bestimmt die Spaltenbreite.
+const HINT_SAMPLE: &str = "§ 1004 BGB";
+/// Linker Textrand mit bzw. ohne Randspalte.
+const MARGIN_WITH_GUTTER: i32 = 10;
+const MARGIN_WITHOUT_GUTTER: i32 = 32;
+/// Unter dieser Breite der Ansicht zeigt die Randspalte nur die Pfeile
+/// (Nummer und Überschrift stehen dann im Tooltip); darüber wieder beides.
+const GUTTER_COMPACT_BELOW: i32 = 540;
+const GUTTER_FULL_ABOVE: i32 = 580;
 
-/// Ein Pfeilfeld der Randspalte in deren Koordinaten.
+/// Eine Zeile der Randspalte in deren Koordinaten.
 struct HintSlot {
     /// Norm-ID und Index des Hinweises (für den Zustand „überfahren“).
     key: (i64, usize),
-    /// Oberkante des Felds.
+    /// Oberkante und Höhe der Zeile.
     y: f64,
-    hint: Hint,
+    height: f64,
+    hint: MarginHint,
 }
 
 /// Ein im Puffer dargestellter Normabschnitt.
@@ -146,7 +158,7 @@ pub struct Section {
     /// Marke am Anfang der Überschriftzeile; dort beginnen die Randpfeile.
     title: gtk::TextMark,
     /// Kuratierte Randhinweise auf Anschlussnormen.
-    hints: &'static [Hint],
+    hints: Vec<MarginHint>,
     /// IDs des Gliederungspfads (für die Überschriften beim Nachladen).
     unit_ids: Vec<i64>,
     /// Marke am Abschnittsanfang (bleibt beim Einfügen davor stehen).
@@ -247,7 +259,11 @@ mod imp {
         pub context_menu: OnceCell<gtk::PopoverMenu>,
         pub context: RefCell<Option<MenuContext>>,
         /// Randspalte links neben dem Text (Hinweispfeile).
-        pub gutter: OnceCell<gtk::DrawingArea>,
+        pub gutter: OnceCell<LexHintGutter>,
+        /// Das angezeigte Gesetz hat Randhinweise (sonst Spaltenbreite 0).
+        pub gutter_enabled: Cell<bool>,
+        /// Schmale Ansicht: nur Pfeile, keine Nummern.
+        pub gutter_compact: Cell<bool>,
         /// Überfahrenes Pfeilfeld (Norm-ID, Index).
         pub hovered_hint: Cell<Option<(i64, usize)>>,
     }
@@ -291,6 +307,27 @@ mod imp {
     }
 
     impl WidgetImpl for LexNormView {
+        fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
+            self.parent_size_allocate(width, height, baseline);
+            // Mit Hysterese, damit die Spalte an der Schwelle nicht flackert;
+            // die Breite wird erst nach dem laufenden Layout geändert.
+            let compact = self.gutter_compact.get();
+            let limit = if compact {
+                GUTTER_FULL_ABOVE
+            } else {
+                GUTTER_COMPACT_BELOW
+            };
+            if (width < limit) != compact {
+                self.gutter_compact.set(!compact);
+                let view = self.obj().downgrade();
+                glib::idle_add_local_once(move || {
+                    if let Some(view) = view.upgrade() {
+                        view.update_gutter_width();
+                    }
+                });
+            }
+        }
+
         fn unroot(&self) {
             // Popovers hängen direkt am TextView; vor dem Zerstören abhängen,
             // sonst meldet GTK „finalized with children left“ (Absturz unter
@@ -340,6 +377,9 @@ impl LexNormView {
         imp.end_next.set(false);
         imp.end_prev.set(false);
         self.reset_buffer();
+        imp.gutter_enabled
+            .set(page.as_ref().is_some_and(|p| has_hints(&p.law_abbrev)));
+        self.update_gutter_width();
         match page {
             Some(page) => {
                 let norm_id = page.norm.info.id;
@@ -913,6 +953,7 @@ impl LexNormView {
         for label in imp.table_labels.borrow().iter() {
             label.set_attributes(Some(&attrs));
         }
+        self.update_gutter_width();
         self.queue_gutter();
     }
 
@@ -1039,19 +1080,6 @@ impl LexNormView {
             .indent(0)
             .pixels_above_lines(3)
             .pixels_below_lines(3)
-            .build());
-        // Verweis-Pfeile unter der Überschrift: klein, eng gesetzt.
-        add(gtk::TextTag::builder()
-            .name("ref-chip")
-            .scale(0.85)
-            .justification(gtk::Justification::Left)
-            .indent(0)
-            .pixels_above_lines(0)
-            .pixels_below_lines(2)
-            .build());
-        add(gtk::TextTag::builder()
-            .name("chip-dim")
-            .foreground("#8c8c8c")
             .build());
         // Eigene Notiz (Schema) unter der Überschrift.
         add(gtk::TextTag::builder()
@@ -1349,8 +1377,7 @@ impl LexNormView {
             law_abbrev,
             note,
             annotations,
-            outgoing,
-            incoming,
+            hints,
         } = page;
         let is_first = imp.sections.borrow().is_empty();
         // Verweis-Offsets verschiebt `render_section` selbst; ohne diesen
@@ -1404,19 +1431,9 @@ impl LexNormView {
 
         // Überschrift; die Marke davor (Linksgravitation) trägt die Randpfeile.
         let title_mark = buffer.create_mark(None, &buffer.iter_at_mark(&at), true);
-        let hints = norm
-            .info
-            .enbez
-            .as_deref()
-            .map(|enbez| hints_for(&law_abbrev, enbez))
-            .unwrap_or(&[]);
         let title = norm.info.display_name();
         let title_tags = self.tags_for(&[], &["norm-title"]);
         self.insert_text(&buffer, &at, &format!("{title}\n"), &title_tags);
-
-        // Verweis-Pfeile: → wohin diese Norm zeigt, ← wer auf sie zeigt.
-        self.insert_ref_chips(&buffer, &at, "→", &outgoing);
-        self.insert_ref_chips(&buffer, &at, "←", &incoming);
 
         // Notiz (Schema) zwischen Überschrift und Text
         let note_start = buffer.create_mark(None, &buffer.iter_at_mark(&at), true);
@@ -1583,41 +1600,6 @@ impl LexNormView {
         self.insert_text(buffer, at, "\n", &gap);
         self.insert_text(buffer, at, "\u{2009}\n", &rule);
         self.insert_text(buffer, at, "\n", &gap);
-    }
-
-    /// Fügt eine Zeile klickbarer Verweis-Pfeile ein („→ § 434 · § 437“).
-    fn insert_ref_chips(
-        &self,
-        buffer: &gtk::TextBuffer,
-        at: &gtk::TextMark,
-        arrow: &str,
-        chips: &[RefChip],
-    ) {
-        if chips.is_empty() {
-            return;
-        }
-        let imp = self.imp();
-        let dim = self.tags_for(&[], &["ref-chip", "chip-dim"]);
-        let link = self.tags_for(&[], &["ref-chip", "reference"]);
-        self.insert_text(buffer, at, &format!("{arrow} "), &dim);
-        for (i, chip) in chips.iter().take(MAX_REF_CHIPS).enumerate() {
-            if i > 0 {
-                self.insert_text(buffer, at, " · ", &dim);
-            }
-            let start = buffer.iter_at_mark(at).offset();
-            self.insert_text(buffer, at, &chip.label, &link);
-            imp.links.borrow_mut().push(LinkRange {
-                start,
-                end: buffer.iter_at_mark(at).offset(),
-                target: LinkTarget::Reference(chip.target.clone()),
-            });
-        }
-        if chips.len() > MAX_REF_CHIPS {
-            let more =
-                gettext("+{n} weitere").replace("{n}", &(chips.len() - MAX_REF_CHIPS).to_string());
-            self.insert_text(buffer, at, &format!(" · {more}"), &dim);
-        }
-        self.insert_text(buffer, at, "\n", &dim);
     }
 
     /// Fügt die Notiz (Schema) als hervorgehobenen Block ein.
@@ -1981,53 +1963,41 @@ impl LexNormView {
     // Randspalte mit Hinweispfeilen
     // ------------------------------------------------------------------
 
-    /// Richtet die Randspalte links neben dem Text ein. Sie ist ein
-    /// Gutter-Kind des `GtkTextView` und zeichnet die Pfeile selbst: Die
-    /// Positionen werden bei jedem Zeichnen aus den Textmarken berechnet,
-    /// es gibt also keine gemerkten Koordinaten, die nach Scrollen,
-    /// Nachladen oder Neuumbruch veralten könnten. Die Pfeile sind
-    /// Cairo-Pfade, keine Schriftzeichen – ihr Aussehen hängt nicht davon
-    /// ab, ob die Leseschrift Pfeilglyphen enthält.
+    /// Richtet die Randspalte links neben dem Text ein (Gutter-Kind des
+    /// `GtkTextView`). Sie zeigt je Hinweis eine Zeile im Stil einer
+    /// Marginalie: feiner Pfeil (↗ Grundlage, ↘ Anschlussnorm) und daneben
+    /// die Zielnorm in der Leseschrift, beides abgeblendet; erst beim
+    /// Überfahren Akzentfarbe und eine zarte Hinterlegung wie bei flachen
+    /// Schaltflächen. Die Positionen werden bei jedem Zeichnen aus den
+    /// Textmarken berechnet, es gibt keine gemerkten Koordinaten; die Pfeile
+    /// sind Pfade, keine Schriftzeichen.
     fn setup_gutter(&self) {
         let imp = self.imp();
-        let area = gtk::DrawingArea::builder()
-            .content_width(GUTTER_WIDTH)
-            .has_tooltip(true)
-            .build();
-        area.add_css_class("hint-gutter");
-        area.set_draw_func(glib::clone!(
+        let gutter = LexHintGutter::new();
+        gutter.set_has_tooltip(true);
+        gutter.set_draw(glib::clone!(
             #[weak(rename_to = view)]
             self,
-            move |_, cr, width, _| view.draw_gutter(cr, width)
+            move |gutter, snapshot| view.draw_gutter(gutter, snapshot)
         ));
-        area.connect_query_tooltip(glib::clone!(
+        gutter.connect_query_tooltip(glib::clone!(
             #[weak(rename_to = view)]
             self,
             #[upgrade_or]
             false,
-            move |area, x, y, keyboard, tooltip| {
+            move |gutter, x, y, keyboard, tooltip| {
                 if keyboard {
                     return false;
                 }
                 let Some(slot) = view.hint_slot_at(x as f64, y as f64) else {
                     return false;
                 };
-                let head = match slot.hint.direction {
-                    Direction::Up => gettext("Grundlage: {target}"),
-                    Direction::Down => gettext("Anschlussnorm: {target}"),
-                }
-                .replace("{target}", &slot.hint.label());
-                let text = format!(
-                    "{head}\n{}\n\n{}",
-                    slot.hint.reason,
-                    gettext("Klick öffnet, Strg+Klick in der zweiten Ansicht")
-                );
-                tooltip.set_text(Some(&text));
+                tooltip.set_markup(Some(&hint_tooltip_markup(&slot.hint)));
                 tooltip.set_tip_area(&gtk::gdk::Rectangle::new(
                     0,
                     slot.y as i32,
-                    area.width(),
-                    HINT_BADGE as i32,
+                    gutter.width(),
+                    slot.height.ceil() as i32,
                 ));
                 true
             }
@@ -2043,7 +2013,7 @@ impl LexNormView {
             self,
             move |_| view.set_hovered_hint(None)
         ));
-        area.add_controller(motion);
+        gutter.add_controller(motion);
         let click = gtk::GestureClick::builder().button(1).build();
         click.connect_released(glib::clone!(
             #[weak(rename_to = view)]
@@ -2056,46 +2026,98 @@ impl LexNormView {
                 let other_pane = gesture
                     .current_event_state()
                     .contains(gtk::gdk::ModifierType::CONTROL_MASK);
-                view.follow_link(&LinkTarget::Reference(slot.hint.target()), other_pane);
+                view.follow_link(&LinkTarget::Reference(slot.hint.hint.target()), other_pane);
             }
         ));
-        area.add_controller(click);
+        gutter.add_controller(click);
         // Farben folgen Akzentfarbe und Farbschema.
         let style_manager = adw::StyleManager::default();
         style_manager.connect_accent_color_rgba_notify(glib::clone!(
             #[weak]
-            area,
-            move |_| area.queue_draw()
+            gutter,
+            move |_| gutter.queue_draw()
         ));
         style_manager.connect_dark_notify(glib::clone!(
             #[weak]
-            area,
-            move |_| area.queue_draw()
+            gutter,
+            move |_| gutter.queue_draw()
         ));
         imp.text_view
-            .set_gutter(gtk::TextWindowType::Left, Some(&area));
-        imp.gutter.set(area).ok();
+            .set_gutter(gtk::TextWindowType::Left, Some(&gutter));
+        imp.gutter.set(gutter).ok();
+        self.update_gutter_width();
     }
 
     /// Fordert ein Neuzeichnen der Randspalte an (billig, löst kein Layout aus).
     fn queue_gutter(&self) {
-        if let Some(area) = self.imp().gutter.get() {
-            area.queue_draw();
+        if let Some(gutter) = self.imp().gutter.get() {
+            gutter.queue_draw();
         }
     }
 
-    /// Pfeilfelder der Randspalte in deren Koordinaten, von oben nach unten.
-    /// Die Pfeile einer Norm stehen untereinander ab der Überschriftzeile;
-    /// reicht der Platz neben einer kurzen Norm nicht, rücken die Pfeile der
-    /// folgenden Norm nach unten, statt sich zu überdecken.
+    /// Beschriftung der Randspalte: Leseschrift, etwas kleiner, mit
+    /// Tabellenziffern, damit die Nummern untereinander stehen.
+    fn hint_layout(&self, text: &str) -> pango::Layout {
+        let layout = self.imp().text_view.create_pango_layout(Some(text));
+        let attrs = pango::AttrList::new();
+        let size = self.font_size() as f64 * HINT_FONT_SCALE * pango::SCALE as f64;
+        attrs.insert(pango::AttrSize::new(size.round() as i32));
+        attrs.insert(pango::AttrFontFeatures::new("tnum=1"));
+        layout.set_attributes(Some(&attrs));
+        layout
+    }
+
+    /// Höhe einer Zeile der Randspalte.
+    fn hint_row_height(&self) -> f64 {
+        let (_, height) = self.hint_layout("§ 0").pixel_size();
+        height as f64 + 2.0 * HINT_ROW_PAD
+    }
+
+    /// Passt Breite der Randspalte und linken Textrand an: keine Spalte bei
+    /// Gesetzen ohne Hinweise, nur Pfeile in schmalen Ansichten, sonst Pfeil
+    /// und Nummer (Breite nach Schriftgröße).
+    fn update_gutter_width(&self) {
+        let imp = self.imp();
+        let Some(gutter) = imp.gutter.get() else {
+            return;
+        };
+        let enabled = imp.gutter_enabled.get();
+        let width = if !enabled {
+            0.0
+        } else if imp.gutter_compact.get() {
+            2.0 * HINT_PAD + HINT_ARROW
+        } else {
+            let (text_width, _) = self.hint_layout(HINT_SAMPLE).pixel_size();
+            2.0 * HINT_PAD + HINT_ARROW + HINT_GAP + text_width as f32
+        };
+        gutter.set_gutter_width(width.ceil() as i32);
+        let margin = if enabled {
+            MARGIN_WITH_GUTTER
+        } else {
+            MARGIN_WITHOUT_GUTTER
+        };
+        if imp.text_view.left_margin() != margin {
+            imp.text_view.set_left_margin(margin);
+        }
+        gutter.queue_draw();
+    }
+
+    /// Zeilen der Randspalte in deren Koordinaten, von oben nach unten.
+    /// Die Hinweise einer Norm stehen untereinander ab der Überschriftzeile;
+    /// reicht der Platz neben einer kurzen Norm nicht, rücken die Hinweise
+    /// der folgenden Norm nach unten, statt sich zu überdecken.
     fn hint_slots(&self) -> Vec<HintSlot> {
         let imp = self.imp();
-        let Some(area) = imp.gutter.get() else {
+        let Some(gutter) = imp.gutter.get() else {
             return Vec::new();
         };
+        if !imp.gutter_enabled.get() || gutter.width() <= 0 {
+            return Vec::new();
+        }
         let text_view = &*imp.text_view;
         let buffer = text_view.buffer();
-        let height = area.height() as f64;
+        let height = gutter.height() as f64;
+        let row = self.hint_row_height();
         let mut slots = Vec::new();
         let mut next_free = f64::MIN;
         for section in imp.sections.borrow().iter() {
@@ -2106,37 +2128,40 @@ impl LexNormView {
             let (_, widget_y) =
                 text_view.buffer_to_window_coords(gtk::TextWindowType::Widget, 0, line.y());
             let top = text_view
-                .compute_point(area, &gtk::graphene::Point::new(0.0, widget_y as f32))
+                .compute_point(gutter, &gtk::graphene::Point::new(0.0, widget_y as f32))
                 .map(|p| p.y() as f64)
                 .unwrap_or(widget_y as f64);
-            let centered = top + ((line.height() as f64 - HINT_BADGE) / 2.0).max(0.0);
+            // Erste Zeile mittig neben der Überschrift.
+            let centered = top + (line.height() as f64 - row) / 2.0;
             let mut y = centered.max(next_free);
             if y > height {
                 break;
             }
             for (index, hint) in section.hints.iter().enumerate() {
-                if y + HINT_BADGE >= 0.0 && y <= height {
+                if y + row >= 0.0 && y <= height {
                     slots.push(HintSlot {
                         key: (section.norm.id, index),
                         y,
-                        hint: *hint,
+                        height: row,
+                        hint: hint.clone(),
                     });
                 }
-                y += HINT_PITCH;
+                y += row;
             }
             // Etwas Luft zur nächsten Gruppe.
-            next_free = y + HINT_PITCH / 2.0;
+            next_free = y + row / 2.0;
         }
         slots
     }
 
     fn hint_slot_at(&self, x: f64, y: f64) -> Option<HintSlot> {
-        if x < 0.0 || x > GUTTER_WIDTH as f64 {
+        let width = self.imp().gutter.get().map(|g| g.width()).unwrap_or(0);
+        if x < 0.0 || x > width as f64 {
             return None;
         }
         self.hint_slots()
             .into_iter()
-            .find(|slot| slot.y <= y && y < slot.y + HINT_BADGE)
+            .find(|slot| slot.y <= y && y < slot.y + slot.height)
     }
 
     fn set_hovered_hint(&self, key: Option<(i64, usize)>) {
@@ -2144,74 +2169,93 @@ impl LexNormView {
         if imp.hovered_hint.replace(key) == key {
             return;
         }
-        if let Some(area) = imp.gutter.get() {
-            area.set_cursor_from_name(key.map(|_| "pointer"));
-            area.queue_draw();
+        if let Some(gutter) = imp.gutter.get() {
+            gutter.set_cursor_from_name(key.map(|_| "pointer"));
+            gutter.queue_draw();
         }
     }
 
-    /// Zeichnet die Pfeilfelder: getöntes, umrandetes Feld in Akzentfarbe
-    /// mit kräftigem Pfeil (↗ Grundlage, ↘ Anschlussnorm).
-    fn draw_gutter(&self, cr: &gtk::cairo::Context, width: i32) {
+    /// Zeichnet die Zeilen der Randspalte.
+    fn draw_gutter(&self, gutter: &LexHintGutter, snapshot: &gtk::Snapshot) {
+        let imp = self.imp();
+        let width = gutter.width() as f32;
+        if width <= 0.0 {
+            return;
+        }
+        let compact = imp.gutter_compact.get();
         let style_manager = adw::StyleManager::default();
-        let dark = style_manager.is_dark();
-        let accent = style_manager.accent_color_rgba();
-        // Pfeil und Rand deckend und je nach Farbschema aufgehellt bzw.
-        // abgedunkelt, damit sie sich klar vom Hintergrund abheben.
-        let mix = |channel: f32| -> f64 {
-            let channel = channel as f64;
-            if dark {
-                channel + (1.0 - channel) * 0.45
-            } else {
-                channel * 0.8
-            }
+        let foreground = gutter.color();
+        let with_alpha = |alpha: f32| {
+            gtk::gdk::RGBA::new(
+                foreground.red(),
+                foreground.green(),
+                foreground.blue(),
+                foreground.alpha() * alpha,
+            )
         };
-        let (r, g, b) = (mix(accent.red()), mix(accent.green()), mix(accent.blue()));
-        let hovered = self.imp().hovered_hint.get();
-        let x = ((width as f64 - HINT_BADGE) / 2.0).floor();
-        cr.set_line_cap(gtk::cairo::LineCap::Round);
-        cr.set_line_join(gtk::cairo::LineJoin::Round);
+        // Ruhezustand wie abgeblendete Beschriftungen, überfahren in der
+        // für Text geeigneten Variante der Akzentfarbe.
+        let dim = with_alpha(0.55);
+        let accent = style_manager
+            .accent_color()
+            .to_standalone_rgba(style_manager.is_dark());
+        let hover_background = with_alpha(0.07);
+        let hovered = imp.hovered_hint.get();
+        let stroke = gtk::gsk::Stroke::new(HINT_STROKE);
+        stroke.set_line_cap(gtk::gsk::LineCap::Round);
+        stroke.set_line_join(gtk::gsk::LineJoin::Round);
         for slot in self.hint_slots() {
-            let y = slot.y.round();
             let active = hovered == Some(slot.key);
-            rounded_rect(
-                cr,
-                x + 0.5,
-                y + 0.5,
-                HINT_BADGE - 1.0,
-                HINT_BADGE - 1.0,
-                6.0,
-            );
-            cr.set_source_rgba(r, g, b, if active { 0.42 } else { 0.16 });
-            let _ = cr.fill_preserve();
-            cr.set_source_rgba(r, g, b, if active { 1.0 } else { 0.7 });
-            cr.set_line_width(1.0);
-            let _ = cr.stroke();
+            let color = if active { &accent } else { &dim };
+            let y = slot.y.round() as f32;
+            let row = slot.height as f32;
+            if active {
+                let bounds = gtk::graphene::Rect::new(1.0, y, width - 2.0, row);
+                snapshot.push_rounded_clip(&gtk::gsk::RoundedRect::from_rect(bounds, 5.0));
+                snapshot.append_color(&hover_background, &bounds);
+                snapshot.pop();
+            }
 
-            // Diagonale mit Pfeilspitze, innerhalb des Felds mit Rand.
-            let pad = 6.5;
-            let (left, right) = (x + pad, x + HINT_BADGE - pad);
-            let (top, bottom) = (y + pad, y + HINT_BADGE - pad);
-            let head = 5.5;
-            cr.set_source_rgba(r, g, b, 1.0);
-            cr.set_line_width(2.0);
-            match slot.hint.direction {
+            // Diagonale mit offener Pfeilspitze.
+            let left = HINT_PAD;
+            let right = left + HINT_ARROW;
+            let top = y + (row - HINT_ARROW) / 2.0;
+            let bottom = top + HINT_ARROW;
+            let path = gtk::gsk::PathBuilder::new();
+            match slot.hint.hint.direction {
                 Direction::Up => {
-                    cr.move_to(left, bottom);
-                    cr.line_to(right, top);
-                    cr.move_to(right - head, top);
-                    cr.line_to(right, top);
-                    cr.line_to(right, top + head);
+                    path.move_to(left, bottom);
+                    path.line_to(right, top);
+                    path.move_to(right - HINT_ARROW_HEAD, top);
+                    path.line_to(right, top);
+                    path.line_to(right, top + HINT_ARROW_HEAD);
                 }
                 Direction::Down => {
-                    cr.move_to(left, top);
-                    cr.line_to(right, bottom);
-                    cr.move_to(right - head, bottom);
-                    cr.line_to(right, bottom);
-                    cr.line_to(right, bottom - head);
+                    path.move_to(left, top);
+                    path.line_to(right, bottom);
+                    path.move_to(right - HINT_ARROW_HEAD, bottom);
+                    path.line_to(right, bottom);
+                    path.line_to(right, bottom - HINT_ARROW_HEAD);
                 }
             }
-            let _ = cr.stroke();
+            snapshot.append_stroke(&path.to_path(), &stroke, color);
+
+            if compact {
+                continue;
+            }
+            let layout = self.hint_layout(&slot.hint.hint.label());
+            let text_x = right + HINT_GAP;
+            let available = (width - text_x - 2.0).max(0.0);
+            layout.set_width((available * pango::SCALE as f32) as i32);
+            layout.set_ellipsize(pango::EllipsizeMode::End);
+            let (_, text_height) = layout.pixel_size();
+            snapshot.save();
+            snapshot.translate(&gtk::graphene::Point::new(
+                text_x,
+                y + (row - text_height as f32) / 2.0,
+            ));
+            snapshot.append_layout(&layout, color);
+            snapshot.restore();
         }
     }
 
@@ -3259,15 +3303,25 @@ impl LexNormView {
 // Hilfsfunktionen (ohne Widgets, testbar)
 // ----------------------------------------------------------------------
 
-/// Pfad eines Rechtecks mit abgerundeten Ecken.
-fn rounded_rect(cr: &gtk::cairo::Context, x: f64, y: f64, w: f64, h: f64, radius: f64) {
-    use std::f64::consts::{FRAC_PI_2, PI};
-    cr.new_sub_path();
-    cr.arc(x + w - radius, y + radius, radius, -FRAC_PI_2, 0.0);
-    cr.arc(x + w - radius, y + h - radius, radius, 0.0, FRAC_PI_2);
-    cr.arc(x + radius, y + h - radius, radius, FRAC_PI_2, PI);
-    cr.arc(x + radius, y + radius, radius, PI, PI + FRAC_PI_2);
-    cr.close_path();
+/// Tooltip eines Randhinweises als Pango-Markup: Zielnorm mit amtlicher
+/// Überschrift, darunter Richtung und Begründung, zuletzt die Bedienung.
+fn hint_tooltip_markup(hint: &MarginHint) -> String {
+    let escape = |text: &str| glib::markup_escape_text(text).to_string();
+    let mut head = format!("<b>{}</b>", escape(&hint.hint.label()));
+    if let Some(title) = hint.title.as_deref() {
+        head.push_str("  ");
+        head.push_str(&escape(title));
+    }
+    let direction = match hint.hint.direction {
+        Direction::Up => gettext("Grundlage"),
+        Direction::Down => gettext("Anschlussnorm"),
+    };
+    format!(
+        "{head}\n{}: {}\n<span size=\"small\" alpha=\"65%\">{}</span>",
+        escape(&direction),
+        escape(hint.hint.reason),
+        escape(&gettext("Klick öffnet, Strg+Klick in der zweiten Ansicht"))
+    )
 }
 
 fn list_tag_name(depth: u8) -> String {
@@ -3496,6 +3550,23 @@ mod tests {
         assert_eq!(sign_prefix_start(&c, at("440")), at("§§ 440"));
         assert_eq!(sign_prefix_start(&c, at("323")), at("323"));
         assert_eq!(sign_prefix_start(&c, at("229")), at("Art. 229"));
+    }
+
+    #[test]
+    fn hint_tooltip_shows_title_and_reason() {
+        let hint = crate::hints::hints_for("BGB", "§ 433")
+            .iter()
+            .find(|h| h.norm == "§ 437")
+            .copied()
+            .expect("Hinweis auf § 437");
+        let with_title = hint_tooltip_markup(&MarginHint {
+            hint,
+            title: Some("Rechte des Käufers bei Mängeln <1>".into()),
+        });
+        assert!(with_title.starts_with("<b>§ 437</b>  Rechte des Käufers bei Mängeln &lt;1&gt;\n"));
+        assert!(with_title.contains(hint.reason));
+        let without = hint_tooltip_markup(&MarginHint { hint, title: None });
+        assert!(without.starts_with("<b>§ 437</b>\n"));
     }
 
     #[test]

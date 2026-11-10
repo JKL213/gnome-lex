@@ -14,9 +14,10 @@ use adw::subclass::prelude::*;
 use gtk::{gio, glib, CompositeTemplate};
 
 use crate::db::Database;
+use crate::hints::hints_for;
 use crate::model::{Annotation, AnnotationKind, LawInfo, NormInfo};
-use crate::refs::{JumpTarget, LawRef, NormRef};
-use crate::widgets::norm_view::{AnnotationEvent, NormPage, RefChip};
+use crate::refs::{JumpTarget, NormRef};
+use crate::widgets::norm_view::{AnnotationEvent, MarginHint, NormPage};
 use crate::widgets::LexNormView;
 
 /// Was eine Ansicht gerade zeigt.
@@ -82,39 +83,26 @@ fn load_page(db: &Database, norm_id: i64) -> Result<Option<(NormPage, LawInfo)>,
         }
         None => (None, Vec::new()),
     };
-    let chip = |abbrev: &str, enbez: &str| RefChip {
-        label: if abbrev.eq_ignore_ascii_case(&law.jurabk) {
-            enbez.to_owned()
-        } else {
-            format!("{enbez} {abbrev}")
-        },
-        target: NormRef {
-            law: if abbrev.eq_ignore_ascii_case(&law.jurabk) {
-                LawRef::Same
+    // Randhinweise mit der amtlichen Überschrift der Zielnorm (für den
+    // Tooltip); fehlt das Zielgesetz, bleibt die Überschrift leer.
+    let mut hints = Vec::new();
+    if let Some(enbez) = norm.info.enbez.as_deref() {
+        for hint in hints_for(&law.jurabk, enbez) {
+            let abbrev = if hint.law.is_empty() {
+                law.jurabk.as_str()
             } else {
-                LawRef::Abbrev(abbrev.to_owned())
-            },
-            norm: Some(enbez.to_owned()),
-            sub_section: None,
-            paragraph: None,
-            sentence: None,
-            number: None,
-        },
-    };
-    let outgoing = db
-        .outgoing_refs(norm.info.id)?
-        .iter()
-        .map(|(abbrev, enbez)| chip(abbrev, enbez))
-        .collect();
-    let incoming = match norm.info.enbez.as_deref() {
-        Some(enbez) => db
-            .incoming_refs(&law.jurabk, enbez, 40)?
-            .iter()
-            .filter(|(info, _)| info.id != norm.info.id)
-            .filter_map(|(info, abbrev)| info.enbez.as_deref().map(|e| chip(abbrev, e)))
-            .collect(),
-        None => Vec::new(),
-    };
+                hint.law
+            };
+            let mut title = None;
+            for candidate in hint.target().enbez_candidates() {
+                title = db.norm_title(abbrev, &candidate)?;
+                if title.is_some() {
+                    break;
+                }
+            }
+            hints.push(MarginHint { hint: *hint, title });
+        }
+    }
     Ok(Some((
         NormPage {
             norm,
@@ -122,8 +110,7 @@ fn load_page(db: &Database, norm_id: i64) -> Result<Option<(NormPage, LawInfo)>,
             law_abbrev: law.jurabk.clone(),
             note,
             annotations,
-            outgoing,
-            incoming,
+            hints,
         },
         law,
     )))

@@ -742,6 +742,31 @@ Stufe 1 zusätzlich mit Meson-Tests und Flatpak-Build; Stufe 2 wurde über
   - **Quellen:** AnfG (`anfg_1999`) ergänzt; ZVG war bereits enthalten.
     Der Slug konnte mangels Netzzugriff nicht abgerufen werden – beim
     ersten Download prüfen.
+- **Randspalte überarbeitet, Inline-Verweiszeilen entfernt (10.11.2026,
+  Auftrag):** Nur statisch geprüft (fmt, clippy `-D warnings` mit
+  Stub-pkg-config; `hints`/`refs`-Tests im Hilfscrate); **Sichtprüfung unter
+  GTK steht aus.**
+  - **Entfernt:** die Zeilen „→ § 434 · § 437“ / „← …“ unter der Überschrift
+    samt `RefChip`, `NormPage.outgoing/incoming`, Tags `ref-chip`/`chip-dim`,
+    `insert_ref_chips`, Tabelle `norm_refs` (wird beim Öffnen per
+    `DROP TABLE IF EXISTS` beseitigt), `outgoing_refs`/`incoming_refs` und
+    Test `reference_index`. Klickbare Verweise im Normtext bleiben.
+  - **Randspalte:** `LexHintGutter` (`src/widgets/hint_gutter.rs`, Widget
+    fester Breite mit Zeichen-Rückruf in den `GtkSnapshot`) ersetzt die
+    `GtkDrawingArea`. Je Hinweis eine Zeile im Stil einer Marginalie: feiner
+    Pfeil (`GskPath`, Strich 1,2 px, ohne Feld und Rahmen) und daneben die
+    Zielnorm („§ 437“, „§ 253 ZPO“) in der Leseschrift (82 %,
+    Tabellenziffern), abgeblendet (Vordergrund 55 %); beim Überfahren
+    Akzentfarbe (`AccentColor::to_standalone_rgba`) und zarte Hinterlegung.
+    Breite aus `HINT_SAMPLE` und Schriftgröße (`update_gutter_width`);
+    Gesetze ohne Hinweise (`hints::has_hints`) bekommen Breite 0 und den
+    alten linken Rand; unter 540 px Ansichtsbreite nur Pfeile
+    (`gutter_compact`, Hysterese in `size_allocate`).
+  - **Tooltip:** Zielnorm fett mit amtlicher Überschrift, darunter
+    „Grundlage“/„Anschlussnorm“ mit Begründung (`hint_tooltip_markup`). Die
+    Überschrift liest `load_page` über `Database::norm_title(kürzel, enbez)`
+    und reicht sie als `NormPage.hints: Vec<MarginHint {hint, title}>` durch;
+    ist das Zielgesetz nicht installiert, fehlt sie.
 - **Tooling:** `.vscode/` (settings, tasks, launch, extensions; Tasks
   `sdk: cargo build|run|qualität` für die SDK-Sandbox),
   `build-aux/sdk-cargo.sh` (führt Cargo in `org.gnome.Sdk//51` mit
