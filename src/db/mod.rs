@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 //! SQLite-Datenhaltung: Gesetze, Gliederung, Normen, Absätze, Volltextindex
-//! (FTS5) und Annotationen.
+//! (FTS5), Annotationen und Karteikarten (Untermodul `cards`).
 // Wird ab den folgenden Stufen von der Oberfläche genutzt.
+
+mod cards;
 
 use std::path::{Path, PathBuf};
 
@@ -158,6 +160,7 @@ impl Database {
     fn init(conn: Connection) -> Result<Self> {
         conn.execute_batch("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;")?;
         conn.execute_batch(SCHEMA)?;
+        conn.execute_batch(cards::SCHEMA)?;
         let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
         if version < SCHEMA_VERSION {
             conn.pragma_update(None, "user_version", SCHEMA_VERSION)?;

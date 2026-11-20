@@ -24,6 +24,10 @@ template $LexWindow : Adw.ApplicationWindow {
     condition ("max-width: 640sp")
 
     setters {
+      mode_rail.visible: false;
+      mode_bar.reveal: true;
+      sidebar_switcher_bar.reveal: false;
+      sidebar_switcher_inline.visible: true;
       split_view.collapsed: true;
       notes_split.collapsed: true;
       jump_bar.compact: true;
@@ -34,314 +38,444 @@ template $LexWindow : Adw.ApplicationWindow {
   }
 
   content: Adw.ToastOverlay toast_overlay {
-    child: Stack stack {
-      transition-type: crossfade;
+    child: Box {
+      orientation: horizontal;
 
-      StackPage {
-        name: "empty";
+      // Modusleiste am linken Rand: Gesetze lesen oder Karteikarten lernen.
+      // Bei Schmalbreite übernimmt die Leiste am unteren Rand.
+      WindowHandle mode_rail {
+        styles [
+          "mode-rail",
+        ]
 
-        child: Adw.ToolbarView {
-          [top]
-          Adw.HeaderBar {
-            [end]
-            MenuButton {
-              icon-name: "open-menu-symbolic";
-              tooltip-text: _("Hauptmenü");
-              primary: true;
-              menu-model: primary_menu;
-            }
-          }
+        child: Box {
+          orientation: vertical;
+          spacing: 4;
 
-          content: Adw.StatusPage empty_page {
-            icon-name: "org.gnomelex.Gesetze";
-            title: _("Kein Gesetz geladen");
-            description: _("Gesetze werden einmalig von gesetze-im-internet.de heruntergeladen und lokal gespeichert.");
+          ToggleButton {
+            tooltip-text: _("Gesetze (Alt+1)");
+            action-name: "win.mode";
+            action-target: "'laws'";
+            focus-on-click: false;
 
-            // Eine Schaltfläche je bekannter Quelle (wird im Code befüllt).
-            child: Box download_buttons {
+            styles [
+              "flat",
+              "mode-button",
+            ]
+
+            child: Box {
               orientation: vertical;
-              spacing: 12;
-              halign: center;
+              spacing: 3;
+
+              Image {
+                icon-name: "paragraph-symbolic";
+                pixel-size: 22;
+              }
+
+              Label {
+                label: C_("Modus", "Gesetze");
+
+                styles [
+                  "mode-label",
+                ]
+              }
             };
-          };
-        };
-      }
-
-      StackPage {
-        name: "busy";
-
-        child: Adw.ToolbarView {
-          [top]
-          Adw.HeaderBar {
-            [end]
-            MenuButton {
-              icon-name: "open-menu-symbolic";
-              tooltip-text: _("Hauptmenü");
-              menu-model: primary_menu;
-            }
           }
 
-          content: Adw.StatusPage busy_page {
-            title: _("Lade herunter …");
-            description: "";
-          };
+          ToggleButton {
+            tooltip-text: _("Karteikarten (Alt+2)");
+            action-name: "win.mode";
+            action-target: "'cards'";
+            focus-on-click: false;
+
+            styles [
+              "flat",
+              "mode-button",
+            ]
+
+            child: Overlay {
+              child: Box {
+                orientation: vertical;
+                spacing: 3;
+
+                Image {
+                  icon-name: "index-cards-symbolic";
+                  pixel-size: 22;
+                }
+
+                Label {
+                  label: _("Karten");
+
+                  styles [
+                    "mode-label",
+                  ]
+                }
+              };
+
+              // Zahl der heute fälligen Karten.
+              [overlay]
+              Label cards_badge {
+                visible: false;
+                halign: end;
+                valign: start;
+
+                styles [
+                  "mode-badge",
+                  "numeric",
+                ]
+              }
+            };
+          }
         };
       }
 
-      StackPage {
-        name: "law";
+      Adw.ToolbarView {
+        hexpand: true;
 
-        child: Adw.NavigationSplitView split_view {
-          min-sidebar-width: 240;
-          max-sidebar-width: 420;
-          sidebar-width-fraction: 0.3;
+        content: Adw.ViewStack mode_stack {
+          enable-transitions: true;
 
-          sidebar: Adw.NavigationPage {
-            title: _("Gliederung");
-            tag: "sidebar";
+          Adw.ViewStackPage {
+            name: "laws";
+            title: C_("Modus", "Gesetze");
+            icon-name: "paragraph-symbolic";
 
-            child: Adw.ToolbarView {
-              [top]
-              Adw.HeaderBar {
-                // Auswahl des Gesetzes, dessen Gliederung gezeigt wird.
-                title-widget: DropDown law_dropdown {
-                  tooltip-text: _("Gesetz der Gliederung");
-                };
+            child: Stack stack {
+              transition-type: crossfade;
 
-                [end]
-                MenuButton {
-                  icon-name: "open-menu-symbolic";
-                  tooltip-text: _("Hauptmenü");
-                  primary: true;
-                  menu-model: primary_menu;
-                }
-              }
-
-              content: Adw.ViewStack sidebar_stack {
-                Adw.ViewStackPage {
-                  name: "outline";
-                  title: _("Gliederung");
-                  icon-name: "view-list-symbolic";
-
-                  child: ScrolledWindow {
-                    hscrollbar-policy: never;
-
-                    child: ListView outline_view {
-                      single-click-activate: true;
-
-                      styles ["navigation-sidebar"]
-                    };
-                  };
-                }
-
-                Adw.ViewStackPage {
-                  name: "favorites";
-                  title: _("Favoriten");
-                  icon-name: "starred-symbolic";
-
-                  child: ScrolledWindow {
-                    hscrollbar-policy: never;
-
-                    child: ListBox favorites_list {
-                      selection-mode: none;
-
-                      styles ["navigation-sidebar"]
-                    };
-                  };
-                }
-              };
-
-              [bottom]
-              Adw.ViewSwitcherBar {
-                stack: sidebar_stack;
-                reveal: true;
-              }
-            };
-          };
-
-          content: Adw.NavigationPage content_page {
-            title: _("Norm");
-            tag: "content";
-
-            // Rechts einblendbares Panel für die eigene Notiz (Schema) zur Norm.
-            child: Adw.OverlaySplitView notes_split {
-              sidebar-position: end;
-              show-sidebar: false;
-              min-sidebar-width: 260;
-              max-sidebar-width: 440;
-              sidebar-width-fraction: 0.32;
-
-              sidebar: Adw.ToolbarView {
-                [top]
-                Adw.HeaderBar {
-                  show-start-title-buttons: false;
-                  show-end-title-buttons: false;
-
-                  title-widget: Adw.WindowTitle notes_title {
-                    title: _("Schema / Notiz");
-                    subtitle: "";
-                  };
-
-                  [end]
-                  Button {
-                    icon-name: "window-close-symbolic";
-                    tooltip-text: _("Panel schließen");
-                    action-name: "win.toggle-notes";
-                  }
-                }
-
-                content: ScrolledWindow {
-                  hscrollbar-policy: never;
-                  vexpand: true;
-
-                  child: TextView notes_view {
-                    wrap-mode: word_char;
-                    accepts-tab: false;
-                    top-margin: 8;
-                    bottom-margin: 8;
-                    left-margin: 8;
-                    right-margin: 8;
-
-                    styles ["notes-view"]
-                  };
-                };
-
-                [bottom]
-                Label notes_hint {
-                  label: _("Wird automatisch gespeichert und unter der Überschrift der Norm angezeigt.");
-                  wrap: true;
-                  margin-top: 6;
-                  margin-bottom: 8;
-                  margin-start: 12;
-                  margin-end: 12;
-
-                  styles ["dim-label", "caption"]
-                }
-              };
-
-              // Tabs: Übersicht um die Werkzeugleiste, Tab-Leiste unter der
-              // Kopfleiste (nur bei mehreren Tabs sichtbar), je Tab eine Leseansicht.
-              content: Adw.TabOverview tab_overview {
-                view: tab_view;
-                enable-new-tab: true;
+              StackPage {
+                name: "empty";
 
                 child: Adw.ToolbarView {
-                [top]
-                Adw.HeaderBar {
-                  [start]
-                  Box {
-                    styles ["linked"]
-
-                    Button {
-                      icon-name: "go-previous-symbolic";
-                      tooltip-text: _("Vorherige Norm (Alt+Bild↑)");
-                      action-name: "win.prev-norm";
-                    }
-
-                    Button {
-                      icon-name: "go-next-symbolic";
-                      tooltip-text: _("Nächste Norm (Alt+Bild↓)");
-                      action-name: "win.next-norm";
+                  [top]
+                  Adw.HeaderBar {
+                    [end]
+                    MenuButton {
+                      icon-name: "open-menu-symbolic";
+                      tooltip-text: _("Hauptmenü");
+                      primary: true;
+                      menu-model: primary_menu;
                     }
                   }
 
-                  [start]
-                  MenuButton history_button {
-                    icon-name: "document-open-recent-symbolic";
-                    tooltip-text: _("Zuletzt gelesene Normen");
+                  content: Adw.StatusPage empty_page {
+                    icon-name: "org.gnomelex.Gesetze";
+                    title: _("Kein Gesetz geladen");
+                    description: _("Gesetze werden einmalig von gesetze-im-internet.de heruntergeladen und lokal gespeichert.");
 
-                    popover: Popover history_popover {
-                      child: Box {
-                        orientation: vertical;
-                        spacing: 6;
-                        width-request: 320;
+                    // Eine Schaltfläche je bekannter Quelle (wird im Code befüllt).
+                    child: Box download_buttons {
+                      orientation: vertical;
+                      spacing: 12;
+                      halign: center;
+                    };
+                  };
+                };
+              }
 
-                        ScrolledWindow {
-                          hscrollbar-policy: never;
-                          propagate-natural-height: true;
-                          max-content-height: 420;
+              StackPage {
+                name: "busy";
 
-                          child: ListBox history_list {
-                            selection-mode: none;
+                child: Adw.ToolbarView {
+                  [top]
+                  Adw.HeaderBar {
+                    [end]
+                    MenuButton {
+                      icon-name: "open-menu-symbolic";
+                      tooltip-text: _("Hauptmenü");
+                      menu-model: primary_menu;
+                    }
+                  }
 
-                            styles ["navigation-sidebar"]
-                          };
+                  content: Adw.StatusPage busy_page {
+                    title: _("Lade herunter …");
+                    description: "";
+                  };
+                };
+              }
+
+              StackPage {
+                name: "law";
+
+                child: Adw.NavigationSplitView split_view {
+                  min-sidebar-width: 240;
+                  max-sidebar-width: 420;
+                  sidebar-width-fraction: 0.3;
+
+                  sidebar: Adw.NavigationPage {
+                    title: _("Gliederung");
+                    tag: "sidebar";
+
+                    child: Adw.ToolbarView {
+                      [top]
+                      Adw.HeaderBar {
+                        // Auswahl des Gesetzes, dessen Gliederung gezeigt wird.
+                        title-widget: DropDown law_dropdown {
+                          tooltip-text: _("Gesetz der Gliederung");
+                        };
+
+                        [end]
+                        MenuButton {
+                          icon-name: "open-menu-symbolic";
+                          tooltip-text: _("Hauptmenü");
+                          primary: true;
+                          menu-model: primary_menu;
+                        }
+                      }
+
+                      content: Adw.ViewStack sidebar_stack {
+                          Adw.ViewStackPage {
+                            name: "outline";
+                            title: _("Gliederung");
+                            icon-name: "view-list-symbolic";
+
+                            child: ScrolledWindow {
+                              hscrollbar-policy: never;
+
+                              child: ListView outline_view {
+                                single-click-activate: true;
+
+                                styles ["navigation-sidebar"]
+                              };
+                            };
+                          }
+
+                          Adw.ViewStackPage {
+                            name: "favorites";
+                            title: _("Favoriten");
+                            icon-name: "starred-symbolic";
+
+                            child: ScrolledWindow {
+                              hscrollbar-policy: never;
+
+                              child: ListBox favorites_list {
+                                selection-mode: none;
+
+                                styles ["navigation-sidebar"]
+                              };
+                            };
+                          }
+                        };
+
+                        // Bei Schmalbreite gehört der untere Rand der Modusleiste;
+                        // Gliederung und Favoriten wechseln dann hier oben.
+                        [top]
+                        Adw.InlineViewSwitcher sidebar_switcher_inline {
+                          stack: sidebar_stack;
+                          display-mode: both;
+                          halign: center;
+                          margin-bottom: 6;
+                          visible: false;
                         }
 
-                        Button {
-                          label: _("Verlauf leeren");
-                          action-name: "win.clear-history";
-                          halign: end;
-                          margin-end: 6;
-                          margin-bottom: 6;
-
-                          styles ["flat"]
+                        [bottom]
+                        Adw.ViewSwitcherBar sidebar_switcher_bar {
+                          stack: sidebar_stack;
+                          reveal: true;
                         }
                       };
                     };
-                  }
 
-                  title-widget: $LexJumpBar jump_bar {
-                    margin-start: 6;
-                    margin-end: 6;
+                    content: Adw.NavigationPage content_page {
+                      title: _("Norm");
+                      tag: "content";
+
+                      // Rechts einblendbares Panel für die eigene Notiz (Schema) zur Norm.
+                      child: Adw.OverlaySplitView notes_split {
+                        sidebar-position: end;
+                        show-sidebar: false;
+                        min-sidebar-width: 260;
+                        max-sidebar-width: 440;
+                        sidebar-width-fraction: 0.32;
+
+                        sidebar: Adw.ToolbarView {
+                          [top]
+                          Adw.HeaderBar {
+                            show-start-title-buttons: false;
+                            show-end-title-buttons: false;
+
+                            title-widget: Adw.WindowTitle notes_title {
+                              title: _("Schema / Notiz");
+                              subtitle: "";
+                            };
+
+                            [end]
+                            Button {
+                              icon-name: "window-close-symbolic";
+                              tooltip-text: _("Panel schließen");
+                              action-name: "win.toggle-notes";
+                            }
+                          }
+
+                          content: ScrolledWindow {
+                            hscrollbar-policy: never;
+                            vexpand: true;
+
+                            child: TextView notes_view {
+                              wrap-mode: word_char;
+                              accepts-tab: false;
+                              top-margin: 8;
+                              bottom-margin: 8;
+                              left-margin: 8;
+                              right-margin: 8;
+
+                              styles ["notes-view"]
+                            };
+                          };
+
+                          [bottom]
+                          Label notes_hint {
+                            label: _("Wird automatisch gespeichert und unter der Überschrift der Norm angezeigt.");
+                            wrap: true;
+                            margin-top: 6;
+                            margin-bottom: 8;
+                            margin-start: 12;
+                            margin-end: 12;
+
+                            styles ["dim-label", "caption"]
+                          }
+                        };
+
+                        // Tabs: Übersicht um die Werkzeugleiste, Tab-Leiste unter der
+                        // Kopfleiste (nur bei mehreren Tabs sichtbar), je Tab eine Leseansicht.
+                        content: Adw.TabOverview tab_overview {
+                          view: tab_view;
+                          enable-new-tab: true;
+
+                          child: Adw.ToolbarView {
+                          [top]
+                          Adw.HeaderBar {
+                            [start]
+                            Box {
+                              styles ["linked"]
+
+                              Button {
+                                icon-name: "go-previous-symbolic";
+                                tooltip-text: _("Vorherige Norm (Alt+Bild↑)");
+                                action-name: "win.prev-norm";
+                              }
+
+                              Button {
+                                icon-name: "go-next-symbolic";
+                                tooltip-text: _("Nächste Norm (Alt+Bild↓)");
+                                action-name: "win.next-norm";
+                              }
+                            }
+
+                            [start]
+                            MenuButton history_button {
+                              icon-name: "document-open-recent-symbolic";
+                              tooltip-text: _("Zuletzt gelesene Normen");
+
+                              popover: Popover history_popover {
+                                child: Box {
+                                  orientation: vertical;
+                                  spacing: 6;
+                                  width-request: 320;
+
+                                  ScrolledWindow {
+                                    hscrollbar-policy: never;
+                                    propagate-natural-height: true;
+                                    max-content-height: 420;
+
+                                    child: ListBox history_list {
+                                      selection-mode: none;
+
+                                      styles ["navigation-sidebar"]
+                                    };
+                                  }
+
+                                  Button {
+                                    label: _("Verlauf leeren");
+                                    action-name: "win.clear-history";
+                                    halign: end;
+                                    margin-end: 6;
+                                    margin-bottom: 6;
+
+                                    styles ["flat"]
+                                  }
+                                };
+                              };
+                            }
+
+                            title-widget: $LexJumpBar jump_bar {
+                              margin-start: 6;
+                              margin-end: 6;
+                            };
+
+                            [end]
+                            MenuButton {
+                              icon-name: "open-menu-symbolic";
+                              tooltip-text: _("Hauptmenü");
+                              menu-model: primary_menu;
+                              visible: bind split_view.collapsed;
+                            }
+
+                            [end]
+                            ToggleButton favorite_button {
+                              icon-name: "non-starred-symbolic";
+                              tooltip-text: _("Favorit (Strg+D)");
+                              action-name: "win.toggle-favorite";
+                            }
+
+                            [end]
+                            ToggleButton notes_button {
+                              icon-name: "document-edit-symbolic";
+                              tooltip-text: _("Schema / Notiz (Strg+Umschalt+N)");
+                              action-name: "win.toggle-notes";
+                            }
+
+                            [end]
+                            ToggleButton split_button {
+                              icon-name: "view-dual-symbolic";
+                              tooltip-text: _("Geteilte Ansicht (Strg+Umschalt+D)");
+                              action-name: "win.split";
+                            }
+
+                            [end]
+                            Adw.TabButton tab_button {
+                              view: tab_view;
+                              tooltip-text: _("Tab-Übersicht (Strg+Umschalt+O)");
+                              action-name: "win.tab-overview";
+                            }
+
+                            [end]
+                            Button new_tab_button {
+                              icon-name: "tab-new-symbolic";
+                              tooltip-text: _("Neuer Tab (Strg+T)");
+                              action-name: "win.new-tab";
+                            }
+                          }
+
+                          [top]
+                          Adw.TabBar tab_bar {
+                            view: tab_view;
+                            autohide: true;
+                          }
+
+                          content: Adw.TabView tab_view {};
+                          };
+                        };
+                      };
+                    };
                   };
-
-                  [end]
-                  MenuButton {
-                    icon-name: "open-menu-symbolic";
-                    tooltip-text: _("Hauptmenü");
-                    menu-model: primary_menu;
-                    visible: bind split_view.collapsed;
-                  }
-
-                  [end]
-                  ToggleButton favorite_button {
-                    icon-name: "non-starred-symbolic";
-                    tooltip-text: _("Favorit (Strg+D)");
-                    action-name: "win.toggle-favorite";
-                  }
-
-                  [end]
-                  ToggleButton notes_button {
-                    icon-name: "document-edit-symbolic";
-                    tooltip-text: _("Schema / Notiz (Strg+Umschalt+N)");
-                    action-name: "win.toggle-notes";
-                  }
-
-                  [end]
-                  ToggleButton split_button {
-                    icon-name: "view-dual-symbolic";
-                    tooltip-text: _("Geteilte Ansicht (Strg+Umschalt+D)");
-                    action-name: "win.split";
-                  }
-
-                  [end]
-                  Adw.TabButton tab_button {
-                    view: tab_view;
-                    tooltip-text: _("Tab-Übersicht (Strg+Umschalt+O)");
-                    action-name: "win.tab-overview";
-                  }
-
-                  [end]
-                  Button new_tab_button {
-                    icon-name: "tab-new-symbolic";
-                    tooltip-text: _("Neuer Tab (Strg+T)");
-                    action-name: "win.new-tab";
-                  }
                 }
-
-                [top]
-                Adw.TabBar tab_bar {
-                  view: tab_view;
-                  autohide: true;
-                }
-
-                content: Adw.TabView tab_view {};
-                };
-              };
             };
-          };
+          }
+
+          Adw.ViewStackPage {
+            name: "cards";
+            title: _("Karteikarten");
+            icon-name: "index-cards-symbolic";
+
+            child: $LexFlashcards flashcards {};
+          }
         };
+
+        [bottom]
+        Adw.ViewSwitcherBar mode_bar {
+          stack: mode_stack;
+        }
       }
     };
   };

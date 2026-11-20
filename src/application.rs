@@ -145,6 +145,8 @@ impl LexApplication {
         self.set_accels_for_action("app.quit", &["<Control>q"]);
         self.set_accels_for_action("app.preferences", &["<Control>comma"]);
         self.set_accels_for_action("app.shortcuts", &["<Control>question"]);
+        self.set_accels_for_action("win.mode::laws", &["<Alt>1"]);
+        self.set_accels_for_action("win.mode::cards", &["<Alt>2"]);
         self.set_accels_for_action("win.toggle-notes", &["<Control><Shift>n"]);
         self.set_accels_for_action("win.new-tab", &["<Control>t"]);
         self.set_accels_for_action("win.close-tab", &["<Control>w"]);
@@ -188,7 +190,7 @@ impl LexApplication {
     /// Übersicht der Tastenkürzel (`Adw.ShortcutsDialog`).
     fn show_shortcuts(&self) {
         let dialog = adw::ShortcutsDialog::new();
-        let sections: [(&str, &[(&str, &str)]); 4] = [
+        let sections: [(&str, &[(&str, &str)]); 5] = [
             (
                 &gettext("Navigation"),
                 &[
@@ -220,6 +222,18 @@ impl LexApplication {
                 ],
             ),
             (
+                &gettext("Karteikarten"),
+                &[
+                    (&gettext("Karte umdrehen"), "space"),
+                    (&gettext("Gewusst (ein Fach weiter)"), "Right 2"),
+                    (&gettext("Nicht gewusst (zurück in Fach 1)"), "Left 1"),
+                    (
+                        &gettext("Beim Durchblättern: nächste / vorherige Karte"),
+                        "Right Left",
+                    ),
+                ],
+            ),
+            (
                 &gettext("Schrift"),
                 &[
                     (&gettext("Vergrößern"), "<Control>plus"),
@@ -230,6 +244,8 @@ impl LexApplication {
             (
                 &gettext("Allgemein"),
                 &[
+                    (&gettext("Modus Gesetze"), "<Alt>1"),
+                    (&gettext("Modus Karteikarten"), "<Alt>2"),
                     (&gettext("Einstellungen"), "<Control>comma"),
                     (&gettext("Tastenkürzel"), "<Control>question"),
                     (&gettext("Beenden"), "<Control>q"),

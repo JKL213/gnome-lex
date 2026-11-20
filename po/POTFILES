@@ -2,6 +2,7 @@ data/org.gnomelex.Gesetze.desktop.in
 data/org.gnomelex.Gesetze.metainfo.xml.in
 data/org.gnomelex.Gesetze.gschema.xml
 data/ui/download_center.blp
+data/ui/flashcards.blp
 data/ui/reader.blp
 data/ui/norm_view.blp
 data/ui/outline_row.blp
@@ -10,6 +11,10 @@ data/ui/jump_bar.blp
 data/ui/window.blp
 src/application.rs
 src/widgets/download_center.rs
+src/widgets/flashcards.rs
+src/widgets/leitner_box.rs
+src/cards/anki.rs
+src/cards/import.rs
 src/widgets/reader.rs
 src/widgets/norm_view.rs
 src/widgets/preferences.rs

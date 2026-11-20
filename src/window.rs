@@ -4,7 +4,8 @@
 //! Hauptfenster: Erststart mit Download-Angebot, Fortschrittsanzeige während
 //! des Imports, Prüfung auf neue Gesetzesfassungen, Gliederung (Seitenleiste
 //! mit Gesetzesauswahl), die Leseansicht mit optionaler Teilung und die
-//! Sprungleiste in der Kopfleiste.
+//! Sprungleiste in der Kopfleiste. Die Modusleiste am linken Rand wechselt
+//! zwischen den Gesetzen und den Karteikarten.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::path::PathBuf;
@@ -21,8 +22,8 @@ use crate::model::{Annotation, AnnotationKind, LawInfo, NormInfo, UnitInfo};
 use crate::refs::{LawRef, NormRef};
 use crate::settings;
 use crate::widgets::{
-    norm_view::AnnotationEvent, reader::PaneInfo, LexDownloadCenter, LexJumpBar, LexOutlineRow,
-    LexReader, Outline, ReaderState, TabsState,
+    norm_view::AnnotationEvent, reader::PaneInfo, LexDownloadCenter, LexFlashcards, LexJumpBar,
+    LexOutlineRow, LexReader, Outline, ReaderState, TabsState,
 };
 
 /// Mindestabstand zwischen zwei automatischen Aktualisierungsprüfungen.
@@ -52,6 +53,13 @@ mod imp {
         pub breakpoint: TemplateChild<adw::Breakpoint>,
         #[template_child]
         pub toast_overlay: TemplateChild<adw::ToastOverlay>,
+        /// Modus: „laws“ (Gesetze) oder „cards“ (Karteikarten).
+        #[template_child]
+        pub mode_stack: TemplateChild<adw::ViewStack>,
+        #[template_child]
+        pub flashcards: TemplateChild<LexFlashcards>,
+        #[template_child]
+        pub cards_badge: TemplateChild<gtk::Label>,
         #[template_child]
         pub stack: TemplateChild<gtk::Stack>,
         #[template_child]
@@ -139,6 +147,7 @@ mod imp {
             LexReader::ensure_type();
             LexOutlineRow::ensure_type();
             LexJumpBar::ensure_type();
+            LexFlashcards::ensure_type();
             klass.bind_template();
         }
 
@@ -178,6 +187,7 @@ mod imp {
             obj.setup_favorites();
             obj.setup_notes();
             obj.setup_history();
+            obj.setup_modes();
             obj.load_state();
         }
     }
@@ -387,6 +397,26 @@ impl LexWindow {
         let clear_history = gio::ActionEntry::builder("clear-history")
             .activate(|win: &Self, _, _| win.clear_history())
             .build();
+        // Modus der Anwendung: „laws“ oder „cards“ (Modusleiste, Alt+1/Alt+2).
+        let mode = gio::ActionEntry::builder("mode")
+            .parameter_type(Some(&String::static_variant_type()))
+            .state("laws".to_variant())
+            .activate(|win: &Self, _, param| {
+                if let Some(mode) = param.and_then(|p| p.get::<String>()) {
+                    win.set_mode(&mode);
+                }
+            })
+            .build();
+        // Nur für Tests: Befehl an den Karteikarten-Modus („import <Pfad>“,
+        // „open 0“, „flip“, „known“ …).
+        let cards_test = gio::ActionEntry::builder("cards-test")
+            .parameter_type(Some(&String::static_variant_type()))
+            .activate(|win: &Self, _, param| {
+                if let Some(cmd) = param.and_then(|p| p.get::<String>()) {
+                    win.imp().flashcards.test_command(&cmd);
+                }
+            })
+            .build();
         // Sprungleiste mit vorbelegter Eingabe (Kontextmenü „Auswahl in der
         // Schnellsuche“, Tests).
         let quick_query = gio::ActionEntry::builder("quick-search-query")
@@ -427,6 +457,8 @@ impl LexWindow {
             favorite,
             notes,
             clear_history,
+            mode,
+            cards_test,
         ]);
         self.update_actions();
     }
@@ -436,7 +468,10 @@ impl LexWindow {
         let busy = imp.busy.get();
         let installed = !imp.laws.borrow().is_empty();
         let reader = self.reader();
-        let showing = installed && !busy && reader.active_norm_id().is_some();
+        // Im Karteikarten-Modus ruhen die Aktionen der Leseansicht, damit
+        // ihre Tastenkürzel dort nichts Unsichtbares auslösen.
+        let laws = !self.cards_mode();
+        let showing = laws && installed && !busy && reader.active_norm_id().is_some();
         let split = reader.split();
         for (name, enabled) in [
             ("download", !busy),
@@ -444,20 +479,20 @@ impl LexWindow {
             ("prev-norm", showing),
             ("next-norm", showing),
             ("show-norm", installed && !busy),
-            ("split", installed),
-            ("switch-pane", split),
+            ("split", laws && installed),
+            ("switch-pane", laws && split),
             ("open-in-other-pane", installed && !busy),
-            ("quick-search", installed && !busy),
-            ("quick-search-query", installed && !busy),
-            ("new-tab", installed && !busy),
-            ("close-tab", imp.tab_view.n_pages() > 0),
-            ("next-tab", imp.tab_view.n_pages() > 1),
-            ("prev-tab", imp.tab_view.n_pages() > 1),
-            ("tab-overview", installed),
+            ("quick-search", laws && installed && !busy),
+            ("quick-search-query", laws && installed && !busy),
+            ("new-tab", laws && installed && !busy),
+            ("close-tab", laws && imp.tab_view.n_pages() > 0),
+            ("next-tab", laws && imp.tab_view.n_pages() > 1),
+            ("prev-tab", laws && imp.tab_view.n_pages() > 1),
+            ("tab-overview", laws && installed),
             ("open-in-new-tab", installed && !busy),
             ("download-center", !busy),
             ("toggle-favorite", showing),
-            ("toggle-notes", installed),
+            ("toggle-notes", laws && installed),
             ("clear-history", !imp.history.borrow().is_empty()),
         ] {
             if let Some(action) = self.lookup_action(name) {
@@ -636,7 +671,7 @@ impl LexWindow {
                     || f.downcast_ref::<gtk::TextView>()
                         .is_some_and(|tv| tv.is_editable())
             });
-            if in_entry {
+            if in_entry || win.cards_mode() {
                 return glib::Propagation::Proceed;
             }
             if win
@@ -651,6 +686,157 @@ impl LexWindow {
         let trigger = gtk::KeyvalTrigger::new(gdk::Key::slash, gdk::ModifierType::empty());
         controller.add_shortcut(gtk::Shortcut::new(Some(trigger), Some(action)));
         self.add_controller(controller);
+    }
+
+    // ------------------------------------------------------------------
+    // Modus: Gesetze oder Karteikarten
+    // ------------------------------------------------------------------
+
+    fn cards_mode(&self) -> bool {
+        self.imp().mode_stack.visible_child_name().as_deref() == Some("cards")
+    }
+
+    /// Wechselt den Modus („laws“ oder „cards“).
+    fn set_mode(&self, mode: &str) {
+        if matches!(mode, "laws" | "cards") {
+            self.imp().mode_stack.set_visible_child_name(mode);
+        }
+    }
+
+    /// Verbindet Modusleiste, Einstellung und Karteikarten-Modus.
+    fn setup_modes(&self) {
+        let imp = self.imp();
+        imp.mode_stack
+            .connect_visible_child_name_notify(glib::clone!(
+                #[weak(rename_to = win)]
+                self,
+                move |stack| {
+                    let mode = stack
+                        .visible_child_name()
+                        .map(|name| name.to_string())
+                        .unwrap_or_else(|| "laws".into());
+                    if let Some(action) = win
+                        .lookup_action("mode")
+                        .and_downcast::<gio::SimpleAction>()
+                    {
+                        action.set_state(&mode.to_variant());
+                    }
+                    let settings = win.settings();
+                    if settings.string("mode") != mode.as_str() {
+                        if let Err(err) = settings.set_string("mode", &mode) {
+                            log::warn!("mode konnte nicht gespeichert werden: {err}");
+                        }
+                    }
+                    win.update_actions();
+                    if mode == "cards" {
+                        win.imp().flashcards.focus_study();
+                    }
+                }
+            ));
+        imp.flashcards.connect_navigate(glib::clone!(
+            #[weak(rename_to = win)]
+            self,
+            move |target| win.open_card_reference(target.clone())
+        ));
+        imp.flashcards.connect_message(glib::clone!(
+            #[weak(rename_to = win)]
+            self,
+            move |text| win.toast(text)
+        ));
+        imp.flashcards.connect_due_changed(glib::clone!(
+            #[weak(rename_to = win)]
+            self,
+            move |due| {
+                let badge = &win.imp().cards_badge;
+                badge.set_visible(due > 0);
+                badge.set_label(&if due > 99 {
+                    "99+".to_owned()
+                } else {
+                    due.to_string()
+                });
+                badge.set_tooltip_text(Some(
+                    &ngettext("{n} Karte heute fällig", "{n} Karten heute fällig", due)
+                        .replace("{n}", &due.to_string()),
+                ));
+            }
+        ));
+        imp.flashcards.refresh();
+        if self.settings().string("mode") == "cards" {
+            self.set_mode("cards");
+        }
+    }
+
+    /// Klick auf ein Normzitat einer Karteikarte: Gesetz und Norm auflösen
+    /// und in der Leseansicht zeigen. Ohne Kürzel im Zitat gilt das Gesetz,
+    /// das gerade gelesen wird.
+    fn open_card_reference(&self, target: NormRef) {
+        let imp = self.imp();
+        let first_law = imp.laws.borrow().first().map(|law| law.slug.clone());
+        let Some(first_law) = first_law else {
+            self.toast(&gettext(
+                "Für Verweise aus Karteikarten muss das Gesetz heruntergeladen sein.",
+            ));
+            return;
+        };
+        let law_key = match &target.law {
+            LawRef::Abbrev(abbrev) => LawKey::Abbrev(abbrev.clone()),
+            _ => LawKey::Slug(
+                self.reader()
+                    .active_info()
+                    .map(|info| info.law_slug)
+                    .unwrap_or(first_law),
+            ),
+        };
+        let candidates = target.enbez_candidates();
+        if candidates.is_empty() {
+            return;
+        }
+        let inner = target.inner_target();
+        let label = target.label();
+        glib::spawn_future_local(glib::clone!(
+            #[weak(rename_to = win)]
+            self,
+            async move {
+                let path = Self::db_path();
+                let key = law_key.clone();
+                let result = gio::spawn_blocking(move || -> Result<RefLookup, rusqlite::Error> {
+                    let db = Database::open(&path)?;
+                    let law = match &key {
+                        LawKey::Slug(slug) => db.law_by_slug(slug)?,
+                        LawKey::Abbrev(abbrev) => db.law_by_abbrev(abbrev)?,
+                    };
+                    let Some(law) = law else {
+                        return Ok(RefLookup::LawMissing);
+                    };
+                    for candidate in &candidates {
+                        if let Some(id) = db.norm_id_by_enbez(law.id, candidate)? {
+                            return Ok(RefLookup::Found(id));
+                        }
+                    }
+                    Ok(RefLookup::NormMissing)
+                })
+                .await;
+                match result {
+                    Ok(Ok(RefLookup::Found(id))) => {
+                        win.set_mode("laws");
+                        let reader = win.reader();
+                        let pane = reader.active_pane();
+                        reader.show_norm_in_pane_at(
+                            id,
+                            pane,
+                            Some(inner).filter(|t| !t.is_empty()),
+                        );
+                        win.reveal_content();
+                    }
+                    Ok(Ok(RefLookup::NormMissing)) => win.toast(
+                        &gettext("Verweis {label} wurde nicht gefunden.")
+                            .replace("{label}", &label),
+                    ),
+                    Ok(Ok(RefLookup::LawMissing)) => win.offer_law_download(&law_key),
+                    _ => log::warn!("Verweis {label} konnte nicht aufgelöst werden"),
+                }
+            }
+        ));
     }
 
     // ------------------------------------------------------------------
@@ -1753,6 +1939,7 @@ impl LexWindow {
                 .await;
                 match result {
                     Ok(Ok(hits)) if !hits.is_empty() => {
+                        win.set_mode("laws");
                         win.show_norm_in_active(hits[0].norm.id);
                         win.reveal_content();
                     }

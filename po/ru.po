@@ -7,15 +7,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gesetze\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-22 23:52+0200\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-11-19 15:00+0000\n"
 "PO-Revision-Date: 2026-10-13 22:00+0200\n"
 "Last-Translator: Gnome Lex\n"
 "Language-Team: none\n"
 "Language: ru\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
 #: data/org.gnomelex.Gesetze.desktop.in:2
 msgid "Gesetze"
@@ -26,18 +27,36 @@ msgid "Deutsche Bundesgesetze lesen und annotieren"
 msgstr "Чтение и аннотирование федеральных законов Германии"
 
 #: data/org.gnomelex.Gesetze.desktop.in:9
-msgid "Gesetz;BGB;Recht;Norm;Paragraph;"
-msgstr "закон;BGB;право;норма;параграф;Gesetz;"
+msgid "Gesetz;BGB;Recht;Norm;Paragraph;Karteikarten;Lernen;"
+msgstr "закон;BGB;право;норма;параграф;Gesetz;карточки;учёба;Karteikarten;"
 
 #: data/org.gnomelex.Gesetze.metainfo.xml.in:9
-msgid "Gesetze zeigt den Text des Bürgerlichen Gesetzbuchs aus der amtlichen Quelle gesetze-im-internet.de mit Gliederung, Volltextsuche und klickbaren Verweisen. Textstellen lassen sich markieren, mit Notizen versehen und als Lesezeichen ablegen."
-msgstr "Gesetze показывает текст Bürgerliches Gesetzbuch (BGB) из официального источника gesetze-im-internet.de с оглавлением, полнотекстовым поиском и кликабельными ссылками. Фрагменты текста можно выделять, снабжать заметками и добавлять в закладки."
+msgid ""
+"Gesetze zeigt den Text des Bürgerlichen Gesetzbuchs aus der amtlichen Quelle "
+"gesetze-im-internet.de mit Gliederung, Volltextsuche und klickbaren "
+"Verweisen. Textstellen lassen sich markieren, mit Notizen versehen und als "
+"Lesezeichen ablegen."
+msgstr ""
+"Gesetze показывает текст Bürgerliches Gesetzbuch (BGB) из официального "
+"источника gesetze-im-internet.de с оглавлением, полнотекстовым поиском и "
+"кликабельными ссылками. Фрагменты текста можно выделять, снабжать заметками "
+"и добавлять в закладки."
 
-#: data/org.gnomelex.Gesetze.metainfo.xml.in:20
+#: data/org.gnomelex.Gesetze.metainfo.xml.in:15
+msgid ""
+"Im Karteikarten-Modus werden Anki-Kartenpakete importiert und nach dem "
+"Fächerprinzip der Lernkartei abgefragt. Normzitate auf den Karten führen "
+"direkt in den Gesetzestext."
+msgstr ""
+"В режиме карточек импортируются пакеты Anki, а карточки повторяются по "
+"принципу картотеки с ячейками. Ссылки на нормы на карточках ведут прямо к "
+"тексту закона."
+
+#: data/org.gnomelex.Gesetze.metainfo.xml.in:25
 msgid "Gnome Lex"
 msgstr "Gnome Lex"
 
-#: data/org.gnomelex.Gesetze.metainfo.xml.in:38
+#: data/org.gnomelex.Gesetze.metainfo.xml.in:43
 msgid "Erste Version: BGB lesen, suchen, verweisen, annotieren."
 msgstr "Первая версия: чтение, поиск, ссылки и аннотации для BGB."
 
@@ -58,8 +77,125 @@ msgid "Verfügbar"
 msgstr "Доступно"
 
 #: data/ui/download_center.blp:29
-msgid "Quelle: gesetze-im-internet.de (Bundesministerium der Justiz). Die Texte werden lokal gespeichert."
-msgstr "Источник: gesetze-im-internet.de (Bundesministerium der Justiz). Тексты сохраняются локально."
+msgid ""
+"Quelle: gesetze-im-internet.de (Bundesministerium der Justiz). Die Texte "
+"werden lokal gespeichert."
+msgstr ""
+"Источник: gesetze-im-internet.de (Bundesministerium der Justiz). Тексты "
+"сохраняются локально."
+
+#: data/ui/flashcards.blp:9 data/ui/window.blp:468
+msgid "Karteikarten"
+msgstr "Карточки"
+
+#: data/ui/flashcards.blp:18 data/ui/flashcards.blp:42
+msgid "Anki-Paket importieren …"
+msgstr "Импортировать пакет Anki…"
+
+#: data/ui/flashcards.blp:25 data/ui/window.blp:155 data/ui/window.blp:185
+#: data/ui/window.blp:220 data/ui/window.blp:409
+msgid "Hauptmenü"
+msgstr "Главное меню"
+
+#: data/ui/flashcards.blp:38
+msgid "Noch keine Karteikarten"
+msgstr "Карточек пока нет"
+
+#: data/ui/flashcards.blp:39
+msgid ""
+"Importieren Sie ein Anki-Kartenpaket (.apkg). Die Karten werden lokal "
+"gespeichert und nach dem Fächerprinzip der Lernkartei abgefragt."
+msgstr ""
+"Импортируйте пакет карточек Anki (.apkg). Карточки хранятся локально и "
+"повторяются по принципу картотеки с ячейками."
+
+#: data/ui/flashcards.blp:58
+msgid "Importiere Karten …"
+msgstr "Импорт карточек…"
+
+#: data/ui/flashcards.blp:113
+msgid "Lernen"
+msgstr "Обучение"
+
+#: data/ui/flashcards.blp:124
+msgid "Stapel"
+msgstr "Колода"
+
+#: data/ui/flashcards.blp:169 data/ui/flashcards.blp:241
+msgid "Umdrehen"
+msgstr "Перевернуть"
+
+#: data/ui/flashcards.blp:170 data/ui/flashcards.blp:242
+msgid "Karte umdrehen (Leertaste)"
+msgstr "Перевернуть карточку (Пробел)"
+
+#: data/ui/flashcards.blp:195
+msgid "Nicht gewusst"
+msgstr "Не знаю"
+
+#: data/ui/flashcards.blp:196
+msgid "Zurück in Fach 1 (← oder 1)"
+msgstr "Назад в ячейку 1 (← или 1)"
+
+#: data/ui/flashcards.blp:207
+msgid "Gewusst"
+msgstr "Знаю"
+
+#: data/ui/flashcards.blp:208
+msgid "Ein Fach weiter (→ oder 2)"
+msgstr "В следующую ячейку (→ или 2)"
+
+#: data/ui/flashcards.blp:230
+msgid "Vorherige Karte (←)"
+msgstr "Предыдущая карточка (←)"
+
+#: data/ui/flashcards.blp:254
+msgid "Nächste Karte (→)"
+msgstr "Следующая карточка (→)"
+
+#: data/ui/flashcards.blp:279
+msgid "Für heute geschafft"
+msgstr "На сегодня всё"
+
+#: data/ui/flashcards.blp:287
+msgid "Zur Stapelübersicht"
+msgstr "К списку колод"
+
+#: data/ui/flashcards.blp:297
+msgid "Alle Karten durchblättern"
+msgstr "Пролистать все карточки"
+
+#: data/ui/flashcards.blp:316
+msgid "Anki-Paket _importieren …"
+msgstr "_Импортировать пакет Anki…"
+
+#: data/ui/flashcards.blp:323 data/ui/window.blp:533
+msgid "_Einstellungen"
+msgstr "_Параметры"
+
+#: data/ui/flashcards.blp:328 data/ui/window.blp:537
+msgid "_Tastenkürzel"
+msgstr "_Комбинации клавиш"
+
+#: data/ui/flashcards.blp:333 data/ui/window.blp:541
+msgid "_Info zu Gesetze"
+msgstr "_О приложении Gesetze"
+
+#: data/ui/flashcards.blp:338 data/ui/window.blp:545
+msgid "_Beenden"
+msgstr "В_ыйти"
+
+#: data/ui/flashcards.blp:347
+msgid "Fällige Karten _lernen"
+msgstr "_Учить карточки к повторению"
+
+#: data/ui/flashcards.blp:352
+msgid "Alle Karten _durchblättern"
+msgstr "_Пролистать все карточки"
+
+#: data/ui/flashcards.blp:359
+msgid "Lernstand _zurücksetzen"
+msgstr "_Сбросить прогресс"
 
 #: data/ui/jump_bar.blp:18
 msgid "Springen … (Super+K)"
@@ -137,240 +273,285 @@ msgstr "Проверять новые редакции при запуске"
 msgid "Höchstens einmal täglich; lädt die Archive von gesetze-im-internet.de"
 msgstr "Не чаще раза в день; загружает архивы с gesetze-im-internet.de"
 
-#: data/ui/window.blp:37 data/ui/window.blp:67 data/ui/window.blp:102
-#: data/ui/window.blp:280
-msgid "Hauptmenü"
-msgstr "Главное меню"
+#: data/ui/window.blp:56
+msgid "Gesetze (Alt+1)"
+msgstr "Законы (Alt+1)"
 
-#: data/ui/window.blp:45
+#: data/ui/window.blp:76 data/ui/window.blp:140
+msgctxt "Modus"
+msgid "Gesetze"
+msgstr "Законы"
+
+#: data/ui/window.blp:86
+msgid "Karteikarten (Alt+2)"
+msgstr "Карточки (Alt+2)"
+
+#: data/ui/window.blp:107
+msgid "Karten"
+msgstr "Карточки"
+
+#: data/ui/window.blp:163
 msgid "Kein Gesetz geladen"
 msgstr "Законы не загружены"
 
-#: data/ui/window.blp:46
-msgid "Gesetze werden einmalig von gesetze-im-internet.de heruntergeladen und lokal gespeichert."
-msgstr "Законы однократно загружаются с gesetze-im-internet.de и сохраняются локально."
+#: data/ui/window.blp:164
+msgid ""
+"Gesetze werden einmalig von gesetze-im-internet.de heruntergeladen und lokal "
+"gespeichert."
+msgstr ""
+"Законы однократно загружаются с gesetze-im-internet.de и сохраняются "
+"локально."
 
-#: data/ui/window.blp:73
+#: data/ui/window.blp:191
 msgid "Lade herunter …"
 msgstr "Загрузка …"
 
-#: data/ui/window.blp:88 data/ui/window.blp:111
+#: data/ui/window.blp:206 data/ui/window.blp:229
 msgid "Gliederung"
 msgstr "Оглавление"
 
-#: data/ui/window.blp:96
+#: data/ui/window.blp:214
 msgid "Gesetz der Gliederung"
 msgstr "Закон, показанный в оглавлении"
 
-#: data/ui/window.blp:127
+#: data/ui/window.blp:245
 msgid "Favoriten"
 msgstr "Избранное"
 
-#: data/ui/window.blp:151
+#: data/ui/window.blp:280
 msgid "Norm"
 msgstr "Норма"
 
-#: data/ui/window.blp:169
+#: data/ui/window.blp:298
 msgid "Schema / Notiz"
 msgstr "Схема / заметка"
 
-#: data/ui/window.blp:176
+#: data/ui/window.blp:305
 msgid "Panel schließen"
 msgstr "Закрыть панель"
 
-#: data/ui/window.blp:199
-msgid "Wird automatisch gespeichert und unter der Überschrift der Norm angezeigt."
+#: data/ui/window.blp:328
+msgid ""
+"Wird automatisch gespeichert und unter der Überschrift der Norm angezeigt."
 msgstr "Сохраняется автоматически и отображается под заголовком нормы."
 
-#: data/ui/window.blp:225
+#: data/ui/window.blp:354
 msgid "Vorherige Norm (Alt+Bild↑)"
 msgstr "Предыдущая норма (Alt+PgUp)"
 
-#: data/ui/window.blp:231
+#: data/ui/window.blp:360
 msgid "Nächste Norm (Alt+Bild↓)"
 msgstr "Следующая норма (Alt+PgDn)"
 
-#: data/ui/window.blp:239
+#: data/ui/window.blp:368
 msgid "Zuletzt gelesene Normen"
 msgstr "Недавно прочитанные нормы"
 
-#: data/ui/window.blp:260
+#: data/ui/window.blp:389
 msgid "Verlauf leeren"
 msgstr "Очистить журнал"
 
-#: data/ui/window.blp:288
+#: data/ui/window.blp:417
 msgid "Favorit (Strg+D)"
 msgstr "В избранное (Ctrl+D)"
 
-#: data/ui/window.blp:295
+#: data/ui/window.blp:424
 msgid "Schema / Notiz (Strg+Umschalt+N)"
 msgstr "Схема / заметка (Ctrl+Shift+N)"
 
-#: data/ui/window.blp:302
+#: data/ui/window.blp:431
 msgid "Geteilte Ansicht (Strg+Umschalt+D)"
 msgstr "Разделённый вид (Ctrl+Shift+D)"
 
-#: data/ui/window.blp:309
+#: data/ui/window.blp:438
 msgid "Tab-Übersicht (Strg+Umschalt+O)"
 msgstr "Обзор вкладок (Ctrl+Shift+O)"
 
-#: data/ui/window.blp:316
+#: data/ui/window.blp:445
 msgid "Neuer Tab (Strg+T)"
 msgstr "Новая вкладка (Ctrl+T)"
 
-#: data/ui/window.blp:341
+#: data/ui/window.blp:487
 msgid "_Springen …"
 msgstr "_Перейти …"
 
-#: data/ui/window.blp:345
+#: data/ui/window.blp:491
 msgid "Neuer _Tab"
 msgstr "Новая _вкладка"
 
-#: data/ui/window.blp:349
+#: data/ui/window.blp:495
 msgid "_Geteilte Ansicht"
 msgstr "_Разделённый вид"
 
-#: data/ui/window.blp:353
+#: data/ui/window.blp:499
 msgid "_Favorit"
 msgstr "В _избранное"
 
-#: data/ui/window.blp:357
+#: data/ui/window.blp:503
 msgid "Schema / _Notiz"
 msgstr "Схема / _заметка"
 
-#: data/ui/window.blp:363
+#: data/ui/window.blp:509
 msgid "Schrift ver_größern"
 msgstr "У_величить шрифт"
 
-#: data/ui/window.blp:367
+#: data/ui/window.blp:513
 msgid "Schrift ver_kleinern"
 msgstr "У_меньшить шрифт"
 
-#: data/ui/window.blp:371
+#: data/ui/window.blp:517
 msgid "Schriftgröße _zurücksetzen"
 msgstr "_Сбросить размер шрифта"
 
-#: data/ui/window.blp:377
+#: data/ui/window.blp:523
 msgid "Auf _Aktualisierung prüfen"
 msgstr "Проверить _обновления"
 
-#: data/ui/window.blp:381
+#: data/ui/window.blp:527
 msgid "Gesetze _herunterladen …"
 msgstr "За_грузить законы …"
 
-#: data/ui/window.blp:387
-msgid "_Einstellungen"
-msgstr "_Параметры"
-
-#: data/ui/window.blp:391
-msgid "_Tastenkürzel"
-msgstr "_Комбинации клавиш"
-
-#: data/ui/window.blp:395
-msgid "_Info zu Gesetze"
-msgstr "_О приложении Gesetze"
-
-#: data/ui/window.blp:399
-msgid "_Beenden"
-msgstr "В_ыйти"
-
-#: src/application.rs:193
+#: src/application.rs:195
 msgid "Navigation"
 msgstr "Навигация"
 
-#: src/application.rs:196
+#: src/application.rs:198
 msgid "Springen (Sprungleiste)"
 msgstr "Перейти (строка перехода)"
 
-#: src/application.rs:199
+#: src/application.rs:201
 msgid "Vorherige Norm"
 msgstr "Предыдущая норма"
 
-#: src/application.rs:200
+#: src/application.rs:202
 msgid "Nächste Norm"
 msgstr "Следующая норма"
 
-#: src/application.rs:201
+#: src/application.rs:203
 msgid "Favorit setzen oder entfernen"
 msgstr "Добавить в избранное или удалить"
 
-#: src/application.rs:203
+#: src/application.rs:205
 msgid "Notiz / Schema ein- oder ausblenden"
 msgstr "Показать или скрыть заметку / схему"
 
-#: src/application.rs:209
+#: src/application.rs:211
 msgid "Ansicht"
 msgstr "Вид"
 
-#: src/application.rs:211
+#: src/application.rs:213
 msgid "Geteilte Ansicht"
 msgstr "Разделённый вид"
 
-#: src/application.rs:212
+#: src/application.rs:214
 msgid "Zwischen den Ansichten wechseln"
 msgstr "Переключиться между панелями"
 
-#: src/application.rs:213 src/window.rs:1141 src/window.rs:1227
+#: src/application.rs:215 src/window.rs:1327 src/window.rs:1413
 msgid "Neuer Tab"
 msgstr "Новая вкладка"
 
-#: src/application.rs:214
+#: src/application.rs:216
 msgid "Tab schließen"
 msgstr "Закрыть вкладку"
 
-#: src/application.rs:216
+#: src/application.rs:218
 msgid "Nächster / vorheriger Tab"
 msgstr "Следующая / предыдущая вкладка"
 
-#: src/application.rs:219
+#: src/application.rs:221
 msgid "Tab-Übersicht"
 msgstr "Обзор вкладок"
 
-#: src/application.rs:223
+#: src/application.rs:227
+msgid "Karte umdrehen"
+msgstr "Перевернуть карточку"
+
+#: src/application.rs:228
+msgid "Gewusst (ein Fach weiter)"
+msgstr "Знаю (в следующую ячейку)"
+
+#: src/application.rs:229
+msgid "Nicht gewusst (zurück in Fach 1)"
+msgstr "Не знаю (назад в ячейку 1)"
+
+#: src/application.rs:231
+msgid "Beim Durchblättern: nächste / vorherige Karte"
+msgstr "При пролистывании: следующая / предыдущая карточка"
+
+#: src/application.rs:237
 msgid "Schrift"
 msgstr "Шрифт"
 
-#: src/application.rs:225
+#: src/application.rs:239
 msgid "Vergrößern"
 msgstr "Увеличить"
 
-#: src/application.rs:226
+#: src/application.rs:240
 msgid "Verkleinern"
 msgstr "Уменьшить"
 
-#: src/application.rs:227
+#: src/application.rs:241
 msgid "Zurücksetzen"
 msgstr "Сбросить"
 
-#: src/application.rs:231
+#: src/application.rs:245
 msgid "Allgemein"
 msgstr "Общие"
 
-#: src/application.rs:234
+#: src/application.rs:247
+msgid "Modus Gesetze"
+msgstr "Режим «Законы»"
+
+#: src/application.rs:248
+msgid "Modus Karteikarten"
+msgstr "Режим «Карточки»"
+
+#: src/application.rs:250
 msgid "Tastenkürzel"
 msgstr "Комбинации клавиш"
 
-#: src/application.rs:235
+#: src/application.rs:251
 msgid "Beenden"
 msgstr "Выйти"
 
-#: src/application.rs:256
-msgid "Deutsche Bundesgesetze lesen und annotieren. Datenquelle: gesetze-im-internet.de"
-msgstr "Чтение и аннотирование федеральных законов Германии. Источник данных: gesetze-im-internet.de"
+#: src/application.rs:272
+msgid ""
+"Deutsche Bundesgesetze lesen und annotieren. Datenquelle: gesetze-im-"
+"internet.de"
+msgstr ""
+"Чтение и аннотирование федеральных законов Германии. Источник данных: "
+"gesetze-im-internet.de"
 
-#: src/model/mod.rs:162
+#: src/cards/anki.rs:175
+msgid "Das Archiv enthält keine Kartensammlung (collection.anki2)."
+msgstr "Архив не содержит коллекции карточек (collection.anki2)."
+
+#: src/cards/anki.rs:228
+msgid "Das Paket ist zu groß."
+msgstr "Пакет слишком велик."
+
+#: src/cards/anki.rs:285
+msgid "Die Sammlung enthält keine Karten."
+msgstr "Коллекция не содержит карточек."
+
+#: src/cards/import.rs:44
+msgid "Das Paket enthält keine Karten."
+msgstr "Пакет не содержит карточек."
+
+#: src/model/mod.rs:162 src/widgets/flashcards.rs:1094
 msgid "Gelb"
 msgstr "Жёлтый"
 
-#: src/model/mod.rs:163
+#: src/model/mod.rs:163 src/widgets/flashcards.rs:1095
 msgid "Grün"
 msgstr "Зелёный"
 
-#: src/model/mod.rs:164
+#: src/model/mod.rs:164 src/widgets/flashcards.rs:1096
 msgid "Blau"
 msgstr "Синий"
 
-#: src/model/mod.rs:165
+#: src/model/mod.rs:165 src/widgets/flashcards.rs:1097
 msgid "Rosa"
 msgstr "Розовый"
 
@@ -378,7 +559,7 @@ msgstr "Розовый"
 msgid "Orange"
 msgstr "Оранжевый"
 
-#: src/widgets/download_center.rs:80 src/window.rs:809
+#: src/widgets/download_center.rs:80 src/window.rs:995
 msgid "Aktualisieren"
 msgstr "Обновить"
 
@@ -386,7 +567,7 @@ msgstr "Обновить"
 msgid "{abbrev} · nicht installiert"
 msgstr "{abbrev} · не установлен"
 
-#: src/widgets/download_center.rs:83 src/window.rs:1379
+#: src/widgets/download_center.rs:83 src/window.rs:1565
 msgid "Herunterladen"
 msgstr "Загрузить"
 
@@ -398,101 +579,319 @@ msgstr "Загрузить {abbrev} с gesetze-im-internet.de"
 msgid "importiert am {date}"
 msgstr "импортировано {date}"
 
+#: src/widgets/flashcards.rs:376
+msgid "Nur Anki-Kartenpakete (.apkg) lassen sich importieren."
+msgstr "Импортировать можно только пакеты Anki (.apkg)."
+
+#: src/widgets/flashcards.rs:406
+msgid "Die Kartenstapel konnten nicht gelesen werden."
+msgstr "Не удалось прочитать колоды."
+
+#: src/widgets/flashcards.rs:424
+msgid "{n} Stapel"
+msgid_plural "{n} Stapel"
+msgstr[0] "{n} колода"
+msgstr[1] "{n} колоды"
+msgstr[2] "{n} колод"
+
+#: src/widgets/flashcards.rs:426
+msgid "heute ist nichts fällig"
+msgstr "на сегодня повторений нет"
+
+#: src/widgets/flashcards.rs:428 src/window.rs:758
+msgid "{n} Karte heute fällig"
+msgid_plural "{n} Karten heute fällig"
+msgstr[0] "{n} карточка к повторению сегодня"
+msgstr[1] "{n} карточки к повторению сегодня"
+msgstr[2] "{n} карточек к повторению сегодня"
+
+#: src/widgets/flashcards.rs:466 src/widgets/leitner_box.rs:72
+msgid "{n} Karte"
+msgid_plural "{n} Karten"
+msgstr[0] "{n} карточка"
+msgstr[1] "{n} карточки"
+msgstr[2] "{n} карточек"
+
+#: src/widgets/flashcards.rs:470
+msgid "{n} fällig"
+msgstr "к повторению: {n}"
+
+#: src/widgets/flashcards.rs:473
+msgid "nichts fällig"
+msgstr "повторений нет"
+
+#: src/widgets/flashcards.rs:492
+msgid "Quelle: {file}"
+msgstr "Источник: {file}"
+
+#: src/widgets/flashcards.rs:516
+msgid "Anki-Kartenpakete (*.apkg)"
+msgstr "Пакеты Anki (*.apkg)"
+
+#: src/widgets/flashcards.rs:521
+msgid "Anki-Paket importieren"
+msgstr "Импорт пакета Anki"
+
+#: src/widgets/flashcards.rs:522
+msgid "Importieren"
+msgstr "Импортировать"
+
+#: src/widgets/flashcards.rs:598
+msgid "Import fehlgeschlagen – {error}"
+msgstr "Не удалось импортировать – {error}"
+
+#: src/widgets/flashcards.rs:631
+msgid "Die Karten konnten nicht geladen werden."
+msgstr "Не удалось загрузить карточки."
+
+#: src/widgets/flashcards.rs:691
+msgid "Antwort"
+msgstr "Ответ"
+
+#: src/widgets/flashcards.rs:693
+msgid "Frage"
+msgstr "Вопрос"
+
+#: src/widgets/flashcards.rs:718
+msgid "erledigt"
+msgstr "готово"
+
+#: src/widgets/flashcards.rs:720
+msgid "noch {n} Karte"
+msgid_plural "noch {n} Karten"
+msgstr[0] "осталась {n} карточка"
+msgstr[1] "осталось {n} карточки"
+msgstr[2] "осталось {n} карточек"
+
+#: src/widgets/flashcards.rs:723
+msgid "Durchblättern"
+msgstr "Пролистывание"
+
+#: src/widgets/flashcards.rs:726
+msgid "Karte {i} von {n} · Fach {box}"
+msgstr "Карточка {i} из {n} · ячейка {box}"
+
+#: src/widgets/flashcards.rs:889
+msgid "Nichts fällig"
+msgstr "Повторений нет"
+
+#: src/widgets/flashcards.rs:890
+msgid ""
+"Alle Karten dieses Stapels sind für heute erledigt. Durchblättern lassen sie "
+"sich jederzeit."
+msgstr ""
+"Все карточки этой колоды на сегодня пройдены. Пролистать их можно в любое "
+"время."
+
+#: src/widgets/flashcards.rs:894
+msgid "{n} Karte gewusst"
+msgid_plural "{n} Karten gewusst"
+msgstr[0] "{n} карточка усвоена"
+msgstr[1] "{n} карточки усвоены"
+msgstr[2] "{n} карточек усвоено"
+
+#: src/widgets/flashcards.rs:899
+msgid "{n} Wiederholung"
+msgid_plural "{n} Wiederholungen"
+msgstr[0] "{n} повтор"
+msgstr[1] "{n} повтора"
+msgstr[2] "{n} повторов"
+
+#: src/widgets/flashcards.rs:918
+msgid "Lernstand zurücksetzen?"
+msgstr "Сбросить прогресс?"
+
+#: src/widgets/flashcards.rs:920
+msgid "Alle Karten des Stapels „{name}“ wandern zurück in Fach 1."
+msgstr "Все карточки колоды «{name}» вернутся в ячейку 1."
+
+#: src/widgets/flashcards.rs:925 src/widgets/flashcards.rs:985
+msgid "_Abbrechen"
+msgstr "_Отмена"
+
+#: src/widgets/flashcards.rs:926
+msgid "_Zurücksetzen"
+msgstr "_Сбросить"
+
+#: src/widgets/flashcards.rs:962
+msgid "Der Lernstand konnte nicht zurückgesetzt werden."
+msgstr "Не удалось сбросить прогресс."
+
+#: src/widgets/flashcards.rs:973
+msgid "Stapel löschen?"
+msgstr "Удалить колоду?"
+
+#: src/widgets/flashcards.rs:975
+msgid "„{name}“ mit {n} Karte und dem Lernstand wird entfernt."
+msgid_plural "„{name}“ mit {n} Karten und dem Lernstand wird entfernt."
+msgstr[0] "Колода «{name}» с {n} карточкой и прогрессом будет удалена."
+msgstr[1] "Колода «{name}» с {n} карточками и прогрессом будет удалена."
+msgstr[2] "Колода «{name}» с {n} карточками и прогрессом будет удалена."
+
+#: src/widgets/flashcards.rs:986
+msgid "_Löschen"
+msgstr "_Удалить"
+
+#: src/widgets/flashcards.rs:1012
+msgid "Der Stapel konnte nicht gelöscht werden."
+msgstr "Не удалось удалить колоду."
+
+#: src/widgets/flashcards.rs:1098
+msgid "Weiß"
+msgstr "Белый"
+
+#: src/widgets/flashcards.rs:1130
+msgid "_Papierfarbe"
+msgstr "_Цвет бумаги"
+
+#: src/widgets/flashcards.rs:1136
+msgid "Stapel _löschen …"
+msgstr "_Удалить колоду…"
+
+#: src/widgets/flashcards.rs:1146
+msgid "{n} Stapel importiert"
+msgid_plural "{n} Stapel importiert"
+msgstr[0] "Импортирована {n} колода"
+msgstr[1] "Импортировано {n} колоды"
+msgstr[2] "Импортировано {n} колод"
+
+#: src/widgets/flashcards.rs:1151
+msgid "{n} neue Karte"
+msgid_plural "{n} neue Karten"
+msgstr[0] "{n} новая карточка"
+msgstr[1] "{n} новые карточки"
+msgstr[2] "{n} новых карточек"
+
+#: src/widgets/flashcards.rs:1156
+msgid "{n} aktualisiert"
+msgstr "обновлено: {n}"
+
+#: src/widgets/flashcards.rs:1159
+msgid "{n} entfernt"
+msgstr "удалено: {n}"
+
 #: src/widgets/jump_bar.rs:268
-msgid "Eingabe öffnet · Strg+Eingabe in der zweiten Ansicht · Tab vervollständigt"
+msgid ""
+"Eingabe öffnet · Strg+Eingabe in der zweiten Ansicht · Tab vervollständigt"
 msgstr "Enter — открыть · Ctrl+Enter — во второй панели · Tab — дополнить"
 
 #: src/widgets/jump_bar.rs:827
 msgid "[Tabelle]"
 msgstr "[Таблица]"
 
-#: src/widgets/norm_view.rs:1385
+#: src/widgets/leitner_box.rs:74
+msgid "Wiederholung täglich"
+msgstr "Повторение ежедневно"
+
+#: src/widgets/leitner_box.rs:76
+msgid "Wiederholung alle {n} Tage"
+msgstr "Повторение каждые {n} дн."
+
+#: src/widgets/leitner_box.rs:80 src/widgets/leitner_box.rs:282
+msgid "Fach {n}"
+msgstr "Ячейка {n}"
+
+#: src/widgets/norm_view.rs:1471
 msgid "Fußnoten"
 msgstr "Сноски"
 
-#: src/widgets/norm_view.rs:1817
+#: src/widgets/norm_view.rs:1877
 msgid "Zur Fußnote springen"
 msgstr "Перейти к сноске"
 
-#: src/widgets/norm_view.rs:1819
+#: src/widgets/norm_view.rs:1879
 msgid ""
 "{target} öffnen\n"
 "Strg+Klick: in der zweiten Ansicht öffnen"
-msgstr "Открыть {target}\nCtrl+щелчок: открыть во второй панели"
+msgstr ""
+"Открыть {target}\n"
+"Ctrl+щелчок: открыть во второй панели"
 
-#: src/widgets/norm_view.rs:2468 src/widgets/norm_view.rs:2993
+#: src/widgets/norm_view.rs:2833 src/widgets/norm_view.rs:3379
 msgid "Markieren"
 msgstr "Выделить"
 
-#: src/widgets/norm_view.rs:2473
+#: src/widgets/norm_view.rs:2838
 msgid "Notiz"
 msgstr "Заметка"
 
-#: src/widgets/norm_view.rs:2485
+#: src/widgets/norm_view.rs:2850
 msgid "Notiz in {farbe} anheften"
 msgstr "Прикрепить заметку цветом «{farbe}»"
 
-#: src/widgets/norm_view.rs:2486
+#: src/widgets/norm_view.rs:2851
 msgid "{farbe} markieren"
 msgstr "Выделить цветом «{farbe}»"
 
-#: src/widgets/norm_view.rs:2503
+#: src/widgets/norm_view.rs:2868
 msgid "Entfernen"
 msgstr "Удалить"
 
-#: src/widgets/norm_view.rs:2504
+#: src/widgets/norm_view.rs:2869
 msgid "Markierung oder Notiz entfernen"
 msgstr "Удалить выделение или заметку"
 
-#: src/widgets/norm_view.rs:2968
+#: src/widgets/norm_view.rs:3316
+msgid "Grundlage"
+msgstr "Основание"
+
+#: src/widgets/norm_view.rs:3317
+msgid "Anschlussnorm"
+msgstr "Последующая норма"
+
+#: src/widgets/norm_view.rs:3323
+msgid "Klick öffnet, Strg+Klick in der zweiten Ansicht"
+msgstr "Щелчок открывает, Ctrl+щелчок — во второй панели"
+
+#: src/widgets/norm_view.rs:3354
 msgid "{ref} öffnen"
 msgstr "Открыть {ref}"
 
-#: src/widgets/norm_view.rs:2969
+#: src/widgets/norm_view.rs:3355
 msgid "Zur Fußnote"
 msgstr "К сноске"
 
-#: src/widgets/norm_view.rs:2974
+#: src/widgets/norm_view.rs:3360
 msgid "In zweiter Ansicht öffnen"
 msgstr "Открыть во второй панели"
 
-#: src/widgets/norm_view.rs:2982
+#: src/widgets/norm_view.rs:3368
 msgid "Notizfarbe"
 msgstr "Цвет заметки"
 
-#: src/widgets/norm_view.rs:2983
+#: src/widgets/norm_view.rs:3369
 msgid "Notiz löschen"
 msgstr "Удалить заметку"
 
-#: src/widgets/norm_view.rs:2987
+#: src/widgets/norm_view.rs:3373
 msgid "Markierungsfarbe"
 msgstr "Цвет выделения"
 
-#: src/widgets/norm_view.rs:2988
+#: src/widgets/norm_view.rs:3374
 msgid "Markierung entfernen"
 msgstr "Удалить выделение"
 
-#: src/widgets/norm_view.rs:2994
+#: src/widgets/norm_view.rs:3380
 msgid "Notiz hinzufügen"
 msgstr "Добавить заметку"
 
-#: src/widgets/norm_view.rs:2997
+#: src/widgets/norm_view.rs:3383
 msgid "Kopieren"
 msgstr "Копировать"
 
-#: src/widgets/norm_view.rs:2999
+#: src/widgets/norm_view.rs:3385
 msgid "Auswahl in der Schnellsuche"
 msgstr "Найти выделенное в строке перехода"
 
-#: src/widgets/norm_view.rs:3006
+#: src/widgets/norm_view.rs:3392
 msgid "Norm in neuem Tab öffnen"
 msgstr "Открыть норму в новой вкладке"
 
-#: src/widgets/norm_view.rs:3011
+#: src/widgets/norm_view.rs:3397
 msgid "Norm als Favorit"
 msgstr "Добавить норму в избранное"
 
-#: src/widgets/norm_view.rs:3015
+#: src/widgets/norm_view.rs:3401
 msgid "Schema / Notiz zur Norm"
 msgstr "Схема / заметка к норме"
 
@@ -500,121 +899,117 @@ msgstr "Схема / заметка к норме"
 msgid "Die neue Sprache gilt nach dem nächsten Start."
 msgstr "Новый язык будет применён после следующего запуска."
 
-#: src/window.rs:533
+#: src/window.rs:568
 msgid "Verarbeite Gesetzestext und schreibe die Datenbank …"
 msgstr "Обработка текста закона и запись базы данных …"
 
-#: src/window.rs:563
+#: src/window.rs:598
 msgid "BGB herunterladen"
 msgstr "Загрузить BGB"
 
-#: src/window.rs:566
+#: src/window.rs:601
 msgid "Bürgerliches Gesetzbuch von gesetze-im-internet.de laden"
 msgstr "Загрузить Bürgerliches Gesetzbuch с gesetze-im-internet.de"
 
-#: src/window.rs:574
+#: src/window.rs:609
 msgid "Weitere Gesetze …"
 msgstr "Другие законы …"
 
-#: src/window.rs:577
+#: src/window.rs:612
 msgid "Download-Center mit allen verfügbaren Gesetzen öffnen"
 msgstr "Открыть центр загрузки со всеми доступными законами"
 
-#: src/window.rs:675 src/window.rs:678
-msgid "Datenbank konnte nicht geöffnet werden"
-msgstr "Не удалось открыть базу данных"
+#: src/window.rs:776
+msgid "Für Verweise aus Karteikarten muss das Gesetz heruntergeladen sein."
+msgstr "Чтобы переходить по ссылкам из карточек, закон должен быть загружен."
 
-#: src/window.rs:717 src/window.rs:756
-msgid "Download fehlgeschlagen"
-msgstr "Ошибка загрузки"
-
-#: src/window.rs:724
-msgid "Lade {name} herunter …"
-msgstr "Загрузка {name} …"
-
-#: src/window.rs:774
-msgid "Prüfe auf Aktualisierung …"
-msgstr "Проверка обновлений …"
-
-#: src/window.rs:805
-msgid "Neue Fassung: {law}, {stand}"
-msgstr "Новая редакция: {law}, {stand}"
-
-#: src/window.rs:820
-msgid "Aktualisierungsprüfung fehlgeschlagen"
-msgstr "Не удалось проверить обновления"
-
-#: src/window.rs:834
-msgid "Auf dem neuesten Stand: {laws}"
-msgstr "Актуальная версия: {laws}"
-
-#: src/window.rs:997 src/window.rs:1001
-msgid "Gliederung konnte nicht geladen werden"
-msgstr "Не удалось загрузить оглавление"
-
-#: src/window.rs:1354
+#: src/window.rs:832 src/window.rs:1540
 msgid "Verweis {label} wurde nicht gefunden."
 msgstr "Ссылка {label} не найдена."
 
-#: src/window.rs:1375
+#: src/window.rs:861 src/window.rs:864
+msgid "Datenbank konnte nicht geöffnet werden"
+msgstr "Не удалось открыть базу данных"
+
+#: src/window.rs:903 src/window.rs:942
+msgid "Download fehlgeschlagen"
+msgstr "Ошибка загрузки"
+
+#: src/window.rs:910
+msgid "Lade {name} herunter …"
+msgstr "Загрузка {name} …"
+
+#: src/window.rs:960
+msgid "Prüfe auf Aktualisierung …"
+msgstr "Проверка обновлений …"
+
+#: src/window.rs:991
+msgid "Neue Fassung: {law}, {stand}"
+msgstr "Новая редакция: {law}, {stand}"
+
+#: src/window.rs:1006
+msgid "Aktualisierungsprüfung fehlgeschlagen"
+msgstr "Не удалось проверить обновления"
+
+#: src/window.rs:1020
+msgid "Auf dem neuesten Stand: {laws}"
+msgstr "Актуальная версия: {laws}"
+
+#: src/window.rs:1183 src/window.rs:1187
+msgid "Gliederung konnte nicht geladen werden"
+msgstr "Не удалось загрузить оглавление"
+
+#: src/window.rs:1561
 msgid "{law} ist nicht installiert."
 msgstr "{law} не установлен."
 
-#: src/window.rs:1432
+#: src/window.rs:1618
 msgid "Annotation konnte nicht gespeichert werden"
 msgstr "Не удалось сохранить аннотацию"
 
-#: src/window.rs:1448
+#: src/window.rs:1634
 msgid "Noch keine gelesenen Normen."
 msgstr "Прочитанных норм пока нет."
 
-#: src/window.rs:1700
+#: src/window.rs:1886
 msgid "Notiz konnte nicht gespeichert werden"
 msgstr "Не удалось сохранить заметку"
 
-#: src/window.rs:1760 src/window.rs:2038
+#: src/window.rs:1947 src/window.rs:2225
 msgid "Norm {enbez} wurde nicht gefunden."
 msgstr "Норма {enbez} не найдена."
 
-#: src/window.rs:1846
+#: src/window.rs:2033
 msgid "Noch keine Favoriten. Stern in der Kopfleiste oder Strg+D."
 msgstr "Избранного пока нет. Звезда в заголовке окна или Ctrl+D."
 
-#: src/window.rs:1922
+#: src/window.rs:2109
 msgid "Nicht mehr vorhanden"
 msgstr "Больше не существует"
 
-#: src/window.rs:1927
+#: src/window.rs:2114
 msgid "Favorit entfernen"
 msgstr "Удалить из избранного"
 
-#: src/window.rs:1984
+#: src/window.rs:2171
 msgid "Favorit konnte nicht gespeichert werden"
 msgstr "Не удалось сохранить избранное"
 
-#: src/window.rs:2004
+#: src/window.rs:2191
 msgid "Favorit konnte nicht entfernt werden"
 msgstr "Не удалось удалить из избранного"
 
-#: src/window.rs:2240
+#: src/window.rs:2427
 msgid "importiert: {} Norm."
 msgid_plural "importiert: {} Normen."
 msgstr[0] "импортировано: {} норма."
 msgstr[1] "импортировано: {} нормы."
 msgstr[2] "импортировано: {} норм."
 
-#: src/window.rs:2251
-msgid "Annotationen: {moved} verschoben, {orphaned} verwaist, {recovered} wiedergefunden."
-msgstr "Аннотации: перемещено {moved}, без привязки {orphaned}, восстановлено {recovered}."
-
-#: src/widgets/norm_view.rs
-msgid "Klick öffnet, Strg+Klick in der zweiten Ansicht"
-msgstr "Щелчок открывает, Ctrl+щелчок — во второй панели"
-
-#: src/widgets/norm_view.rs
-msgid "Grundlage"
-msgstr "Основание"
-
-#: src/widgets/norm_view.rs
-msgid "Anschlussnorm"
-msgstr "Последующая норма"
+#: src/window.rs:2438
+msgid ""
+"Annotationen: {moved} verschoben, {orphaned} verwaist, {recovered} "
+"wiedergefunden."
+msgstr ""
+"Аннотации: перемещено {moved}, без привязки {orphaned}, восстановлено "
+"{recovered}."

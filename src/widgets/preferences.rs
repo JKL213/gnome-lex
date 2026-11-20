@@ -188,7 +188,7 @@ pub fn apply_reading_font(settings: &gio::Settings) {
             format!("\"{}\", {DEFAULT_READING_FONTS}", family.replace('"', ""))
         };
         provider.load_from_string(&format!(
-            ".norm-text, .norm-text label, .note-editor {{ font-family: {stack}; }}"
+            ".norm-text, .norm-text label, .note-editor, .card-text {{ font-family: {stack}; }}"
         ));
     };
     apply(settings);

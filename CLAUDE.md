@@ -87,7 +87,7 @@ Unit-Tests für Importer und Verweisparser sind Pflicht.
 
 ---
 
-## 3. Stand: Leseansicht mit Tabs, Verweisindex, Annotationen im Kern, Übersetzungen (siehe unten)
+## 3. Stand: Leseansicht mit Tabs, Annotationen im Kern, Übersetzungen, Karteikarten-Modus (siehe unten)
 
 Alles Folgende ist gebaut und geprüft (cargo build/test/clippy/fmt grün,
 Stufe 1 zusätzlich mit Meson-Tests und Flatpak-Build; Stufe 2 wurde über
@@ -767,6 +767,94 @@ Stufe 1 zusätzlich mit Meson-Tests und Flatpak-Build; Stufe 2 wurde über
     Überschrift liest `load_page` über `Database::norm_title(kürzel, enbez)`
     und reicht sie als `NormPage.hints: Vec<MarginHint {hint, title}>` durch;
     ist das Zielgesetz nicht installiert, fehlt sie.
+- **Karteikarten-Modus (19.11.2026, Auftrag):** Gebaut und geprüft in einer
+  chroot-Umgebung mit Ubuntu 26.04 (GTK 4.22.4, libadwaita 1.9.1): fmt,
+  clippy `-D warnings` (auch `--tests`), 97 Tests grün; Sichtprüfung unter
+  Xvfb mit GL (Bildschirmfotos, Maus und Tastatur per `xdotool`), hell,
+  dunkel, Schmalbreite 380 px, Deutsch und Englisch.
+  - **Modusleiste:** `window.blp` beginnt jetzt mit einer waagerechten `Box`:
+    links `WindowHandle mode_rail` (zwei `ToggleButton` an der Zustandsaktion
+    `win.mode` mit Ziel `'laws'`/`'cards'`, Zähler fälliger Karten als
+    `cards_badge`), rechts `Adw.ToolbarView` mit `Adw.ViewStack mode_stack`
+    (Seite „laws“ = bisheriger `Stack stack`, Seite „cards“ =
+    `$LexFlashcards flashcards`) und unten `Adw.ViewSwitcherBar mode_bar`.
+    Der 640sp-Breakpoint blendet die Leiste aus und zeigt stattdessen
+    `mode_bar`; damit unten nicht zwei Leisten stehen, wechselt die
+    Seitenleiste dann über `Adw.InlineViewSwitcher sidebar_switcher_inline`
+    (oben) statt über `sidebar_switcher_bar`. `LexWindow`: `setup_modes`,
+    `set_mode`, `cards_mode`; GSettings `mode` (laws/cards) wird beim Start
+    wiederhergestellt; Kürzel Alt+1/Alt+2 (`win.mode::laws`). Im
+    Karteikarten-Modus sind die Aktionen der Leseansicht deaktiviert
+    (`update_actions`, auch „/“), damit ihre Kürzel nichts Unsichtbares tun.
+  - **Kernmodule `src/cards/`** (ohne GTK, getestet): `mod.rs` (DeckInfo,
+    Card, Rating, `schedule` nach dem Fächerprinzip mit fünf Fächern und
+    `BOX_INTERVALS` 1/2/5/10/30 Tage, `Session` für Lernen und Durchblättern,
+    `PAPER_COLORS`), `template.rs` (Anki-Vorlagen: Felder, Filter `text`/
+    `cloze`/`hint`/`type`, Bedingungen `#`/`^`, Sonderfelder, Lückentexte auch
+    verschachtelt; `render_back` lässt alles bis `<hr id=answer>` weg, weil
+    die Frage auf der Vorderseite steht), `html.rs` (HTML → `Block::Text`
+    als Pango-Markup, `Image`, `Rule`; Farben werden geprüft, sehr helle
+    Schrift verworfen; Normzitate werden zu `<a href="ref:N">` mit
+    `NormRef`, auch Kurzform „§ 433 I 1 BGB“ über `citation_tail`), `anki.rs`
+    (`read_package`: Zip → `collection.anki21b` (Zstandard über `ruzstd`,
+    Tabellen `notetypes`/`fields`/`templates`/`decks`, Vorlagen als Protobuf
+    mit eigenem Mini-Leser) oder `collection.anki21`/`.anki2` (JSON in
+    `col`); `extract_media` entpackt nur referenzierte Bilder und nur reine
+    Dateinamen), `import.rs` (`import_package`, `remove_deck`, Medien unter
+    `user_data_dir/gesetze/karten-medien/<Stapel-ID>/`). Der Lernstand des
+    Pakets wird nicht übernommen; neue Karten beginnen in Fach 1.
+  - **Datenbank `src/db/cards.rs`:** Tabellen `card_decks` (Name eindeutig,
+    Quelle, Papierfarbe) und `cards` (Vorder-/Rückseite als HTML, `box`,
+    `due` als `JJJJ-MM-TT`, `reviews`, `lapses`). `import_deck` erkennt
+    Karten beim erneuten Import an der Anki-Karten-ID wieder (Lernstand
+    bleibt, Text wird aktualisiert, fehlende Karten entfallen). rusqlite
+    braucht dafür das Feature `collation` (Anki sortiert mit `unicase`).
+  - **Widgets:** `LexIndexCard` (`index_card.rs`): Karte A6 quer, Papier und
+    rote Kopflinie im `snapshot`, Text als Labels in einer `RuledPaper`-
+    Fläche, die die blaue Lineatur relativ zum Textanfang zeichnet (Linien
+    laufen beim Scrollen mit). **Schriftgröße und `line-height` in
+    `style.css` (`indexcard .card-text`: 16 px/28 px, `.mini` 12,5 px/18 px)
+    müssen zu `Metrics.pitch` passen.** Die Karte bleibt in jedem Farbschema
+    papierhell. `LexCardStack` (`card_stack.rs`): zeichnet die Lagen unter
+    der obersten Karte (`pile_layers`, leichte feste Unregelmäßigkeit), hält
+    zwei Kartenwidgets (oberste und „Geisterkarte“) und animiert Umdrehen
+    (`flip`, Seitenwechsel bei der Hälfte) sowie Weg- und Zurückfliegen
+    (`fly_out`, `fly_in`) über `adw::TimedAnimation`. **Das Umdrehen ist
+    bewusst eine flache Transformation (Stauchen plus Scherung): Mit
+    `perspective`/`rotate_3d` schnitt der GL-Renderer die Karte ab, und Cairo
+    kann es gar nicht.** `LexLeitnerBox` (`leitner_box.rs`): Karteikasten von
+    oben mit fünf Fächern, Kartenkanten je Füllstand, Aufleuchten des
+    Zielfachs. `LexFlashcards` (`flashcards.rs`, `flashcards.blp`):
+    `Adw.NavigationView` mit Stapelübersicht (FlowBox aus Mini-Stapeln,
+    Kachelmenü: lernen, durchblättern, Papierfarbe, zurücksetzen, löschen)
+    und Lernansicht; Aktionsgruppe `cards.*`; Import über `gtk::FileDialog`
+    oder Ziehen und Ablegen; Tasten (Capture): Leertaste/Eingabe drehen,
+    ←/1 nicht gewusst, →/2 gewusst, beim Durchblättern ←/→. Klick auf ein
+    Normzitat → `LexWindow::open_card_reference` (Gesetz aus dem Kürzel,
+    sonst das der aktiven Leseansicht) wechselt in den Gesetze-Modus.
+  - **Symbole:** `index-cards-symbolic`, `paragraph-symbolic` (Strich-Symbol
+    mit `class="foreground-stroke transparent-fill"`; ohne diese Klassen
+    füllt GTK den Pfad und das § wird zum Klecks), dazu `view-more-symbolic`
+    und `object-select-symbolic` aus Adwaita.
+  - **Test-Hooks:** `window-action "mode cards"`, `"cards-test import <Pfad>"`,
+    `"cards-test open <Nr> [browse]"`, `flip`, `known`, `unknown`, `next`,
+    `prev`, `back`, `reset <Nr>`, `delete <Nr>` (ohne Rückfrage),
+    `confirm-delete <Nr>`.
+  - **Testumgebung ohne Flatpak (Cloud-Sitzung):** `debootstrap` von Ubuntu
+    26.04 („resolute“) nach `/opt/sdk`, darin `libgtk-4-dev`,
+    `libadwaita-1-dev`, `libsoup-3.0-dev`, `blueprint-compiler`, `gettext`,
+    `appstream` (für `metainfo.its`), `xvfb`, `xdotool`, `imagemagick`,
+    `locales`; Projekt, `~/.cargo` und `~/.rustup` per `mount --bind`
+    einhängen und Cargo mit `CARGO_TARGET_DIR=target-sdk` im chroot
+    ausführen. App unter `Xvfb :7` mit eigenem `dbus-daemon`, Fotos mit
+    `import -window root`. Ohne Fenstermanager bleiben eigene Fenster wie die
+    Dateiauswahl unbedienbar; Popovers und Adw-Dialoge funktionieren. In der
+    Locale „C“ bleibt die Oberfläche deutsch (GTK setzt die Locale beim Start
+    neu), zum Prüfen der Übersetzung `LANG=en_US.UTF-8` setzen.
+    gesetze-im-internet.de war dort nicht erreichbar; der Sprung aus einer
+    Karte in die Norm wurde mit einem kleinen BGB-Auszug geprüft.
+  - Offen: Karten selbst anlegen und bearbeiten, Suche in Karten, Ton und
+    LaTeX aus Paketen, Übernahme des Anki-Lernstands, Statistik.
 - **Tooling:** `.vscode/` (settings, tasks, launch, extensions; Tasks
   `sdk: cargo build|run|qualität` für die SDK-Sandbox),
   `build-aux/sdk-cargo.sh` (führt Cargo in `org.gnome.Sdk//51` mit
@@ -787,8 +875,9 @@ Stufe 1 zusätzlich mit Meson-Tests und Flatpak-Build; Stufe 2 wurde über
 ### Bekannte Entscheidungen und Fallstricke
 
 - Crates: gtk4 0.11 (Feature `gnome_50`, `blueprint`), libadwaita 0.9
-  (`v1_9`), glib/gio 0.22, soup3 0.9, rusqlite 0.40 bundled, quick-xml
-  0.42, zip 8, gettext-rs 0.8 (`gettext-system`), regex, chrono, log/env_logger.
+  (`v1_9`), glib/gio 0.22, soup3 0.9, rusqlite 0.40 bundled (+ `collation`),
+  quick-xml 0.42, zip 8, ruzstd 0.9 (Zstandard für neue Anki-Pakete, reines
+  Rust), gettext-rs 0.8 (`gettext-system`), regex, chrono, log/env_logger.
 - `setlocale` aus gettext-rs ist `unsafe` (mit Begründung gekapselt).
 - Die Sandbox unter `flatpak build` hat die rust-stable-Erweiterung nicht
   eingehängt; die gdb-Zeile für Rust-Pretty-Printer in `launch.json` ist

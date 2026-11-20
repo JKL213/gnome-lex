@@ -1,0 +1,363 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Karteikarten-Modus: Übersicht der Stapel und die Lernansicht mit dem
+// Kartenstapel, den Bewertungsschaltflächen und dem Karteikasten.
+template $LexFlashcards : Adw.Bin {
+  child: Adw.NavigationView nav {
+    Adw.NavigationPage {
+      title: _("Karteikarten");
+      tag: "decks";
+
+      child: Adw.ToolbarView {
+        [top]
+        Adw.HeaderBar {
+          [start]
+          Button {
+            icon-name: "list-add-symbolic";
+            tooltip-text: _("Anki-Paket importieren …");
+            action-name: "cards.import";
+          }
+
+          [end]
+          MenuButton {
+            icon-name: "open-menu-symbolic";
+            tooltip-text: _("Hauptmenü");
+            menu-model: cards_menu;
+          }
+        }
+
+        content: Stack decks_stack {
+          transition-type: crossfade;
+
+          StackPage {
+            name: "empty";
+
+            child: Adw.StatusPage {
+              icon-name: "index-cards-symbolic";
+              title: _("Noch keine Karteikarten");
+              description: _("Importieren Sie ein Anki-Kartenpaket (.apkg). Die Karten werden lokal gespeichert und nach dem Fächerprinzip der Lernkartei abgefragt.");
+
+              child: Button {
+                label: _("Anki-Paket importieren …");
+                halign: center;
+                action-name: "cards.import";
+
+                styles [
+                  "pill",
+                  "suggested-action",
+                ]
+              };
+            };
+          }
+
+          StackPage {
+            name: "busy";
+
+            child: Adw.StatusPage busy_page {
+              title: _("Importiere Karten …");
+            };
+          }
+
+          StackPage {
+            name: "decks";
+
+            child: ScrolledWindow {
+              hscrollbar-policy: never;
+
+              child: Adw.Clamp {
+                maximum-size: 1120;
+                tightening-threshold: 700;
+
+                child: Box {
+                  orientation: vertical;
+                  spacing: 6;
+                  margin-top: 18;
+                  margin-bottom: 24;
+                  margin-start: 12;
+                  margin-end: 12;
+
+                  Label summary_label {
+                    xalign: 0;
+                    margin-start: 14;
+                    wrap: true;
+
+                    styles [
+                      "dim-label",
+                    ]
+                  }
+
+                  FlowBox deck_flow {
+                    selection-mode: none;
+                    activate-on-single-click: true;
+                    homogeneous: true;
+                    min-children-per-line: 1;
+                    max-children-per-line: 4;
+                    row-spacing: 10;
+                    column-spacing: 6;
+                    valign: start;
+
+                    styles [
+                      "deck-flow",
+                    ]
+                  }
+                };
+              };
+            };
+          }
+        };
+      };
+    }
+
+    Adw.NavigationPage {
+      title: _("Lernen");
+      tag: "study";
+
+      child: Adw.ToolbarView {
+        [top]
+        Adw.HeaderBar {
+          title-widget: Adw.WindowTitle study_title {};
+
+          [end]
+          MenuButton {
+            icon-name: "view-more-symbolic";
+            tooltip-text: _("Stapel");
+            menu-model: study_menu;
+          }
+        }
+
+        content: Stack study_stack {
+          transition-type: crossfade;
+
+          StackPage {
+            name: "card";
+
+            child: Box {
+              orientation: vertical;
+              spacing: 4;
+
+              styles [
+                "study-desk",
+              ]
+
+              Label progress_label {
+                margin-top: 12;
+
+                styles [
+                  "dim-label",
+                  "caption",
+                  "numeric",
+                ]
+              }
+
+              $LexCardStack card_stack {
+                vexpand: true;
+                hexpand: true;
+                focusable: true;
+              }
+
+              Stack buttons_stack {
+                transition-type: crossfade;
+                margin-bottom: 10;
+                margin-start: 12;
+                margin-end: 12;
+
+                StackPage {
+                  name: "flip";
+
+                  child: Button {
+                    label: _("Umdrehen");
+                    tooltip-text: _("Karte umdrehen (Leertaste)");
+                    action-name: "cards.flip";
+                    halign: center;
+                    focus-on-click: false;
+
+                    styles [
+                      "pill",
+                      "flip-button",
+                    ]
+                  };
+                }
+
+                StackPage {
+                  name: "rate";
+
+                  // Breite Schaltflächen, die bei Schmalbreite nachgeben.
+                  child: Adw.Clamp {
+                    maximum-size: 440;
+                    tightening-threshold: 300;
+
+                    child: Box {
+                    spacing: 12;
+                    homogeneous: true;
+
+                    Button {
+                      label: _("Nicht gewusst");
+                      tooltip-text: _("Zurück in Fach 1 (← oder 1)");
+                      action-name: "cards.unknown";
+                      focus-on-click: false;
+
+                      styles [
+                        "pill",
+                        "rate-unknown",
+                      ]
+                    }
+
+                    Button {
+                      label: _("Gewusst");
+                      tooltip-text: _("Ein Fach weiter (→ oder 2)");
+                      action-name: "cards.known";
+                      focus-on-click: false;
+
+                      styles [
+                        "pill",
+                        "rate-known",
+                      ]
+                    }
+                    };
+                  };
+                }
+
+                StackPage {
+                  name: "browse";
+
+                  child: Box {
+                    spacing: 12;
+                    halign: center;
+
+                    Button {
+                      icon-name: "go-previous-symbolic";
+                      tooltip-text: _("Vorherige Karte (←)");
+                      action-name: "cards.previous";
+                      valign: center;
+                      focus-on-click: false;
+
+                      styles [
+                        "circular",
+                      ]
+                    }
+
+                    Button {
+                      label: _("Umdrehen");
+                      tooltip-text: _("Karte umdrehen (Leertaste)");
+                      action-name: "cards.flip";
+                      focus-on-click: false;
+
+                      styles [
+                        "pill",
+                        "flip-button",
+                      ]
+                    }
+
+                    Button {
+                      icon-name: "go-next-symbolic";
+                      tooltip-text: _("Nächste Karte (→)");
+                      action-name: "cards.next";
+                      valign: center;
+                      focus-on-click: false;
+
+                      styles [
+                        "circular",
+                      ]
+                    }
+                  };
+                }
+              }
+
+              $LexLeitnerBox leitner {
+                margin-start: 12;
+                margin-end: 12;
+              }
+            };
+          }
+
+          StackPage {
+            name: "done";
+
+            child: Adw.StatusPage done_page {
+              icon-name: "object-select-symbolic";
+              title: _("Für heute geschafft");
+
+              child: Box {
+                orientation: vertical;
+                spacing: 12;
+                halign: center;
+
+                Button {
+                  label: _("Zur Stapelübersicht");
+                  action-name: "cards.back";
+
+                  styles [
+                    "pill",
+                    "suggested-action",
+                  ]
+                }
+
+                Button {
+                  label: _("Alle Karten durchblättern");
+                  action-name: "cards.browse-current";
+
+                  styles [
+                    "pill",
+                  ]
+                }
+              };
+            };
+          }
+        };
+      };
+    }
+  };
+}
+
+menu cards_menu {
+  section {
+    item {
+      label: _("Anki-Paket _importieren …");
+      action: "cards.import";
+    }
+  }
+
+  section {
+    item {
+      label: _("_Einstellungen");
+      action: "app.preferences";
+    }
+
+    item {
+      label: _("_Tastenkürzel");
+      action: "app.shortcuts";
+    }
+
+    item {
+      label: _("_Info zu Gesetze");
+      action: "app.about";
+    }
+
+    item {
+      label: _("_Beenden");
+      action: "app.quit";
+    }
+  }
+}
+
+menu study_menu {
+  section {
+    item {
+      label: _("Fällige Karten _lernen");
+      action: "cards.learn-current";
+    }
+
+    item {
+      label: _("Alle Karten _durchblättern");
+      action: "cards.browse-current";
+    }
+  }
+
+  section {
+    item {
+      label: _("Lernstand _zurücksetzen");
+      action: "cards.reset-current";
+    }
+  }
+}
