@@ -78,6 +78,7 @@ blueprint_sources = files(
   'ui/search_row.blp',
   'ui/jump_bar.blp',
   'ui/download_center.blp',
+  'ui/flashcards.blp',
   'ui/preferences.blp',
   'ui/shortcuts.blp',
 )

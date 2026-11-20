@@ -30,6 +30,14 @@
       <default>""</default>
       <summary>Zustand der Leseansicht beim Beenden (JSON)</summary>
     </key>
+    <key name="mode" type="s">
+      <choices>
+        <choice value="laws"/>
+        <choice value="cards"/>
+      </choices>
+      <default>"laws"</default>
+      <summary>Zuletzt gewählter Modus: Gesetze oder Karteikarten</summary>
+    </key>
     <key name="show-annotations-sidebar" type="b">
       <default>false</default>
       <summary>Seitenleiste für Notizen und Lesezeichen sichtbar</summary>

@@ -5,7 +5,8 @@ Hinweise für KI-Agenten und Mitwirkende, die an diesem Repository arbeiten.
 ## Projekt
 
 GNOME-Desktop-Anwendung zum Lesen und Annotieren deutscher Bundesgesetze
-(zunächst BGB). Rust, GTK 4, libadwaita, Blueprint, Meson, Flatpak.
+(zunächst BGB), ergänzt um einen Karteikarten-Modus zum Lernen (Import von
+Anki-Paketen). Rust, GTK 4, libadwaita, Blueprint, Meson, Flatpak.
 App-ID: `org.gnomelex.Gesetze`. Binärname: `gesetze`.
 
 ## Harte Regeln
@@ -48,6 +49,7 @@ bekommen einen Test.
 | `src/db/`        | SQLite-Schema, Abfragen, Annotationen, Neuverankerung   |
 | `src/model/`     | Block-Modell des Normtexts, GObject-Datenobjekte        |
 | `src/refs/`      | Erkennung von Normverweisen                             |
+| `src/cards/`     | Karteikarten: Anki-Import, Vorlagen, HTML, Lernkartei   |
 | `src/widgets/`   | Eigene Widgets                                          |
 | `src/window.rs`  | Hauptfenster                                            |
 | `src/application.rs` | AdwApplication, Aktionen, Dialoge                   |

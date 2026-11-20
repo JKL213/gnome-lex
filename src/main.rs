@@ -4,6 +4,7 @@
 #![doc = include_str!("../README.md")]
 
 mod application;
+mod cards;
 mod config;
 mod db;
 mod hints;

@@ -139,3 +139,139 @@ entry.jump-entry > text > placeholder {
 .norm-text > border {
   background: transparent;
 }
+
+/* Modusleiste am linken Rand: Gesetze oder Karteikarten */
+.mode-rail {
+  padding: 8px 6px;
+  background: color-mix(in srgb, var(--window-fg-color) 7%, var(--sidebar-bg-color));
+  border-right: 1px solid var(--border-color);
+}
+.mode-rail:backdrop {
+  background: color-mix(in srgb, var(--window-fg-color) 5%, var(--sidebar-backdrop-color));
+}
+.mode-button {
+  min-width: 52px;
+  padding: 8px 4px 6px 4px;
+  border-radius: 10px;
+}
+.mode-button:checked {
+  color: var(--accent-color);
+  background: alpha(var(--accent-bg-color), 0.14);
+}
+.mode-label {
+  font-size: 0.72em;
+  font-weight: 600;
+}
+.mode-badge {
+  min-width: 12px;
+  padding: 0 4px;
+  margin: -4px -2px 0 0;
+  border-radius: 9px;
+  font-size: 0.68em;
+  font-weight: 700;
+  color: var(--accent-fg-color);
+  background: var(--accent-bg-color);
+}
+
+/* Karteikarten: Die Karte ist ein Gegenstand aus Papier und behält ihre
+   Farben in jedem Farbschema. Schriftgröße und Zeilenhöhe müssen zum
+   Linienabstand in index_card.rs passen (28 px, verkleinert 18 px). */
+indexcard {
+  color: #1f2430;
+}
+indexcard .card-text {
+  font-size: 16px;
+  line-height: 28px;
+  color: #1f2430;
+}
+indexcard.mini .card-text {
+  font-size: 12.5px;
+  line-height: 18px;
+}
+indexcard .card-text link {
+  color: #1a5fb4;
+}
+indexcard .card-text link:hover {
+  color: #0b3d80;
+}
+indexcard .card-missing {
+  opacity: 0.55;
+  font-style: italic;
+}
+indexcard .card-caption {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: alpha(#1f2430, 0.55);
+}
+indexcard.mini .card-caption {
+  font-size: 8px;
+}
+indexcard .card-corner {
+  font-weight: 600;
+  color: alpha(#a51d2d, 0.75);
+}
+indexcard scrolledwindow,
+indexcard scrolledwindow > viewport {
+  background: transparent;
+}
+indexcard separator.card-rule {
+  min-height: 1px;
+  background: alpha(#1f2430, 0.45);
+}
+cardstack:focus-visible {
+  outline: none;
+}
+
+/* Lernansicht: Schreibunterlage hinter Stapel und Karteikasten */
+.study-desk {
+  padding-bottom: 14px;
+  background-image: radial-gradient(
+    ellipse at 50% 38%,
+    alpha(var(--window-fg-color), 0.00),
+    alpha(var(--window-fg-color), 0.05)
+  );
+}
+.flip-button {
+  min-width: 150px;
+}
+.rate-known,
+.rate-unknown {
+  padding-left: 14px;
+  padding-right: 14px;
+  font-weight: 700;
+}
+.rate-known {
+  color: var(--success-fg-color);
+  background: var(--success-bg-color);
+}
+.rate-unknown {
+  color: var(--destructive-fg-color);
+  background: var(--destructive-bg-color);
+}
+.rate-known:hover,
+.rate-unknown:hover {
+  filter: brightness(1.08);
+}
+
+/* Stapelübersicht */
+.deck-flow > flowboxchild {
+  padding: 6px 4px 10px 4px;
+  border-radius: 14px;
+}
+.deck-status {
+  font-size: 0.92em;
+  opacity: 0.7;
+}
+.deck-status.due {
+  opacity: 1;
+}
+.deck-menu {
+  margin: 2px 6px;
+  opacity: 0.55;
+}
+.deck-menu:hover,
+.deck-menu:checked {
+  opacity: 1;
+}

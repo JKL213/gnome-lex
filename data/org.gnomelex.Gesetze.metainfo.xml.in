@@ -12,6 +12,11 @@
       klickbaren Verweisen. Textstellen lassen sich markieren, mit Notizen
       versehen und als Lesezeichen ablegen.
     </p>
+    <p>
+      Im Karteikarten-Modus werden Anki-Kartenpakete importiert und nach dem
+      Fächerprinzip der Lernkartei abgefragt. Normzitate auf den Karten
+      führen direkt in den Gesetzestext.
+    </p>
   </description>
   <launchable type="desktop-id">@app_id@.desktop</launchable>
   <url type="homepage">https://github.com/gnome-lex/gnome-lex</url>

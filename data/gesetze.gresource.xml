@@ -9,11 +9,11 @@
     <file compressed="true" preprocess="xml-stripblanks">ui/search_row.ui</file>
     <file compressed="true" preprocess="xml-stripblanks">ui/jump_bar.ui</file>
     <file compressed="true" preprocess="xml-stripblanks">ui/download_center.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/flashcards.ui</file>
     <file compressed="true" preprocess="xml-stripblanks">ui/preferences.ui</file>
     <file compressed="true" preprocess="xml-stripblanks">ui/shortcuts.ui</file>
     <file compressed="true">style.css</file>
     <file preprocess="xml-stripblanks" alias="icons/scalable/apps/org.gnomelex.Gesetze.svg">icons/hicolor/scalable/apps/org.gnomelex.Gesetze.svg</file>
-    <file preprocess="xml-stripblanks" alias="icons/scalable/actions/law-symbolic.svg">icons/hicolor/symbolic/apps/org.gnomelex.Gesetze-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/bookmark-new-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/document-edit-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/document-open-recent-symbolic.svg</file>
@@ -24,9 +24,12 @@
     <file preprocess="xml-stripblanks">icons/scalable/actions/go-next-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/go-previous-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/help-about-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/index-cards-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/list-add-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/non-starred-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/object-select-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/open-menu-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/paragraph-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/preferences-system-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/sidebar-show-right-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/sidebar-show-symbolic.svg</file>
@@ -35,6 +38,7 @@
     <file preprocess="xml-stripblanks">icons/scalable/actions/user-trash-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/view-dual-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/view-list-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/view-more-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/view-refresh-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/zoom-in-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/zoom-original-symbolic.svg</file>
